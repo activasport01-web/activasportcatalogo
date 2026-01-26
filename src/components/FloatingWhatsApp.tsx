@@ -21,7 +21,7 @@ export default function FloatingWhatsApp() {
         }
     }, [])
 
-    const PHONE_NUMBER = '59178303866' // Reemplazar con el número real
+    const PHONE_NUMBER = '59163448209' // Número actualizado
     const MESSAGE = 'Hola! Me gustaría hacer una consulta.'
 
     const handleClick = () => {

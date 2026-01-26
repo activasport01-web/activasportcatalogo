@@ -25,16 +25,19 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     const [isLoaded, setIsLoaded] = useState(false)
 
     // Cargar favoritos al inicio
+    // Cargar favoritos al inicio (Client-side only)
     useEffect(() => {
-        const saved = localStorage.getItem('user_favorites')
-        if (saved) {
-            try {
-                setFavorites(JSON.parse(saved))
-            } catch (e) {
-                console.error("Error loading favorites", e)
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('user_favorites')
+            if (saved) {
+                try {
+                    setFavorites(JSON.parse(saved))
+                } catch (e) {
+                    console.error("Error loading favorites", e)
+                }
             }
+            setIsLoaded(true)
         }
-        setIsLoaded(true)
     }, [])
 
     // Guardar cambios

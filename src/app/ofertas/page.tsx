@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+
 import ProductCard from '@/components/ProductCard'
 
 export const revalidate = 0
@@ -17,7 +16,7 @@ export default async function OfertasPage() {
 
     return (
         <main className="min-h-screen bg-gray-50">
-            <Navbar />
+
 
             {/* Hero */}
             <section className="bg-gradient-to-r from-red-500 to-orange-600 text-white py-20">
@@ -52,7 +51,7 @@ export default async function OfertasPage() {
                 )}
             </section>
 
-            <Footer />
+
         </main>
     )
 }

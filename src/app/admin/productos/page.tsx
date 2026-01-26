@@ -14,7 +14,8 @@ import {
     Upload,
     CheckCircle,
     AlertCircle,
-    X
+    X,
+    ImageIcon
 } from 'lucide-react'
 
 interface Producto {
@@ -24,7 +25,7 @@ interface Producto {
     precio: number
     categoria: string
     tallas: string[]
-    colores: string[]
+    colores: any[] // Puede ser string[] (viejo) o ColorVariant[] (nuevo)
     etiquetas: string[]
     url_imagen: string
     imagen_hover?: string
@@ -43,22 +44,54 @@ export default function ProductosAdmin() {
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imageHoverFile, setImageHoverFile] = useState<File | null>(null)
 
+    // Marcas desde DB
+    const [marcasList, setMarcasList] = useState<any[]>([])
+
+    // NUEVO: Estado para variantes de color con imágenes
+    type ColorVariant = {
+        color: string      // Hex code
+        nombre: string     // Nombre del color
+        imagen: string     // URL de la imagen (después de subir)
+        imageFile?: File   // Archivo temporal antes de subir
+    }
+    const [colorVariants, setColorVariants] = useState<ColorVariant[]>([])
+
+    // Estado para modal de edición de variante
+    const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null)
+    const [showVariantModal, setShowVariantModal] = useState(false)
+
     const [formData, setFormData] = useState({
         nombre: '',
         descripcion: '',
         precio: '',
-        categoria: 'adulto',
+        categoria: 'Deportivo',
+        subcategoria: '',
         tallas: '',
         colores: '',
         etiquetas: [] as string[],
-        origen: 'Nacional', // Nuevo: Origen por defecto
+        origen: '', // Marca
         disponible: true
     })
 
     useEffect(() => {
         checkAuth()
         loadProductos()
+        loadMarcas()
     }, [])
+
+    const loadMarcas = async () => {
+        const { data } = await supabase.from('marcas').select('*').eq('active', true).order('nombre')
+        if (data && data.length > 0) {
+            setMarcasList(data)
+        } else {
+            // Fallback default brands if DB is empty
+            setMarcasList([
+                { nombre: 'Golero' }, { nombre: 'Grasep' }, { nombre: 'Gasper' }, { nombre: 'Buss' }, { nombre: 'Bolka' },
+                { nombre: 'Nike' }, { nombre: 'Adidas' }, { nombre: 'Puma' }, { nombre: 'Reebok' },
+                { nombre: 'Jordan' }, { nombre: 'Vans' }, { nombre: 'Generico' }
+            ])
+        }
+    }
 
     const checkAuth = async () => {
         const { data: { session } } = await supabase.auth.getSession()
@@ -108,60 +141,61 @@ export default function ProductosAdmin() {
         e.preventDefault()
 
         try {
-            let url_imagen = editingProduct?.url_imagen || ''
-            let imagen_hover = editingProduct?.imagen_hover || null
+            // NUEVO: Subir imágenes de variantes de color PRIMERO
+            console.log('🎨 Variantes antes de subir:', colorVariants)
+            const variantsWithUrls = await Promise.all(
+                colorVariants.map(async (variant) => {
+                    let imageUrl = variant.imagen
 
-            // Subir imagen principal
-            if (imageFile) {
-                console.log('Subiendo imagen principal...')
-                // Usar nombre sanitizado
-                const cleanName = sanitizeFileName(imageFile.name)
-                const fileName = `${Date.now()}_${cleanName}`
+                    // Si hay un archivo nuevo, subirlo
+                    if (variant.imageFile) {
+                        const cleanName = sanitizeFileName(variant.imageFile.name)
+                        const fileName = `variant_${Date.now()}_${cleanName}`
 
-                const { error: uploadError } = await supabase.storage
-                    .from('imagenes-zapatos')
-                    .upload(fileName, imageFile)
+                        const { error: uploadError } = await supabase.storage
+                            .from('imagenes-zapatos')
+                            .upload(fileName, variant.imageFile)
 
-                if (uploadError) {
-                    showNotification('Error al subir imagen principal: ' + uploadError.message, 'error')
-                    return
-                }
+                        if (uploadError) {
+                            console.error('Error subiendo variante:', uploadError)
+                            showNotification('Error al subir imagen: ' + uploadError.message, 'error')
+                            return variant // Retornar sin cambios si falla
+                        }
 
-                const { data } = supabase.storage
-                    .from('imagenes-zapatos')
-                    .getPublicUrl(fileName)
-                url_imagen = data.publicUrl
-            }
+                        const { data } = supabase.storage
+                            .from('imagenes-zapatos')
+                            .getPublicUrl(fileName)
+                        imageUrl = data.publicUrl
+                    }
 
-            // Subir imagen hover
-            if (imageHoverFile) {
-                console.log('Subiendo imagen hover...')
-                // Usar nombre sanitizado
-                const cleanName = sanitizeFileName(imageHoverFile.name)
-                const fileName = `hover_${Date.now()}_${cleanName}`
+                    return {
+                        color: variant.color,
+                        nombre: variant.nombre,
+                        imagen: imageUrl
+                    }
+                })
+            )
+            console.log('✅ Variantes con URLs:', variantsWithUrls)
 
-                const { error: uploadError } = await supabase.storage
-                    .from('imagenes-zapatos')
-                    .upload(fileName, imageHoverFile)
+            // Usar la primera variante como imagen principal
+            const url_imagen = variantsWithUrls.length > 0 && variantsWithUrls[0].imagen
+                ? variantsWithUrls[0].imagen
+                : editingProduct?.url_imagen || ''
 
-                if (uploadError) {
-                    showNotification('Error al subir imagen hover: ' + uploadError.message, 'error')
-                    return
-                }
-
-                const { data } = supabase.storage
-                    .from('imagenes-zapatos')
-                    .getPublicUrl(fileName)
-                imagen_hover = data.publicUrl
-            }
+            // Segunda variante como hover (si existe)
+            const imagen_hover = variantsWithUrls.length > 1 && variantsWithUrls[1].imagen
+                ? variantsWithUrls[1].imagen
+                : editingProduct?.imagen_hover || null
 
             const productData: any = {
                 nombre: formData.nombre,
                 descripcion: formData.descripcion || null,
-                precio: parseFloat(formData.precio),
+                precio: 0, // Venta por mayor, precio oculto/negociable/docena
                 categoria: formData.categoria,
+                subcategoria: formData.subcategoria || null,
                 tallas: formData.tallas ? formData.tallas.split(',').map(t => t.trim()).filter(t => t) : [],
-                colores: formData.colores ? formData.colores.split(',').map(c => c.trim()).filter(c => c) : [],
+                // ACTUALIZADO: Guardar variantes completas si existen, sino array vacío
+                colores: variantsWithUrls.length > 0 ? variantsWithUrls : [],
                 etiquetas: formData.etiquetas || [],
                 url_imagen,
                 imagen_hover,
@@ -221,28 +255,59 @@ export default function ProductosAdmin() {
     const openModal = (producto?: Producto) => {
         if (producto) {
             setEditingProduct(producto)
+
+            // Cargar variantes de color si existen
+            console.log('📥 Producto.colores:', producto.colores)
+            if (producto.colores && Array.isArray(producto.colores) && producto.colores.length > 0) {
+                // Detectar si es formato nuevo (objetos con nombre/imagen) o viejo (strings hex)
+                const firstItem: any = producto.colores[0]
+                const isNewFormat = typeof firstItem === 'object' && (firstItem.nombre || firstItem.imagen)
+                console.log('🔍 Es formato nuevo?', isNewFormat, 'Primer item:', firstItem)
+
+                if (isNewFormat) {
+                    // Formato nuevo: array de objetos con color, nombre, imagen
+                    const loadedVariants = producto.colores.map((c: any) => ({
+                        color: c.color || '#000000',
+                        nombre: c.nombre || 'Color',
+                        imagen: c.imagen || ''
+                    }))
+                    console.log('✅ Variantes cargadas:', loadedVariants)
+                    setColorVariants(loadedVariants)
+                } else {
+                    // Formato viejo: array de hex strings - no cargar variantes
+                    console.log('⚠️ Formato viejo detectado, no se cargan variantes')
+                    setColorVariants([])
+                }
+            } else {
+                console.log('❌ No hay colores en el producto')
+                setColorVariants([])
+            }
+
             setFormData({
                 nombre: producto.nombre,
                 descripcion: producto.descripcion || '',
                 precio: producto.precio.toString(),
                 categoria: producto.categoria,
+                subcategoria: (producto as any).subcategoria || '',
                 tallas: producto.tallas?.join(', ') || '',
-                colores: producto.colores?.join(', ') || '',
+                colores: '', // Ya no usamos esto
                 etiquetas: producto.etiquetas || [],
                 origen: producto.origen || 'Nacional', // Cargar origen existente
                 disponible: producto.disponible
             })
         } else {
             setEditingProduct(null)
+            setColorVariants([]) // Limpiar variantes
             setFormData({
                 nombre: '',
                 descripcion: '',
-                precio: '',
-                categoria: 'adulto',
+                precio: '', // Se limpia
+                categoria: 'Deportivo',
+                subcategoria: '',
                 tallas: '',
                 colores: '',
                 etiquetas: [],
-                origen: 'Nacional',
+                origen: '',
                 disponible: true
             })
         }
@@ -303,48 +368,47 @@ export default function ProductosAdmin() {
                 </div>
             </div>
 
-            {/* Header Moderno */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700 shadow-lg text-white">
-                <div className="max-w-7xl mx-auto px-6 py-8">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div className="flex items-start gap-4">
+            {/* Header Moderno Responsive */}
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700 shadow-lg text-white sticky top-0 z-30">
+                <div className="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-8">
+                    <div className="flex justify-between items-center gap-4">
+                        <div className="flex items-center gap-3 md:gap-4">
                             <Link
                                 href="/admin/dashboard"
-                                className="mt-1 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors backdrop-blur-sm"
+                                className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors backdrop-blur-sm shrink-0"
                             >
-                                <ArrowLeft size={20} className="text-orange-400" />
+                                <ArrowLeft size={18} className="text-orange-400" />
                             </Link>
                             <div>
-                                <h1 className="text-3xl font-bold flex items-center gap-3">
-                                    Gestión de Productos
-                                    <span className="text-xs bg-orange-500/20 text-orange-400 px-3 py-1 rounded-full border border-orange-500/30">
-                                        {productos.length} total
+                                <h1 className="text-lg md:text-3xl font-bold flex items-center gap-2 md:gap-3 leading-none">
+                                    Productos
+                                    <span className="text-[10px] md:text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full border border-orange-500/30">
+                                        {productos.length}
                                     </span>
                                 </h1>
-                                <p className="text-slate-400 mt-2 flex items-center gap-2">
-                                    <span className="opacity-75">Admin / Productos</span>
-                                </p>
                             </div>
                         </div>
+
                         <button
                             onClick={() => openModal()}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl transition-all font-bold shadow-lg hover:shadow-orange-500/25 group"
+                            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 md:px-6 md:py-3 rounded-lg md:rounded-xl transition-all font-bold shadow-lg hover:shadow-orange-500/25 group shrink-0"
                         >
-                            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-                            Nuevo Producto
+                            <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+                            <span className="hidden md:inline">Nuevo Producto</span>
+                            <span className="md:hidden text-xs">Nuevo</span>
                         </button>
                     </div>
 
                     {/* Barra de Búsqueda Integrada */}
-                    <div className="mt-8 max-w-2xl px-1">
+                    <div className="mt-4 md:mt-8 max-w-2xl">
                         <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                             <input
                                 type="text"
-                                placeholder="Buscar productos por nombre, categoría..."
+                                placeholder="Buscar..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/10 rounded-xl focus:bg-white/20 focus:border-orange-500/50 outline-none text-white placeholder-slate-400 transition-all backdrop-blur-md"
+                                className="w-full pl-10 pr-4 py-2.5 md:py-4 bg-white/10 border border-white/10 rounded-xl focus:bg-white/20 focus:border-orange-500/50 outline-none text-white placeholder-slate-400 transition-all backdrop-blur-md text-sm md:text-base"
                             />
                         </div>
                     </div>
@@ -394,7 +458,10 @@ export default function ProductosAdmin() {
                                 </div>
 
                                 <div className="flex items-end justify-between mb-4">
-                                    <p className="text-2xl font-bold text-slate-900">${producto.precio}</p>
+                                    {/* Precio puede estar oculto o mostrarse como 'Consultar' en modo mayorista */}
+                                    <p className="text-lg font-bold text-slate-900">
+                                        Mayorista
+                                    </p>
                                     <div className="flex -space-x-2">
                                         {producto.colores?.slice(0, 3).map((color, idx) => (
                                             <div
@@ -457,10 +524,10 @@ export default function ProductosAdmin() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-0 md:p-4">
+                    <div className="bg-white w-full h-full md:h-auto md:max-h-[92vh] md:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
                         {/* Header */}
-                        <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-6 py-4 flex justify-between items-center border-b border-slate-600">
+                        <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-slate-600 shrink-0">
                             <div>
                                 <h2 className="text-xl font-bold text-white tracking-tight">
                                     {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
@@ -477,69 +544,88 @@ export default function ProductosAdmin() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(92vh-80px)]">
-                            <div className="p-6">
-                                {/* Grid de 2 columnas */}
-                                <div className="grid grid-cols-2 gap-6">
-                                    {/* Columna Izquierda */}
-                                    <div className="space-y-4">
-                                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                                <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                                                Información Básica
-                                            </h3>
+                        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 max-h-[calc(100vh-130px)] md:max-h-[calc(92vh-80px)] p-4 md:p-6">
+                            {/* Grid de 2 columnas */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Columna Izquierda */}
+                                <div className="space-y-4">
+                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+                                            Información Básica
+                                        </h3>
 
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre del Producto</label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.nombre}
-                                                        onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
-                                                        placeholder="Ej: Zapato Deportivo Nike Air"
-                                                        required
-                                                    />
-                                                </div>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre del Producto</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.nombre}
+                                                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                    placeholder="Ej: Zapato Deportivo Nike Air"
+                                                    required
+                                                />
+                                            </div>
 
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Descripción</label>
-                                                    <textarea
-                                                        value={formData.descripcion}
-                                                        onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all resize-none"
-                                                        rows={4}
-                                                        placeholder="Describe las características principales del producto..."
-                                                    />
-                                                </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Descripción</label>
+                                                <textarea
+                                                    value={formData.descripcion}
+                                                    onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
+                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all resize-none"
+                                                    rows={4}
+                                                    placeholder="Describe las características principales del producto..."
+                                                />
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                                <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                                                Precio y Categoría
-                                            </h3>
+                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+                                            Configuración de Venta por Mayor
+                                        </h3>
 
-                                            <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Curva de Tallas</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.tallas}
+                                                    onChange={(e) => setFormData({ ...formData, tallas: e.target.value })}
+                                                    placeholder="Ej: 35-40 (2/3/3/2/1/1)"
+                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                />
+                                                <p className="text-[10px] text-slate-500 mt-1">Especifique la distribución de tallas en el bulto.</p>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Precio Unitario</label>
-                                                    <div className="relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium">$</span>
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            value={formData.precio}
-                                                            onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
-                                                            className="w-full pl-7 pr-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
-                                                            placeholder="0.00"
-                                                            required
-                                                        />
-                                                    </div>
+                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Pares por Bulto</label>
+                                                    <select
+                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            if (!val) return;
+                                                            // Añadir al inicio de la descripción de forma inteligente
+                                                            const prefix = `[Bulto de ${val} pares]`;
+                                                            if (!formData.descripcion.includes('[Bulto de')) {
+                                                                setFormData(prev => ({ ...prev, descripcion: `${prefix} ${prev.descripcion}` }));
+                                                            }
+                                                        }}
+                                                    >
+                                                        <option value="">Seleccionar...</option>
+                                                        <option value="12">12 Pares (Docena)</option>
+                                                        <option value="6">6 Pares (Media Docena)</option>
+                                                        <option value="18">18 Pares</option>
+                                                        <option value="24">24 Pares (Cajón)</option>
+                                                        <option value="30">30 Pares</option>
+                                                    </select>
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Categoría</label>
+                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Categoría *</label>
                                                     <select
                                                         value={formData.categoria}
                                                         onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
@@ -547,233 +633,208 @@ export default function ProductosAdmin() {
                                                         required
                                                     >
                                                         <option value="">Seleccionar...</option>
-                                                        <option value="deportivo">Deportivos</option>
-                                                        <option value="formales">Formales</option>
-                                                        <option value="botas">Botas</option>
-                                                        <option value="sandalias">Sandalias</option>
-                                                        <option value="casuales">Casuales</option>
+                                                        <option value="Deportivo">Deportivo</option>
+                                                        <option value="Casual">Casual</option>
+                                                        <option value="Semicasual">Semicasual</option>
+                                                        <option value="Tenis">Tenis</option>
                                                     </select>
                                                 </div>
                                             </div>
 
-                                            {/* Nuevo Selector de Origen */}
+                                            {/* Subcategoría (Nuevo) */}
+                                            <div className="mt-4">
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                                                    Subcategoría <span className="text-slate-400 font-normal">(Opcional)</span>
+                                                </label>
+                                                <select
+                                                    value={(formData as any).subcategoria || ''}
+                                                    onChange={(e) => setFormData({ ...formData, subcategoria: e.target.value } as any)}
+                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                >
+                                                    <option value="">Sin subcategoría</option>
+                                                    <option value="Turf o Trilla">Turf o Trilla</option>
+                                                    <option value="Chutera">Chutera</option>
+                                                    <option value="Salonera">Salonera</option>
+                                                </select>
+                                                <p className="text-[10px] text-slate-500 mt-1">Para calzado deportivo específico</p>
+                                            </div>
+
+                                            {/* Selector de Marca (Reemplaza Origen) */}
                                             <div className="mt-4 pt-4 border-t border-slate-200">
-                                                <label className="block text-xs font-semibold text-slate-600 mb-2">Origen / Calidad</label>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {[
-                                                        { value: 'Nacional', flag: '🇧🇴', label: 'Nacional' },
-                                                        { value: 'Brazilero', flag: '🇧🇷', label: 'Brazilero' },
-                                                        { value: 'Peruano', flag: '🇵🇪', label: 'Peruano' }
-                                                    ].map((opt) => (
+                                                <label className="block text-xs font-semibold text-slate-600 mb-2">Marca</label>
+                                                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                                    {marcasList.map((m) => (
                                                         <button
-                                                            key={opt.value}
+                                                            key={m.nombre}
                                                             type="button"
-                                                            onClick={() => setFormData({ ...formData, origen: opt.value })}
-                                                            className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${formData.origen === opt.value
-                                                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-2 ring-orange-100'
+                                                            onClick={() => setFormData({ ...formData, origen: m.nombre })}
+                                                            className={`flex items-center justify-center p-2 rounded-lg border text-xs font-bold uppercase transition-all ${formData.origen === m.nombre
+                                                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-200'
                                                                 : 'border-slate-200 bg-white hover:border-slate-300 text-slate-500 hover:text-slate-700'
                                                                 }`}
                                                         >
-                                                            <span className="text-2xl mb-1 filter drop-shadow-sm">{opt.flag}</span>
-                                                            <span className="text-xs font-bold uppercase tracking-wide">{opt.label}</span>
+                                                            {m.nombre}
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
 
-                                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                                <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                                                Variantes
-                                            </h3>
+                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+                                            Variantes de Color con Imágenes
+                                        </h3>
 
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Tallas Disponibles</label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.tallas}
-                                                        onChange={(e) => setFormData({ ...formData, tallas: e.target.value })}
-                                                        placeholder="35, 36, 37, 38, 39, 40"
-                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
-                                                    />
-                                                    <p className="text-xs text-slate-500 mt-1">Separa las tallas con comas</p>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-2">Colores Disponibles</label>
-
-                                                    {/* Paleta de Colores Predefinida */}
-                                                    <div className="flex flex-wrap gap-2 mb-3">
-                                                        {[
-                                                            { hex: '#000000', name: 'Negro' },
-                                                            { hex: '#FFFFFF', name: 'Blanco' },
-                                                            { hex: '#5D4037', name: 'Café' },
-                                                            { hex: '#1E40AF', name: 'Azul' },
-                                                            { hex: '#DC2626', name: 'Rojo' },
-                                                            { hex: '#F59E0B', name: 'Mostaza' },
-                                                            { hex: '#E5E7EB', name: 'Gris' },
-                                                            { hex: '#D1D5DB', name: 'Plata' },
-                                                            { hex: '#FEF3C7', name: 'Beige' },
-                                                            { hex: '#FCD34D', name: 'Dorado' },
-                                                            { hex: '#EC4899', name: 'Rosa' },
-                                                            { hex: '#10B981', name: 'Verde' }
-                                                        ].map((color) => {
-                                                            const isSelected = formData.colores?.includes(color.hex) || formData.colores?.includes(color.hex + '')
-                                                            // Nota: formData.colores viene como string "hex1, hex2" en el estado inicial, pero lo manejaremos mejor
-                                                            // Vamos a asumir que formData.colores es string separado por comas para mantener compatibilidad con el resto del código
-                                                            const currentColors = formData.colores ? formData.colores.split(',').map(c => c.trim()) : []
-                                                            const selected = currentColors.includes(color.hex)
-
-                                                            return (
-                                                                <button
-                                                                    key={color.hex}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        let newColors = [...currentColors]
-                                                                        if (selected) {
-                                                                            newColors = newColors.filter(c => c !== color.hex)
-                                                                        } else {
-                                                                            newColors.push(color.hex)
-                                                                        }
-                                                                        setFormData({ ...formData, colores: newColors.join(', ') })
-                                                                    }}
-                                                                    className={`w-8 h-8 rounded-full border-2 shadow-sm transition-all relative flex items-center justify-center group/tooltip ${selected
-                                                                        ? 'border-orange-500 ring-2 ring-orange-200 scale-110'
-                                                                        : 'border-slate-200 hover:scale-105'
-                                                                        }`}
-                                                                    style={{ backgroundColor: color.hex }}
-                                                                    title={color.name}
-                                                                >
-                                                                    {selected && (
-                                                                        <div className={`w-2 h-2 rounded-full ${color.hex === '#FFFFFF' ? 'bg-black' : 'bg-white'}`}></div>
-                                                                    )}
-                                                                </button>
-                                                            )
-                                                        })}
+                                        <div className="space-y-3">
+                                            {/* Lista de variantes existentes */}
+                                            {colorVariants.map((variant, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="bg-white p-3 rounded-lg border border-slate-200 flex items-center gap-3 hover:border-orange-300 transition-colors cursor-pointer group"
+                                                    onClick={() => {
+                                                        setEditingVariantIndex(index)
+                                                        setShowVariantModal(true)
+                                                    }}
+                                                >
+                                                    {/* Preview de imagen */}
+                                                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0">
+                                                        {variant.imageFile ? (
+                                                            <img
+                                                                src={URL.createObjectURL(variant.imageFile)}
+                                                                alt={variant.nombre}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : variant.imagen ? (
+                                                            <img
+                                                                src={variant.imagen}
+                                                                alt={variant.nombre}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full bg-slate-100 flex items-center justify-center">
+                                                                <ImageIcon size={20} className="text-slate-400" />
+                                                            </div>
+                                                        )}
                                                     </div>
 
-                                                    {/* Input Manual para colores extra */}
-                                                    <div className="flex gap-2">
-                                                        <input
-                                                            type="text"
-                                                            value={formData.colores}
-                                                            onChange={(e) => setFormData({ ...formData, colores: e.target.value })}
-                                                            placeholder="Ej: #123456, #ABCDEF"
-                                                            className="flex-1 px-3 py-2 text-xs text-slate-900 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white"
-                                                        />
+                                                    {/* Info del color */}
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <div
+                                                                className="w-5 h-5 rounded-full border-2 border-white shadow-sm"
+                                                                style={{ backgroundColor: variant.color }}
+                                                            />
+                                                            <span className="font-bold text-sm text-slate-700">{variant.nombre}</span>
+                                                        </div>
+                                                        <p className="text-xs text-slate-400 mt-0.5">{variant.color}</p>
                                                     </div>
-                                                    <p className="text-[10px] text-slate-400 mt-1">Selecciona de la lista o escribe los códigos hex manualmente.</p>
-                                                </div>
 
-                                                <hr className="border-slate-200 my-2" />
-                                            </div>
+                                                    {/* Botón editar (visible al hover) */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setEditingVariantIndex(index)
+                                                            setShowVariantModal(true)
+                                                        }}
+                                                        className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                    >
+                                                        <Edit size={18} />
+                                                    </button>
+
+                                                    {/* Botón eliminar */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setColorVariants(colorVariants.filter((_, i) => i !== index))
+                                                        }}
+                                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    >
+                                                        <X size={18} />
+                                                    </button>
+                                                </div>
+                                            ))}
+
+                                            {/* Botón para agregar nueva variante */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    // Agregar una variante vacía
+                                                    setColorVariants([...colorVariants, {
+                                                        color: '#000000',
+                                                        nombre: 'Nuevo Color',
+                                                        imagen: ''
+                                                    }])
+                                                }}
+                                                className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50/50 transition-all flex items-center justify-center gap-2 font-medium text-sm"
+                                            >
+                                                <Plus size={18} />
+                                                Agregar Variante de Color
+                                            </button>
+
+                                            <p className="text-[10px] text-slate-400 mt-2">
+                                                Cada color puede tener su propia imagen. Al hacer clic en un color en el catálogo, se mostrará su imagen correspondiente.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Columna Derecha */}
+                                <div className="space-y-4">
+                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+                                            Etiquetas de Producto
+                                        </h3>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            {['nuevo', 'mas_vendido', 'oferta'].map(tag => (
+                                                <button
+                                                    key={tag}
+                                                    type="button"
+                                                    onClick={() => toggleEtiqueta(tag)}
+                                                    className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all uppercase ${formData.etiquetas.includes(tag)
+                                                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                                                        : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-orange-400 hover:text-orange-600'
+                                                        }`}
+                                                >
+                                                    {tag.replace('_', ' ')}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
 
-                                    {/* Columna Derecha */}
-                                    <div className="space-y-4">
-                                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                                <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                                                Etiquetas de Producto
-                                            </h3>
+                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+                                            Estado del Producto
+                                        </h3>
 
-                                            <div className="flex flex-wrap gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleEtiqueta('nuevo')}
-                                                    className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${formData.etiquetas.includes('nuevo')
-                                                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
-                                                        : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-orange-400 hover:text-orange-600'
-                                                        }`}
-                                                >
-                                                    Nuevo
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleEtiqueta('mas_vendido')}
-                                                    className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${formData.etiquetas.includes('mas_vendido')
-                                                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
-                                                        : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-orange-400 hover:text-orange-600'
-                                                        }`}
-                                                >
-                                                    Más Vendido
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleEtiqueta('oferta')}
-                                                    className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${formData.etiquetas.includes('oferta')
-                                                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
-                                                        : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-orange-400 hover:text-orange-600'
-                                                        }`}
-                                                >
-                                                    Oferta
-                                                </button>
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <div className="relative">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.disponible}
+                                                    onChange={(e) => setFormData({ ...formData, disponible: e.target.checked })}
+                                                    className="sr-only peer"
+                                                />
+                                                <div className="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-orange-500 transition-colors"></div>
+                                                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
                                             </div>
-                                        </div>
-
-                                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                                <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                                                Imágenes del Producto
-                                            </h3>
-
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Imagen Principal</label>
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all file:mr-3 file:py-1.5 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
-                                                    />
-                                                    <p className="text-xs text-slate-500 mt-1">Formato: JPG, PNG (máx. 5MB)</p>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Imagen Hover (Opcional)</label>
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*"
-                                                        onChange={(e) => setImageHoverFile(e.target.files?.[0] || null)}
-                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all file:mr-3 file:py-1.5 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
-                                                    />
-                                                    <p className="text-xs text-slate-500 mt-1">Se muestra al pasar el cursor sobre el producto</p>
-                                                </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-700">Producto Disponible</p>
+                                                <p className="text-xs text-slate-500">El producto estará visible en la tienda</p>
                                             </div>
-                                        </div>
-
-                                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                                                <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                                                Estado del Producto
-                                            </h3>
-
-                                            <label className="flex items-center gap-3 cursor-pointer group">
-                                                <div className="relative">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={formData.disponible}
-                                                        onChange={(e) => setFormData({ ...formData, disponible: e.target.checked })}
-                                                        className="sr-only peer"
-                                                    />
-                                                    <div className="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-orange-500 transition-colors"></div>
-                                                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-semibold text-slate-700">Producto Disponible</p>
-                                                    <p className="text-xs text-slate-500">El producto estará visible en la tienda</p>
-                                                </div>
-                                            </label>
-                                        </div>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Footer con botones */}
-                            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex gap-3">
+                            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-4 py-3 md:px-6 md:py-4 flex gap-3 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                                 <button
                                     type="button"
                                     onClick={closeModal}
@@ -789,6 +850,166 @@ export default function ProductosAdmin() {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Edición de Variante de Color */}
+            {showVariantModal && editingVariantIndex !== null && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-white">Editar Variante de Color</h2>
+                            <button
+                                onClick={() => setShowVariantModal(false)}
+                                className="text-white/80 hover:text-white transition-colors"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-4">
+                            {/* Selector de Color */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Color</label>
+                                <div className="grid grid-cols-6 gap-2 mb-3">
+                                    {[
+                                        { hex: '#000000', name: 'Negro' },
+                                        { hex: '#FFFFFF', name: 'Blanco' },
+                                        { hex: '#5D4037', name: 'Café' },
+                                        { hex: '#1E40AF', name: 'Azul' },
+                                        { hex: '#DC2626', name: 'Rojo' },
+                                        { hex: '#F59E0B', name: 'Mostaza' },
+                                        { hex: '#E5E7EB', name: 'Gris' },
+                                        { hex: '#10B981', name: 'Verde' },
+                                        { hex: '#EC4899', name: 'Rosa' },
+                                        { hex: '#FCD34D', name: 'Dorado' },
+                                        { hex: '#8B4513', name: 'Marrón' },
+                                        { hex: '#4B5563', name: 'Plomo' }
+                                    ].map((c) => (
+                                        <button
+                                            key={c.hex}
+                                            type="button"
+                                            onClick={() => {
+                                                const updated = [...colorVariants]
+                                                updated[editingVariantIndex] = {
+                                                    ...updated[editingVariantIndex],
+                                                    color: c.hex,
+                                                    nombre: c.name
+                                                }
+                                                setColorVariants(updated)
+                                            }}
+                                            className={`w-10 h-10 rounded-full border-2 transition-all ${colorVariants[editingVariantIndex].color === c.hex
+                                                ? 'border-orange-500 ring-2 ring-orange-200 scale-110'
+                                                : 'border-slate-200 hover:scale-105'
+                                                }`}
+                                            style={{ backgroundColor: c.hex }}
+                                            title={c.name}
+                                        />
+                                    ))}
+                                </div>
+                                <input
+                                    type="text"
+                                    value={colorVariants[editingVariantIndex].color}
+                                    onChange={(e) => {
+                                        const updated = [...colorVariants]
+                                        updated[editingVariantIndex].color = e.target.value
+                                        setColorVariants(updated)
+                                    }}
+                                    placeholder="#000000"
+                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                                />
+                            </div>
+
+                            {/* Nombre del Color */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Nombre del Color</label>
+                                <input
+                                    type="text"
+                                    value={colorVariants[editingVariantIndex].nombre}
+                                    onChange={(e) => {
+                                        const updated = [...colorVariants]
+                                        updated[editingVariantIndex].nombre = e.target.value
+                                        setColorVariants(updated)
+                                    }}
+                                    placeholder="Ej: Negro, Blanco, Azul"
+                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+                                />
+                            </div>
+
+                            {/* Subir Imagen */}
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 mb-2">Imagen del Zapato en este Color</label>
+                                <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-orange-400 transition-colors">
+                                    {colorVariants[editingVariantIndex].imageFile || colorVariants[editingVariantIndex].imagen ? (
+                                        <div className="space-y-3">
+                                            <img
+                                                src={
+                                                    colorVariants[editingVariantIndex].imageFile
+                                                        ? URL.createObjectURL(colorVariants[editingVariantIndex].imageFile!)
+                                                        : colorVariants[editingVariantIndex].imagen
+                                                }
+                                                alt="Preview"
+                                                className="w-32 h-32 object-cover mx-auto rounded-lg"
+                                            />
+                                            <label className="inline-block px-4 py-2 bg-orange-500 text-white rounded-lg cursor-pointer hover:bg-orange-600 transition-colors text-sm font-medium">
+                                                Cambiar Imagen
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0]
+                                                        if (file) {
+                                                            const updated = [...colorVariants]
+                                                            updated[editingVariantIndex].imageFile = file
+                                                            setColorVariants(updated)
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                    ) : (
+                                        <label className="cursor-pointer block">
+                                            <Upload className="mx-auto text-slate-400 mb-2" size={32} />
+                                            <p className="text-sm text-slate-600 font-medium">Haz clic para subir imagen</p>
+                                            <p className="text-xs text-slate-400 mt-1">JPG, PNG (máx. 5MB)</p>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0]
+                                                    if (file) {
+                                                        const updated = [...colorVariants]
+                                                        updated[editingVariantIndex].imageFile = file
+                                                        setColorVariants(updated)
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 bg-slate-50 flex gap-3">
+                            <button
+                                onClick={() => setShowVariantModal(false)}
+                                className="flex-1 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+                            >
+                                Cerrar
+                            </button>
+                            <button
+                                onClick={() => setShowVariantModal(false)}
+                                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                            >
+                                Guardar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

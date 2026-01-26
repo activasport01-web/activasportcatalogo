@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+
 import CatalogView from '@/components/CatalogView'
 
 export const revalidate = 0
@@ -34,7 +33,7 @@ export default async function CategoriaPage({ params }: Props) {
 
     return (
         <main className="min-h-screen bg-slate-50">
-            <Navbar />
+
 
             {/* Header de Categoría */}
             <div className="bg-white border-b border-slate-200">
@@ -54,7 +53,7 @@ export default async function CategoriaPage({ params }: Props) {
             {/* La vista recibe SOLO los productos de esta categoría */}
             <CatalogView initialProducts={zapatos || []} />
 
-            <Footer />
+
         </main>
     )
 }

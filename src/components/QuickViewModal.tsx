@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, ShoppingBag, Check, ArrowRight } from 'lucide-react'
+import { X, ShoppingBag, Check, ArrowRight, Info } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import Link from 'next/link'
 
@@ -12,17 +12,22 @@ interface QuickViewProps {
 }
 
 export default function QuickViewModal({ producto, isOpen, onClose }: QuickViewProps) {
-    const [selectedCurva, setSelectedCurva] = useState<string>('')
-    const [selectedColor, setSelectedColor] = useState<string>('')
-    const [cantidadPares, setCantidadPares] = useState<6 | 12>(12) // Default docena
+    const [selectedImage, setSelectedImage] = useState('')
+    const [cantidadPares, setCantidadPares] = useState<6 | 12>(12)
     const { addToCart } = useCart()
     const [isAdded, setIsAdded] = useState(false)
 
-    // Resetear estados cuando cambia el producto
+    // Lógica de Tallas (Igual a ProductView)
+    const tipoCurva = producto?.tallas && producto.tallas.length > 2
+        ? producto.tallas
+        : (producto?.categoria === 'nino' || producto?.categoria === 'niño' || producto?.categoria === 'infantil')
+            ? 'Niño (27-32)'
+            : 'Adulto (38-43)'
+
+    // Resetear estados cuando abre
     useEffect(() => {
-        if (isOpen) {
-            setSelectedCurva('')
-            setSelectedColor('')
+        if (isOpen && producto) {
+            setSelectedImage(producto.url_imagen)
             setCantidadPares(12)
             setIsAdded(false)
         }
@@ -30,174 +35,125 @@ export default function QuickViewModal({ producto, isOpen, onClose }: QuickViewP
 
     if (!isOpen || !producto) return null
 
-    // Lógica básica igual a ProductView
-    const curvas = [
-        { label: 'Niño', range: '27-32', value: 'Niño (27-32)' },
-        { label: 'Juvenil', range: '32-37', value: 'Juvenil (32-37)' },
-        { label: 'Adulto', range: '38-43', value: 'Adulto (38-43)' }
-    ]
+    // Manejo de Colores (Nuevo formato)
+    const coloresDisponibles = producto.colores && producto.colores.length > 0 ? producto.colores : []
+
+    // Helpers de color
+    const getColorImage = (colorData: any) => (typeof colorData === 'object' && colorData.imagen) ? colorData.imagen : producto.url_imagen
+    const getColorHex = (colorData: any) => (typeof colorData === 'object' && colorData.color) ? colorData.color : colorData
+    const getColorName = (colorData: any) => (typeof colorData === 'object' && colorData.nombre) ? colorData.nombre : 'Color'
 
     const handleAddToCart = () => {
-        if (!selectedCurva || !selectedColor) return
-
         addToCart({
             id_producto: producto.id,
             nombre: producto.nombre,
             precio_unitario: producto.precio,
-            imagen: producto.url_imagen,
-            tipo_curva: selectedCurva as any,
+            imagen: selectedImage || producto.url_imagen,
+            tipo_curva: tipoCurva,
             cantidad_pares: cantidadPares,
-            color: selectedColor,
+            color: 'Colores Variados',
+            marca: producto.marca,
             total_item: producto.precio * cantidadPares
         })
 
         setIsAdded(true)
-        setTimeout(() => {
-            onClose()
-        }, 1500)
+        setTimeout(() => onClose(), 1500)
     }
-
-    const coloresDisponibles = producto.colores && producto.colores.length > 0
-        ? producto.colores
-        : ['#000000', '#FFFFFF', '#5D4037', '#1E40AF']
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            {/* Backdrop con blur */}
-            <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-                onClick={onClose}
-            ></div>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
-            {/* Modal Content */}
             <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden relative animate-scale-up flex flex-col md:flex-row max-h-[90vh]">
 
-                {/* Botón Cerrar */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 z-10 bg-white/80 p-2 rounded-full hover:bg-slate-100 transition-colors"
-                >
+                <button onClick={onClose} className="absolute top-4 right-4 z-10 bg-white/80 p-2 rounded-full hover:bg-slate-100 transition-colors">
                     <X size={24} className="text-slate-500" />
                 </button>
 
-                {/* Columna Izquierda: Imagen */}
+                {/* Imagen Principal */}
                 <div className="w-full md:w-1/2 bg-slate-50 relative flex items-center justify-center p-8">
                     <img
-                        src={producto.url_imagen}
+                        src={selectedImage || producto.url_imagen}
                         alt={producto.nombre}
                         className="w-full h-full object-contain mix-blend-multiply max-h-[300px] md:max-h-[400px]"
                     />
-                    {producto.origen && producto.origen !== 'Nacional' && (
-                        <div className="absolute top-6 left-6 flex items-center gap-2 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full shadow-sm">
-                            <span className="text-xl">{producto.origen === 'Brazilero' ? '🇧🇷' : '🇵🇪'}</span>
-                            <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                                {producto.origen}
-                            </span>
+                    {producto.etiquetas?.includes('nuevo') && (
+                        <div className="absolute top-6 left-6">
+                            <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg tracking-wider">NUEVO</span>
                         </div>
                     )}
                 </div>
 
-                {/* Columna Derecha: Info y Acciones */}
-                <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col overflow-y-auto">
-                    <div className="mb-1">
-                        <span className="text-xs font-bold text-orange-500 uppercase tracking-wider">{producto.categoria}</span>
+                {/* Panel Derecho */}
+                <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col overflow-y-auto bg-white">
+                    <div className="mb-1 flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{producto.categoria}</span>
+                        {producto.marca && <span className="text-xs font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2 py-1 rounded">{producto.marca}</span>}
                     </div>
+
                     <h2 className="text-2xl font-black text-slate-900 mb-2 leading-tight">{producto.nombre}</h2>
-                    <p className="text-3xl font-black text-slate-900 mb-6">
-                        Bs {producto.precio}
-                        <span className="text-sm font-normal text-slate-400 ml-1">/ par</span>
-                    </p>
 
-                    {/* Selector Rápido */}
-                    <div className="space-y-5 mb-8">
-                        {/* 1. Curva */}
-                        <div>
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-2">1. Elige Curva</span>
+                    {/* Detalles compactos */}
+                    <div className="flex flex-wrap gap-2 mb-6">
+                        <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg">
+                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Tallas</span>
+                            <span className="text-sm font-bold text-slate-700">{tipoCurva}</span>
+                        </div>
+                        {producto.subcategoria && (
+                            <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-lg">
+                                <span className="text-[10px] text-slate-400 uppercase block font-bold">Tipo</span>
+                                <span className="text-sm font-bold text-slate-700 capitalize">{producto.subcategoria}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Selector de Colores (Solo visualización/cambio de imagen) */}
+                    {coloresDisponibles.length > 0 && (
+                        <div className="mb-6">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-3 flex items-center gap-2">
+                                <Info size={12} /> Colores Disponibles
+                            </span>
                             <div className="flex flex-wrap gap-2">
-                                {curvas.map(c => (
-                                    <button
-                                        key={c.value}
-                                        onClick={() => setSelectedCurva(c.value)}
-                                        className={`px-3 py-2 rounded-lg text-xs font-bold border transition-all ${selectedCurva === c.value
-                                                ? 'border-orange-500 bg-orange-50 text-orange-700'
-                                                : 'border-slate-200 text-slate-600 hover:border-orange-300'
-                                            }`}
-                                    >
-                                        {c.label} <span className="opacity-60 font-normal">({c.range})</span>
-                                    </button>
-                                ))}
+                                {coloresDisponibles.map((colorData: any, idx: number) => {
+                                    const img = getColorImage(colorData)
+                                    const hex = getColorHex(colorData)
+                                    const isSel = selectedImage === img
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setSelectedImage(img)}
+                                            className={`w-10 h-10 rounded-full border-2 shadow-sm relative transition-all ${isSel ? 'border-orange-500 scale-110 ring-2 ring-orange-100' : 'border-slate-200 hover:scale-105'}`}
+                                            title={getColorName(colorData)}
+                                            style={{ backgroundColor: hex }}
+                                        />
+                                    )
+                                })}
                             </div>
                         </div>
+                    )}
 
-                        {/* 2. Color */}
-                        <div>
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-2">2. Elige Color</span>
-                            <div className="flex flex-wrap gap-2">
-                                {coloresDisponibles.map((hex: string) => (
-                                    <button
-                                        key={hex}
-                                        onClick={() => setSelectedColor(hex)}
-                                        className={`w-8 h-8 rounded-full border-2 shadow-sm transition-all relative flex items-center justify-center ${selectedColor === hex
-                                                ? 'border-orange-500 ring-1 ring-orange-200 scale-110'
-                                                : 'border-slate-200 hover:scale-105'
-                                            }`}
-                                        style={{ backgroundColor: hex }}
-                                        title={hex}
-                                    >
-                                        {selectedColor === hex && (
-                                            <Check size={14} className={hex.toUpperCase() === '#FFFFFF' ? 'text-black' : 'text-white'} />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 3. Cantidad */}
-                        <div className="flex gap-3 p-3 bg-slate-50 rounded-xl">
-                            <button
-                                onClick={() => setCantidadPares(6)}
-                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${cantidadPares === 6 ? 'bg-white shadow text-slate-900' : 'text-slate-400 hover:text-slate-600'
-                                    }`}
-                            >
-                                6 Pares
-                            </button>
-                            <button
-                                onClick={() => setCantidadPares(12)}
-                                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${cantidadPares === 12 ? 'bg-white shadow text-slate-900' : 'text-slate-400 hover:text-slate-600'
-                                    }`}
-                            >
-                                12 Pares
-                            </button>
+                    {/* Selector Cantidad */}
+                    <div className="mb-6">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-3">Cantidad del Paquete</span>
+                        <div className="flex gap-3">
+                            <button onClick={() => setCantidadPares(6)} className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${cantidadPares === 6 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 text-slate-500 hover:border-slate-300'}`}>Media (6)</button>
+                            <button onClick={() => setCantidadPares(12)} className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${cantidadPares === 12 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-slate-100 text-slate-500 hover:border-slate-300'}`}>Docena (12)</button>
                         </div>
                     </div>
 
-                    {/* Acciones */}
                     <div className="mt-auto space-y-3">
                         <button
                             onClick={handleAddToCart}
-                            disabled={!selectedCurva || !selectedColor || isAdded}
-                            className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all ${isAdded
-                                    ? 'bg-green-500 text-white'
-                                    : (!selectedCurva || !selectedColor)
-                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                        : 'bg-slate-900 text-white hover:bg-slate-800 shadow-lg hover:shadow-xl hover:-translate-y-1'
-                                }`}
+                            disabled={isAdded}
+                            className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 ${isAdded ? 'bg-green-600 text-white' : 'bg-slate-900 text-white hover:bg-slate-800'}`}
                         >
-                            {isAdded ? (
-                                <>
-                                    <Check size={20} /> ¡Agregado!
-                                </>
-                            ) : (
-                                <>
-                                    <ShoppingBag size={20} /> Agregar al Pedido
-                                </>
-                            )}
+                            {isAdded ? <><Check size={24} /> ¡Agregado!</> : <><ShoppingBag size={24} /> Agregar al Pedido</>}
                         </button>
 
-                        <Link href={`/producto/${producto.id}`} className="block w-full text-center">
-                            <button className="text-xs font-bold text-slate-500 hover:text-orange-500 flex items-center justify-center gap-1 mx-auto transition-colors">
-                                Ver todos los detalles <ArrowRight size={14} />
-                            </button>
+                        <Link href={`/producto/${producto.id}`} className="block text-center">
+                            <span className="text-xs font-bold text-slate-500 hover:text-orange-600 transition-colors flex items-center justify-center gap-1">
+                                Ver detalles completos <ArrowRight size={14} />
+                            </span>
                         </Link>
                     </div>
                 </div>

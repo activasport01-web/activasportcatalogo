@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+
 import CatalogView from '@/components/CatalogView'
 import { notFound } from 'next/navigation'
 
@@ -45,7 +44,7 @@ export default async function OrigenPage({ params }: Props) {
 
     return (
         <main className="min-h-screen bg-slate-50">
-            <Navbar />
+
 
             {/* Header Específico */}
             <div className="bg-slate-900 border-b border-slate-800 text-white">
@@ -65,7 +64,7 @@ export default async function OrigenPage({ params }: Props) {
             {/* Reutilizamos el CatalogView pero ya vendrá con los productos filtrados */}
             <CatalogView initialProducts={zapatos || []} />
 
-            <Footer />
+
         </main>
     )
 }

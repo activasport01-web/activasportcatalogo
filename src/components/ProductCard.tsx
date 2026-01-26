@@ -90,7 +90,7 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                     <div className={`absolute bottom-4 left-0 right-0 flex justify-center gap-3 transition-all duration-300 ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                         <button
                             onClick={handleQuickView}
-                            className="bg-brand-black text-neon-500 p-3 rounded-full shadow-lg hover:bg-neon-500 hover:text-brand-black transition-colors flex items-center justify-center group/btn border border-neon-500/50"
+                            className="bg-brand-black text-brand-orange p-3 rounded-full shadow-lg hover:bg-brand-orange hover:text-white transition-colors flex items-center justify-center group/btn border border-brand-orange/50"
                             title="Vista Rápida"
                         >
                             <Eye size={20} />
@@ -103,7 +103,7 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                     <div className="mb-2">
                         <span className="text-xs uppercase tracking-wider text-slate-400 font-bold">{zapato.categoria}</span>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-1 leading-tight group-hover:text-neon-600 transition-colors line-clamp-2">
+                    <h3 className="text-lg font-bold text-slate-800 mb-1 leading-tight group-hover:text-brand-orange transition-colors line-clamp-2">
                         {zapato.nombre}
                     </h3>
 
@@ -120,15 +120,6 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                     </div>
 
                     <div className="mt-auto flex items-end justify-between border-t border-slate-50 pt-4">
-                        <div className="flex flex-col">
-                            <span className="text-xs text-slate-400 font-medium line-through">
-                                {zapato.precio > 200 ? `Bs ${Math.round(zapato.precio * 1.2)}` : ''}
-                            </span>
-                            <span className="text-xl font-black text-slate-900">
-                                Bs {zapato.precio}
-                            </span>
-                        </div>
-
                         {/* Botón Detalles Real */}
                         <div className="flex gap-2">
                             <button
@@ -140,7 +131,7 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                             </button>
 
                             <span
-                                className={`p-3 rounded-full bg-brand-black text-neon-500 border border-neon-500 shadow-lg transition-transform duration-300 flex items-center justify-center ${isHovered ? 'scale-110 rotate-3 bg-neon-500 text-brand-black' : ''}`}
+                                className={`p-3 rounded-full bg-brand-black text-brand-orange border border-brand-orange shadow-lg transition-transform duration-300 flex items-center justify-center ${isHovered ? 'scale-110 rotate-3 bg-brand-orange text-white' : ''}`}
                             >
                                 <ShoppingBag size={20} />
                             </span>

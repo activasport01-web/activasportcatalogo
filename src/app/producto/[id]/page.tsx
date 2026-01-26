@@ -1,9 +1,8 @@
 import { Metadata } from 'next'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import ProductView from '@/components/ProductView'
-import Footer from '@/components/Footer'
+
 import { notFound } from 'next/navigation'
+import ProductView from '@/components/ProductView'
 
 export const revalidate = 0
 
@@ -30,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     const origen = producto.origen && producto.origen !== 'Nacional' ? `(${producto.origen})` : ''
-    const titulo = `${producto.nombre} ${origen} - Bs ${producto.precio}`
+    const titulo = `${producto.nombre} ${origen} - Catálogo Mayorista`
     const descripcion = `Compra mayorista: ${producto.nombre}. ${producto.descripcion?.slice(0, 100) || 'Calidad garantizada'}...`
 
     return {
@@ -74,13 +73,13 @@ export default async function ProductoPage({ params }: Props) {
 
     return (
         <main className="bg-slate-50 min-h-screen flex flex-col">
-            <Navbar />
+
 
             <div className="flex-grow pt-28 pb-12">
                 <ProductView producto={producto} />
             </div>
 
-            <Footer />
+
         </main>
     )
 }

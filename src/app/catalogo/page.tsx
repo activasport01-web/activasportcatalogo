@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+
 import CatalogView from '@/components/CatalogView'
 
 export const revalidate = 0 // Datos frescos siempre
@@ -16,7 +15,7 @@ export default async function CatalogoPage() {
 
     return (
         <main className="min-h-screen bg-slate-50">
-            <Navbar />
+
 
             {/* Header del Catálogo (Estático) */}
             <div className="bg-white border-b border-slate-200">
@@ -33,7 +32,7 @@ export default async function CatalogoPage() {
             {/* Vista Interactiva (Filtros + Grid) */}
             <CatalogView initialProducts={zapatos || []} />
 
-            <Footer />
+
         </main>
     )
 }

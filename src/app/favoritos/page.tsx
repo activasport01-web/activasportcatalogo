@@ -1,7 +1,6 @@
 'use client'
 import { useFavorites } from '@/context/FavoritesContext'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+
 import Link from 'next/link'
 import { Heart, ShoppingBag, ArrowRight } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
@@ -15,7 +14,7 @@ export default function Favoritos() {
 
     return (
         <main className="min-h-screen bg-slate-50 flex flex-col">
-            <Navbar />
+
 
             <div className="flex-1 pt-8 pb-12">
                 <div className="max-w-7xl mx-auto px-6">
@@ -68,7 +67,7 @@ export default function Favoritos() {
                 </div>
             </div>
 
-            <Footer />
+
         </main>
     )
 }

@@ -10,6 +10,7 @@ export type CartItem = {
     tipo_curva: 'Niño (27-32)' | 'Juvenil (32-37)' | 'Adulto (38-43)'
     cantidad_pares: 6 | 12 // Media docena o Docena
     color?: string // Nuevo: Color específico del bulto
+    marca?: string // Marca del producto
     total_item: number
 }
 

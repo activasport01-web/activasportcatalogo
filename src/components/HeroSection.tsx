@@ -54,7 +54,7 @@ export default function HeroSection({ slides }: HeroProps) {
                     {/* LADO IZQUIERDO: Texto con transición */}
                     <div className="space-y-8 z-10 animate-fade-in" key={`text-${current}`}>
                         {activeSlide.tag && (
-                            <span className="inline-block text-brand-black font-black tracking-widest uppercase text-xs bg-neon-500 px-4 py-2 rounded-full ring-2 ring-neon-400 animate-pulse border border-brand-black/20">
+                            <span className="inline-block text-white font-black tracking-widest uppercase text-xs bg-brand-orange px-4 py-2 rounded-full ring-2 ring-orange-400 animate-pulse border border-brand-black/20">
                                 {activeSlide.tag}
                             </span>
                         )}
@@ -69,7 +69,7 @@ export default function HeroSection({ slides }: HeroProps) {
 
                         <div className="flex flex-wrap gap-4 pt-4">
                             <Link href={activeSlide.product_link}>
-                                <button className="bg-brand-black hover:bg-neon-500 hover:text-brand-black text-neon-500 font-bold py-4 px-10 rounded-full shadow-xl transition-all transform hover:scale-105 hover:shadow-2xl flex items-center gap-3 group border border-neon-500/50">
+                                <button className="bg-brand-black hover:bg-brand-orange hover:text-white text-brand-orange font-bold py-4 px-10 rounded-full shadow-xl transition-all transform hover:scale-105 hover:shadow-2xl flex items-center gap-3 group border border-brand-orange/50">
                                     Ver Ahora
                                     <ArrowRight className="group-hover:translate-x-1 transition-transform" />
                                 </button>
@@ -85,7 +85,7 @@ export default function HeroSection({ slides }: HeroProps) {
                     {/* LADO DERECHO: Imagen con transición */}
                     <div className="relative h-[400px] md:h-[500px] w-full flex items-center justify-center">
                         {/* Círculo decorativo dinámico */}
-                        <div className={`absolute inset-0 rounded-full blur-3xl opacity-30 scale-110 transition-colors duration-1000 ${current % 2 === 0 ? 'bg-gradient-to-tr from-neon-500 to-camo-300' : 'bg-gradient-to-tr from-brand-black to-neon-600'}`}></div>
+                        <div className={`absolute inset-0 rounded-full blur-3xl opacity-30 scale-110 transition-colors duration-1000 ${current % 2 === 0 ? 'bg-gradient-to-tr from-brand-orange to-camo-300' : 'bg-gradient-to-tr from-brand-black to-orange-600'}`}></div>
 
                         {/* Imagen del producto con bordes suaves */}
                         <div className="relative z-10 w-full h-full flex items-center justify-center p-6" key={`img-${current}`}>
@@ -127,7 +127,7 @@ export default function HeroSection({ slides }: HeroProps) {
                         key={idx}
                         onClick={() => setCurrent(idx)}
                         className={`w-3 h-3 rounded-full transition-all duration-300 ${idx === current
-                            ? 'bg-brand-black w-8 border border-neon-500'
+                            ? 'bg-brand-black w-8 border border-brand-orange'
                             : 'bg-camo-300 hover:bg-camo-800'
                             }`}
                         aria-label={`Ir a diapositiva ${idx + 1}`}

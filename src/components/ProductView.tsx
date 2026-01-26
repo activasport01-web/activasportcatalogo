@@ -1,14 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, MessageCircle, ShieldCheck, Truck, Package, Info, ShoppingBag, Check } from 'lucide-react'
+import { ArrowLeft, MessageCircle, ShieldCheck, Truck, Package, Info, ShoppingBag, Check, ChevronLeft, ChevronRight, Heart } from 'lucide-react'
 import ProductCard from '@/components/ProductCard' // Asegurar import
 import { useCart } from '@/context/CartContext'
+import { useFavorites } from '@/context/FavoritesContext'
 
-const WHATSAPP_NUMBER = '59178303866'
+const WHATSAPP_NUMBER = '59163448209'
 
 interface ProductViewProps {
     producto: any
@@ -18,33 +19,99 @@ interface ProductViewProps {
 export default function ProductView({ producto, productosRelacionados }: ProductViewProps) {
     const router = useRouter()
     const { addToCart } = useCart()
+    const { toggleFavorite, isFavorite } = useFavorites()
 
     // Imagen
     const [selectedImage, setSelectedImage] = useState(producto.url_imagen)
 
     // Lógica Mayorista
-    const [tipoCurva, setTipoCurva] = useState<'Niño (27-32)' | 'Juvenil (32-37)' | 'Adulto (38-43)' | null>(() => {
+    // Lógica Mayorista
+    // Lógica Mayorista
+    // Si el administrador definió una curva de tallas específica, usarla. Si no, estimar por categoría.
+    const [tipoCurva] = useState<string>(() => {
+        if (producto.tallas && producto.tallas.length > 2) return producto.tallas
+
+        // Fallback lógica antigua
         if (producto.categoria === 'nino' || producto.categoria === 'niño' || producto.categoria === 'infantil') return 'Niño (27-32)'
-        if (producto.categoria === 'adulto' || producto.categoria === 'varon' || producto.categoria === 'mujer') return 'Adulto (38-43)'
-        return null
+        return 'Adulto (38-43)'
     })
     const [cantidadCajon, setCantidadCajon] = useState<6 | 12>(12)
 
-    // Nuevo: Selección de Color
-    const [selectedColor, setSelectedColor] = useState<string | null>(null)
-
-    // Colores disponibles (si la DB no tiene, usamos un fallback seguro)
+    // Colores disponibles - Soporte para formato nuevo y viejo
+    // Formato nuevo: [{ color: "#000", nombre: "Negro", imagen: "url" }]
+    // Formato viejo: ["#000000", "#FFFFFF"]
     const coloresDisponibles = producto.colores && producto.colores.length > 0
         ? producto.colores
-        : ['#000000', '#FFFFFF', '#5D4037'] // Negro, Blanco, Café por defecto
+        : []
+
+    // Detectar si es formato nuevo (objetos con nombre/imagen) o viejo (strings hex)
+    const isNewFormat = coloresDisponibles.length > 0 &&
+        typeof coloresDisponibles[0] === 'object' &&
+        (coloresDisponibles[0].nombre || coloresDisponibles[0].imagen)
 
     // Función auxiliar para nombres de colores (simple)
-    const getColorName = (hex: string) => {
+    const getColorName = (colorData: any) => {
+        if (typeof colorData === 'object' && colorData.nombre) {
+            return colorData.nombre
+        }
+        const hex = typeof colorData === 'string' ? colorData : colorData?.color || '#000000'
         const names: { [key: string]: string } = {
             '#000000': 'Negro', '#FFFFFF': 'Blanco', '#5D4037': 'Café',
             '#1E40AF': 'Azul', '#DC2626': 'Rojo', '#F59E0B': 'Mostaza'
         }
         return names[hex] || 'Color'
+    }
+
+    // Función para obtener la imagen de un color
+    const getColorImage = (colorData: any) => {
+        if (typeof colorData === 'object' && colorData.imagen) {
+            return colorData.imagen
+        }
+        return producto.url_imagen // Fallback a imagen principal
+    }
+
+    // Función para obtener el hex de un color
+    const getColorHex = (colorData: any) => {
+        if (typeof colorData === 'object' && colorData.color) {
+            return colorData.color
+        }
+        return colorData // Ya es un string hex
+    }
+
+    // Carrusel automático de imágenes
+    const [currentImageIndex, setCurrentImageIndex] = useState(0)
+    const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+
+    // Obtener todas las imágenes disponibles
+    const allImages = coloresDisponibles.length > 0
+        ? coloresDisponibles.map((colorData: any) => getColorImage(colorData))
+        : [producto.url_imagen]
+
+    // Auto-play cada 3 segundos
+    useEffect(() => {
+        if (!isAutoPlaying || allImages.length <= 1) return
+
+        const interval = setInterval(() => {
+            setCurrentImageIndex((prev) => (prev + 1) % allImages.length)
+        }, 3000)
+
+        return () => clearInterval(interval)
+    }, [isAutoPlaying, allImages.length])
+
+    // Actualizar imagen seleccionada cuando cambia el índice
+    useEffect(() => {
+        setSelectedImage(allImages[currentImageIndex])
+    }, [currentImageIndex])
+
+    // Funciones de navegación
+    const nextImage = () => {
+        setIsAutoPlaying(false)
+        setCurrentImageIndex((prev) => (prev + 1) % allImages.length)
+    }
+
+    const prevImage = () => {
+        setIsAutoPlaying(false)
+        setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length)
     }
 
     const handleWhatsAppClick = async () => {
@@ -56,18 +123,17 @@ export default function ProductView({ producto, productosRelacionados }: Product
     }
 
     const handleAddToCart = () => {
-        if (!tipoCurva || !selectedColor) return
-
         const totalItem = producto.precio * cantidadCajon
 
         addToCart({
             id_producto: producto.id,
             nombre: producto.nombre,
             precio_unitario: producto.precio,
-            imagen: producto.url_imagen, // Idealmente cambiaría según el color elegido
-            tipo_curva: tipoCurva,
+            imagen: selectedImage || producto.url_imagen,
+            tipo_curva: tipoCurva as any,
             cantidad_pares: cantidadCajon,
-            color: getColorName(selectedColor) + ` (${selectedColor})`,
+            color: 'Colores Variados',
+            marca: producto.marca,
             total_item: totalItem
         })
 
@@ -100,7 +166,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                 <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
 
-                        {/* Columna Izquierda: Imagen */}
+                        {/* Columna Izquierda: Imagen con Carrusel */}
                         <div className="bg-slate-50 p-6 lg:p-12 flex flex-col items-center justify-center relative group">
                             <div className="relative w-full aspect-square max-w-lg mx-auto">
                                 <img
@@ -108,7 +174,73 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                     alt={producto.nombre}
                                     className="w-full h-full object-contain mix-blend-multiply transition-all duration-500 hover:scale-105 drop-shadow-xl"
                                 />
-                                <div className="absolute top-0 left-0 flex flex-col gap-2">
+
+                                {/* Flechas de navegación (solo si hay múltiples imágenes) */}
+                                {allImages.length > 1 && (
+                                    <>
+                                        {/* Flecha Izquierda */}
+                                        <button
+                                            onClick={prevImage}
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"
+                                            aria-label="Imagen anterior"
+                                        >
+                                            <ChevronLeft size={24} />
+                                        </button>
+
+                                        {/* Flecha Derecha */}
+                                        <button
+                                            onClick={nextImage}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"
+                                            aria-label="Siguiente imagen"
+                                        >
+                                            <ChevronRight size={24} />
+                                        </button>
+
+                                        {/* Indicadores de posición */}
+                                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                                            {allImages.map((_: any, index: number) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => {
+                                                        setIsAutoPlaying(false)
+                                                        setCurrentImageIndex(index)
+                                                    }}
+                                                    className={`w-2 h-2 rounded-full transition-all ${index === currentImageIndex
+                                                        ? 'bg-orange-500 w-6'
+                                                        : 'bg-slate-300 hover:bg-slate-400'
+                                                        }`}
+                                                    aria-label={`Ir a imagen ${index + 1}`}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        {/* Contador de imágenes */}
+                                        <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
+                                            {currentImageIndex + 1} / {allImages.length}
+                                        </div>
+                                    </>
+                                )}
+                                <div className="absolute top-0 right-0 flex flex-col gap-2 p-4 z-20">
+                                    <button
+                                        onClick={() => toggleFavorite({
+                                            id: producto.id,
+                                            nombre: producto.nombre,
+                                            precio: producto.precio,
+                                            url_imagen: producto.url_imagen,
+                                            categoria: producto.categoria || '',
+                                            disponible: producto.disponible ?? true
+                                        })}
+                                        className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${isFavorite(producto.id)
+                                            ? 'bg-red-50 text-red-500 shadow-red-100'
+                                            : 'bg-white text-slate-400 hover:text-red-500'
+                                            }`}
+                                        title={isFavorite(producto.id) ? "Quitar de favoritos" : "Guardar en favoritos"}
+                                    >
+                                        <Heart size={24} className={isFavorite(producto.id) ? "fill-current" : ""} />
+                                    </button>
+                                </div>
+
+                                <div className="absolute top-0 left-0 flex flex-col gap-2 p-4">
                                     {producto.etiquetas?.includes('nuevo') && (
                                         <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg tracking-wider">
                                             NUEVA COLECCIÓN
@@ -135,44 +267,54 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                     {producto.nombre}
                                 </h1>
 
-                                <div className="flex items-center gap-2 mb-6">
-                                    <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                                        Precio Mayorista
-                                    </span>
-                                    <span className="text-3xl font-black text-slate-900">
-                                        Bs {producto.precio}
-                                        <span className="text-sm font-normal text-slate-400 ml-1">/ par</span>
-                                    </span>
+                                {/* Descripción del Producto */}
+                                {producto.descripcion && (
+                                    <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                            <Info size={16} className="text-orange-500" />
+                                            Descripción
+                                        </h3>
+                                        <p className="text-slate-600 text-sm leading-relaxed">
+                                            {producto.descripcion}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Detalles del Producto */}
+                                <div className="mb-6 grid grid-cols-2 gap-3">
+                                    {/* Categoría */}
+                                    {producto.categoria && (
+                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                            <p className="text-xs text-slate-400 font-medium mb-1">Categoría</p>
+                                            <p className="text-sm font-bold text-slate-800 capitalize">{producto.categoria}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Subcategoría */}
+                                    {producto.subcategoria && (
+                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                            <p className="text-xs text-slate-400 font-medium mb-1">Tipo</p>
+                                            <p className="text-sm font-bold text-slate-800 capitalize">{producto.subcategoria}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Marca */}
+                                    {producto.marca && (
+                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                            <p className="text-xs text-slate-400 font-medium mb-1">Marca</p>
+                                            <p className="text-sm font-bold text-orange-600 uppercase">{producto.marca}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Tallas Disponibles */}
+                                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                        <p className="text-xs text-slate-400 font-medium mb-1">Tallas</p>
+                                        <p className="text-sm font-bold text-slate-800">{tipoCurva}</p>
+                                    </div>
                                 </div>
 
-                                {/* Selección 1: Curva */}
-                                <div className="mb-6">
-                                    <h3 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest flex items-center gap-2">
-                                        1. Elige tu Curva (Tallas)
-                                    </h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        {[
-                                            { label: 'Niño', range: '27-32', value: 'Niño (27-32)' },
-                                            { label: 'Juvenil', range: '32-37', value: 'Juvenil (32-37)' },
-                                            { label: 'Adulto', range: '38-43', value: 'Adulto (38-43)' }
-                                        ].map((opcion) => (
-                                            <button
-                                                key={opcion.value}
-                                                onClick={() => setTipoCurva(opcion.value as any)}
-                                                className={`p-3 rounded-xl border-2 text-left transition-all ${tipoCurva === opcion.value
-                                                    ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200'
-                                                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                                                    }`}
-                                            >
-                                                <div className={`font-bold ${tipoCurva === opcion.value ? 'text-orange-700' : 'text-slate-700'}`}>
-                                                    {opcion.label}
-                                                </div>
-                                                <div className="text-xs text-slate-500 font-medium">Tallas {opcion.range}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                    {!tipoCurva && <p className="text-red-500 text-xs mt-1 font-medium animate-pulse">* Requerido</p>}
-                                </div>
+                                {/* Selección 1: Curva (Eliminada por solicitud - Mercadería China viene pre-definida) */}
+                                {/* Se asume curva estándar según categoría para el pedido interno */}
 
                                 {/* Selección 2: Cantidad */}
                                 <div className="mb-6">
@@ -202,73 +344,67 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                     </div>
                                 </div>
 
-                                {/* Selección 3: Color (NUEVO) */}
-                                <div className="mb-8 p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                                    <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase flex items-center justify-between">
-                                        3. Elige el Color del Paquete
-                                        {selectedColor && (
-                                            <span className="text-xs font-normal text-slate-500 normal-case">
-                                                Seleccionado: <strong>{getColorName(selectedColor)}</strong>
-                                            </span>
-                                        )}
-                                    </h3>
+                                {/* Colores Disponibles - Con Imágenes Clickeables */}
+                                {coloresDisponibles && coloresDisponibles.length > 0 && (
+                                    <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                            <Info size={16} className="text-slate-400" />
+                                            Colores disponibles - Haz clic para ver
+                                        </h3>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                                            {coloresDisponibles.map((colorData: any, idx: number) => {
+                                                const imagen = getColorImage(colorData)
+                                                const nombre = getColorName(colorData)
+                                                const hex = getColorHex(colorData)
+                                                const isSelected = selectedImage === imagen
 
-                                    <div className="flex flex-wrap gap-3">
-                                        {coloresDisponibles.map((hex: string) => (
-                                            <button
-                                                key={hex}
-                                                onClick={() => setSelectedColor(hex)}
-                                                className={`w-12 h-12 rounded-full border-2 shadow-sm transition-all relative flex items-center justify-center ${selectedColor === hex
-                                                    ? 'border-orange-500 ring-2 ring-orange-200 scale-110'
-                                                    : 'border-slate-200 hover:scale-105'
-                                                    }`}
-                                                style={{ backgroundColor: hex }}
-                                                title={getColorName(hex)}
-                                            >
-                                                {selectedColor === hex && (
-                                                    <Check size={20} className={hex.toUpperCase() === '#FFFFFF' ? 'text-black' : 'text-white'} />
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    {!selectedColor && (
-                                        <p className="text-slate-400 text-xs mt-3 flex items-center gap-1">
-                                            <Info size={12} />
-                                            Todos los pares del paquete serán de este color.
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => setSelectedImage(imagen)}
+                                                        className={`group relative aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${isSelected
+                                                            ? 'border-orange-500 ring-2 ring-orange-200 shadow-lg'
+                                                            : 'border-slate-200 hover:border-orange-300'
+                                                            }`}
+                                                        title={nombre}
+                                                    >
+                                                        {/* Imagen del zapato */}
+                                                        <img
+                                                            src={imagen}
+                                                            alt={nombre}
+                                                            className="w-full h-full object-cover bg-white"
+                                                        />
+
+                                                        {/* Indicador de color en esquina */}
+                                                        <div
+                                                            className="absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white shadow-md"
+                                                            style={{ backgroundColor: hex }}
+                                                        />
+
+                                                        {/* Overlay de selección */}
+                                                        {isSelected && (
+                                                            <div className="absolute inset-0 bg-orange-500/10 flex items-center justify-center">
+                                                                <div className="bg-orange-500 text-white rounded-full p-1">
+                                                                    <Check size={16} />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Nombre al hacer hover */}
+                                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <p className="text-white text-xs font-bold text-center truncate">{nombre}</p>
+                                                        </div>
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-3 text-center">
+                                            El paquete incluye una mezcla de estos colores
                                         </p>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
 
                                 {/* Resumen del Pedido */}
-                                <div className="bg-slate-900 text-white p-6 rounded-2xl mb-6 shadow-xl">
-                                    <div className="flex justify-between items-center mb-2 text-slate-300 text-xs uppercase tracking-wider font-bold">
-                                        <span>Total estimado</span>
-                                    </div>
-                                    <div className="flex justify-between items-end">
-                                        <div>
-                                            <div className="text-4xl font-black text-white leading-none mb-1">
-                                                Bs {producto.precio * cantidadCajon}
-                                            </div>
-                                            <div className="text-xs text-slate-400">
-                                                ({cantidadCajon} pares x Bs {producto.precio})
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1">
-                                            {tipoCurva ? (
-                                                <span className="text-green-400 text-xs font-bold bg-green-900/50 px-2 py-1 rounded border border-green-700">
-                                                    {tipoCurva}
-                                                </span>
-                                            ) : <span className="text-slate-600 text-xs">Falta Curva</span>}
-
-                                            {selectedColor ? (
-                                                <div className="flex items-center gap-1.5 text-xs font-bold text-white bg-white/10 px-2 py-1 rounded">
-                                                    <div className="w-2 h-2 rounded-full" style={{ background: selectedColor }}></div>
-                                                    {getColorName(selectedColor)}
-                                                </div>
-                                            ) : <span className="text-orange-400 text-xs font-bold animate-pulse">Falta Color</span>}
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
 
                             {/* Botones de Acción */}
@@ -276,8 +412,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                 <button
                                     id="add-btn"
                                     onClick={handleAddToCart}
-                                    disabled={!tipoCurva || !selectedColor}
-                                    className={`w-full py-4 text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${(tipoCurva && selectedColor)
+                                    className={`w-full py-4 text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${true
                                         ? 'bg-orange-500 hover:bg-orange-600 hover:shadow-orange-500/30 hover:translate-y-[-2px]'
                                         : 'bg-slate-300 cursor-not-allowed grayscale'
                                         }`}

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ProductCard from '@/components/ProductCard'
 import QuickViewModal from '@/components/QuickViewModal'
@@ -10,19 +11,13 @@ interface CatalogViewProps {
     initialProducts: any[]
 }
 
-const CATEGORIAS = [
-    { label: 'Adultos', value: 'adulto' },
-    { label: 'Niños', value: 'nino' },
-    { label: 'Deportivos', value: 'deportivo' },
-    { label: 'Botas', value: 'botas' },
-    { label: 'Sandalias', value: 'sandalias' },
-    { label: 'Formales', value: 'formales' },
-    { label: 'Casuales', value: 'casuales' }
-]
-
 export default function CatalogView({ initialProducts }: CatalogViewProps) {
+    const searchParams = useSearchParams()
+
     // Filtros
     const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+    const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([])
+    const [selectedBrands, setSelectedBrands] = useState<string[]>([])
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000])
     const [sortBy, setSortBy] = useState('recientes')
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
@@ -33,7 +28,61 @@ export default function CatalogView({ initialProducts }: CatalogViewProps) {
 
     // Expandir/Colapsar secciones
     const [isCatOpen, setIsCatOpen] = useState(true)
+    const [isSubcatOpen, setIsSubcatOpen] = useState(true)
+    const [isBrandOpen, setIsBrandOpen] = useState(true)
     const [isPriceOpen, setIsPriceOpen] = useState(true)
+
+    // Leer parámetros de URL al cargar y auto-seleccionar categorías
+    useEffect(() => {
+        const marcaParam = searchParams.get('marca')
+
+        if (marcaParam) {
+            setSelectedBrands([marcaParam])
+
+            // Auto-seleccionar categorías de productos con esta marca
+            const productosConMarca = initialProducts.filter(p =>
+                p.marca && p.marca.toLowerCase() === marcaParam.toLowerCase()
+            )
+
+            const categoriasDeProductos = Array.from(new Set(
+                productosConMarca.map(p => p.categoria?.toLowerCase()).filter(Boolean)
+            ))
+
+            setSelectedCategories(categoriasDeProductos as string[])
+
+            // Auto-seleccionar subcategorías también
+            const subcategoriasDeProductos = Array.from(new Set(
+                productosConMarca.map(p => p.subcategoria?.toLowerCase()).filter(Boolean)
+            ))
+
+            if (subcategoriasDeProductos.length > 0) {
+                setSelectedSubcategories(subcategoriasDeProductos as string[])
+            }
+        }
+    }, [searchParams, initialProducts])
+
+    // Generar categorías dinámicamente desde los productos
+    const CATEGORIAS = useMemo(() => {
+        const categoriasUnicas = Array.from(new Set(initialProducts.map(p => p.categoria).filter(Boolean)))
+        return categoriasUnicas.map(cat => ({
+            label: cat.charAt(0).toUpperCase() + cat.slice(1),
+            value: cat.toLowerCase()
+        }))
+    }, [initialProducts])
+
+    // Generar subcategorías dinámicamente
+    const SUBCATEGORIAS = useMemo(() => {
+        const subcategoriasUnicas = Array.from(new Set(initialProducts.map(p => p.subcategoria).filter(Boolean)))
+        return subcategoriasUnicas.map(sub => ({
+            label: sub.charAt(0).toUpperCase() + sub.slice(1),
+            value: sub.toLowerCase()
+        }))
+    }, [initialProducts])
+
+    // Generar marcas disponibles desde TODOS los productos
+    const availableBrands = useMemo(() => {
+        return Array.from(new Set(initialProducts.map(p => p.marca).filter(Boolean))).sort()
+    }, [initialProducts])
 
     // Lógica de Filtrado
     const filteredProducts = useMemo(() => {
@@ -44,10 +93,24 @@ export default function CatalogView({ initialProducts }: CatalogViewProps) {
             result = result.filter(p => selectedCategories.some(cat => p.categoria.toLowerCase().includes(cat.toLowerCase())))
         }
 
-        // 2. Precio
+        // 2. Subcategoría
+        if (selectedSubcategories.length > 0) {
+            result = result.filter(p => p.subcategoria && selectedSubcategories.some(sub => p.subcategoria.toLowerCase().includes(sub.toLowerCase())))
+        }
+
+        // 3. Marca (case-insensitive)
+        if (selectedBrands.length > 0) {
+            result = result.filter(p =>
+                p.marca && selectedBrands.some(brand =>
+                    brand.toLowerCase() === p.marca.toLowerCase()
+                )
+            )
+        }
+
+        // 4. Precio
         result = result.filter(p => p.precio >= priceRange[0] && p.precio <= priceRange[1])
 
-        // 3. Ordenamiento
+        // 5. Ordenamiento
         if (sortBy === 'precio_asc') {
             result.sort((a, b) => a.precio - b.precio)
         } else if (sortBy === 'precio_desc') {
@@ -56,7 +119,7 @@ export default function CatalogView({ initialProducts }: CatalogViewProps) {
         // 'recientes' ya viene ordenado del servidor por fecha descendente
 
         return result
-    }, [initialProducts, selectedCategories, priceRange, sortBy])
+    }, [initialProducts, selectedCategories, selectedSubcategories, selectedBrands, priceRange, sortBy])
 
     const toggleCategory = (cat: string) => {
         setSelectedCategories(prev =>
@@ -64,8 +127,16 @@ export default function CatalogView({ initialProducts }: CatalogViewProps) {
         )
     }
 
+    const toggleSubcategory = (sub: string) => {
+        setSelectedSubcategories(prev =>
+            prev.includes(sub) ? prev.filter(s => s !== sub) : [...prev, sub]
+        )
+    }
+
     const clearFilters = () => {
         setSelectedCategories([])
+        setSelectedSubcategories([])
+        setSelectedBrands([])
         setPriceRange([0, 1000])
         setSortBy('recientes')
     }
@@ -147,42 +218,83 @@ export default function CatalogView({ initialProducts }: CatalogViewProps) {
                                 )}
                             </div>
 
-                            {/* Filtro Precio */}
+                            {/* Filtro Subcategorías */}
+                            {SUBCATEGORIAS.length > 0 && (
+                                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                                    <button
+                                        className="w-full flex justify-between items-center mb-3 font-bold text-slate-800"
+                                        onClick={() => setIsSubcatOpen(!isSubcatOpen)}
+                                    >
+                                        Subcategorías
+                                        {isSubcatOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    </button>
+
+                                    {isSubcatOpen && (
+                                        <div className="space-y-2 animate-fade-in">
+                                            {SUBCATEGORIAS.map(sub => (
+                                                <label key={sub.value} className="flex items-center gap-3 cursor-pointer group hover:bg-slate-50 p-1.5 rounded-lg transition-colors">
+                                                    <div className="relative flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="peer h-5 w-5 border-2 border-slate-300 rounded checked:bg-orange-500 checked:border-orange-500 focus:ring-orange-200 transition-all cursor-pointer appearance-none"
+                                                            checked={selectedSubcategories.includes(sub.value)}
+                                                            onChange={() => toggleSubcategory(sub.value)}
+                                                        />
+                                                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none">
+                                                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-sm ${selectedSubcategories.includes(sub.value) ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
+                                                        {sub.label}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Filtro Marcas */}
                             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                                 <button
                                     className="w-full flex justify-between items-center mb-3 font-bold text-slate-800"
-                                    onClick={() => setIsPriceOpen(!isPriceOpen)}
+                                    onClick={() => setIsBrandOpen(!isBrandOpen)}
                                 >
-                                    Precio (Bs)
-                                    {isPriceOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    Marcas
+                                    {isBrandOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                 </button>
 
-                                {isPriceOpen && (
-                                    <div className="space-y-4 animate-fade-in">
-                                        <div className="flex items-center gap-2">
-                                            <div className="relative flex-1">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">Bs</span>
-                                                <input
-                                                    type="number"
-                                                    value={priceRange[0]}
-                                                    onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
-                                                    className="w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                                />
-                                            </div>
-                                            <span className="text-slate-400 font-bold">-</span>
-                                            <div className="relative flex-1">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">Bs</span>
-                                                <input
-                                                    type="number"
-                                                    value={priceRange[1]}
-                                                    onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
-                                                    className="w-full pl-8 pr-2 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
-                                                />
-                                            </div>
-                                        </div>
+                                {isBrandOpen && (
+                                    <div className="space-y-2 animate-fade-in">
+                                        {availableBrands.map((marca: any) => (
+                                            <label key={marca} className="flex items-center gap-3 cursor-pointer group hover:bg-slate-50 p-1.5 rounded-lg transition-colors">
+                                                <div className="relative flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="peer h-5 w-5 border-2 border-slate-300 rounded checked:bg-orange-500 checked:border-orange-500 focus:ring-orange-200 transition-all cursor-pointer appearance-none"
+                                                        checked={selectedBrands.some(b => b.toLowerCase() === marca.toLowerCase())}
+                                                        onChange={() => {
+                                                            const isSelected = selectedBrands.some(b => b.toLowerCase() === marca.toLowerCase())
+                                                            if (isSelected) {
+                                                                setSelectedBrands(prev => prev.filter(b => b.toLowerCase() !== marca.toLowerCase()))
+                                                            } else {
+                                                                setSelectedBrands(prev => [...prev, marca])
+                                                            }
+                                                        }}
+                                                    />
+                                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none">
+                                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                    </div>
+                                                </div>
+                                                <span className={`text-sm ${selectedBrands.some(b => b.toLowerCase() === marca.toLowerCase()) ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
+                                                    {marca}
+                                                </span>
+                                            </label>
+                                        ))}
                                     </div>
                                 )}
                             </div>
+
                         </div>
                     </div>
                 </aside>

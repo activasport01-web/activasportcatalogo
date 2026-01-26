@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Trash2, MessageCircle, ArrowLeft, Package, ShoppingBag, ArrowRight } from 'lucide-react'
 
 // Número de WhatsApp para recibir pedidos
-const WHATSAPP_NUMBER = '59178303866'
+const WHATSAPP_NUMBER = '59163448209'
 
 export default function CarritoPage() {
     const { items, removeFromCart, cartTotal, clearCart, cartCount } = useCart()
@@ -38,19 +38,34 @@ export default function CarritoPage() {
         }
 
         // 2. Generar Mensaje WhatsApp
-        let mensaje = `👋 *¡Hola! Quiero realizar un pedido Mayorista:*\n\n`
+        // 2. Generar Mensaje WhatsApp Profesional
+        const fecha = new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long' })
+
+        let mensaje = `📋 *NUEVO PEDIDO MAYORISTA* \n`
+        mensaje += `📅 Fecha: ${fecha}\n`
+        mensaje += `--------------------------------\n\n` // Separador visual
 
         items.forEach((item, index) => {
-            mensaje += `📦 *ITEM ${index + 1}:* ${item.nombre}\n`
-            mensaje += `   ├ Curva: ${item.tipo_curva}\n`
-            if (item.color) mensaje += `   ├ Color: ${item.color}\n` // Incluir color en mensaje
-            mensaje += `   ├ Cantidad: ${item.cantidad_pares} pares (${item.cantidad_pares === 6 ? 'Media Docena' : 'Docena'})\n`
-            mensaje += `   └ Subtotal: Bs ${item.total_item}\n\n`
+            const tipoPaquete = item.cantidad_pares === 6 ? 'Media Docena' : 'Docena'
+
+            mensaje += `👟 *MODELO ${index + 1}: ${item.nombre.toUpperCase()}*\n`
+            if (item.marca) mensaje += `🏷️ Marca: ${item.marca}\n`
+            mensaje += `📏 Curva: ${item.tipo_curva}\n`
+            if (item.color) mensaje += `🎨 Color: ${item.color}\n`
+            mensaje += `📦 Cantidad: ${item.cantidad_pares} pares (${tipoPaquete})\n`
+
+            // Usamos el link al producto para que WhatsApp genere la vista previa con foto
+            const productUrl = `${window.location.origin}/producto/${item.id_producto}`
+            mensaje += `🔗 Ver Modelo: ${productUrl}\n`
+            mensaje += `\n` // Espacio entre items
         })
 
-        mensaje += `💰 *TOTAL A PAGAR: Bs ${cartTotal}*\n`
-        mensaje += `📝 *Cantidad de Bultos:* ${items.length}\n\n`
-        mensaje += `¿Me confirman disponibilidad y datos de pago?`
+        mensaje += `--------------------------------\n`
+        mensaje += `📊 *RESUMEN DEL PEDIDO*\n`
+        mensaje += `📦 Total Bultos: ${items.length}\n`
+        mensaje += `👟 Total Pares: ${items.reduce((acc, i) => acc + i.cantidad_pares, 0)}\n\n`
+
+        mensaje += `✅ *Solicito confirmación de stock y datos para el depósito.*`
 
         const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`
         window.open(url, '_blank')
@@ -108,9 +123,6 @@ export default function CarritoPage() {
                                         </p>
                                     </div>
                                     <div className="flex items-end justify-between">
-                                        <div className="text-orange-600 font-bold">
-                                            Bs {item.total_item}
-                                        </div>
                                         <button
                                             onClick={() => removeFromCart(index)}
                                             className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors"
@@ -149,9 +161,8 @@ export default function CarritoPage() {
                                         {items.reduce((acc, item) => acc + item.cantidad_pares, 0)} Pares
                                     </span>
                                 </div>
-                                <div className="border-t border-slate-100 my-2 pt-2 flex justify-between items-center">
-                                    <span className="font-bold text-slate-800">Total a Pagar:</span>
-                                    <span className="text-2xl font-black text-orange-600">Bs {cartTotal}</span>
+                                <div className="border-t border-slate-100 my-2 pt-2">
+                                    <p className="text-sm text-slate-500 text-center">Pedido listo para enviar</p>
                                 </div>
                             </div>
 

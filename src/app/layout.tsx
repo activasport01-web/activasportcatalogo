@@ -36,10 +36,12 @@ export const metadata: Metadata = {
 
 import SocialSpeedDial from '@/components/SocialSpeedDial';
 import NetworkStatus from '@/components/NetworkStatus';
+import TopHeader from '@/components/TopHeader';
+import DockNavbar from '@/components/DockNavbar';
+import Footer from '@/components/Footer';
 import { CartProvider } from '@/context/CartContext';
 import { FavoritesProvider } from '@/context/FavoritesContext';
-
-// ...
+import { ThemeProvider } from '@/context/ThemeContext';
 
 export default function RootLayout({
   children,
@@ -48,14 +50,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className={inter.className}>
-        <CartProvider>
-          <FavoritesProvider>
-            {children}
-            <NetworkStatus />
-            <SocialSpeedDial />
-          </FavoritesProvider>
-        </CartProvider>
+      <body className={`${inter.className} overflow-x-hidden`}>
+        <ThemeProvider>
+          <CartProvider>
+            <FavoritesProvider>
+              <TopHeader />
+              {children}
+              <Footer />
+              <DockNavbar />
+              <NetworkStatus />
+              <SocialSpeedDial />
+            </FavoritesProvider>
+          </CartProvider>
+        </ThemeProvider>
 
         {/* Script para silenciar logs de desarrollo molestos */}
         <script

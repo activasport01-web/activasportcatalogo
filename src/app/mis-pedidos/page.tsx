@@ -131,10 +131,6 @@ function PedidoCard({ pedido }: { pedido: Pedido }) {
                 </div>
 
                 <div className="flex items-center justify-between md:justify-end gap-6 flex-1">
-                    <div className="text-right">
-                        <p className="text-xs text-slate-400 font-medium mb-1">Total Estimado</p>
-                        <p className="text-xl font-black text-slate-900">Bs {pedido.total}</p>
-                    </div>
                     <div className={`px-4 py-2 rounded-full text-xs font-bold ${pedido.estado === 'enviado' ? 'bg-blue-50 text-blue-600' : 'bg-yellow-50 text-yellow-600'}`}>
                         {pedido.estado === 'enviado' ? 'Enviado por WhatsApp' : 'Pendiente'}
                     </div>
@@ -160,7 +156,6 @@ function PedidoCard({ pedido }: { pedido: Pedido }) {
                                         </p>
                                     </div>
                                 </div>
-                                <span className="font-bold text-slate-600">Bs {item.total_item}</span>
                             </div>
                         ))}
                     </div>

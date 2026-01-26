@@ -3,8 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
+
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Save, X, LogOut, ShoppingBag, Heart, Clock } from 'lucide-react'
 
 export default function PerfilPage() {
@@ -86,7 +85,7 @@ export default function PerfilPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-            <Navbar />
+
 
             <div className="max-w-7xl mx-auto px-4 py-12">
                 {/* Header del Perfil */}
@@ -351,7 +350,7 @@ export default function PerfilPage() {
                 </div>
             </div>
 
-            <Footer />
+
         </div>
     )
 }
