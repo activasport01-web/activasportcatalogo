@@ -69,8 +69,8 @@ export default function DockNavbar() {
             <div className="h-24 md:h-32" />
 
             {/* Dock Container - Wrapped design for better integration */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 pt-4 bg-gradient-to-t from-black/20 to-transparent pointer-events-none">
-                <div className="flex items-center gap-1 sm:gap-2 p-2 rounded-full bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-2xl pointer-events-auto transform transition-all hover:scale-[1.01]">
+            <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4 pt-4 bg-gradient-to-t from-slate-950/20 to-transparent pointer-events-none">
+                <div className="flex items-center gap-1 sm:gap-2 p-2 rounded-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-gray-200 dark:border-white/10 shadow-2xl pointer-events-auto transform transition-all hover:scale-[1.01]">
 
                     {navItems.map((item) => {
                         const isActive = pathname === item.href
@@ -117,7 +117,7 @@ export default function DockNavbar() {
                                         strokeWidth={isActive ? 2.5 : 2}
                                     />
                                     {item.count !== undefined && item.count > 0 && (
-                                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center text-[9px] font-bold bg-brand-orange text-white rounded-full border-2 border-white dark:border-zinc-900">
+                                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center text-[9px] font-bold bg-brand-orange text-white rounded-full border-2 border-white dark:border-slate-900">
                                             {item.count}
                                         </span>
                                     )}

@@ -15,7 +15,8 @@ import {
     CheckCircle,
     AlertCircle,
     X,
-    ImageIcon
+    ImageIcon,
+    Info
 } from 'lucide-react'
 
 interface Producto {
@@ -30,6 +31,8 @@ interface Producto {
     url_imagen: string
     imagen_hover?: string
     origen?: string
+    genero?: string
+    grupo_talla?: string // Niño, Juvenil, Adulto
     disponible: boolean
     fecha_creacion: string
 }
@@ -44,12 +47,18 @@ export default function ProductosAdmin() {
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imageHoverFile, setImageHoverFile] = useState<File | null>(null)
 
-    // Marcas desde DB
+    // Listas dinámicas
     const [marcasList, setMarcasList] = useState<any[]>([])
+    const [categoriasList, setCategoriasList] = useState<any[]>([])
+    const [subcategoriasList, setSubcategoriasList] = useState<any[]>([])
+    // Listas NUEVAS para Genero/Grupo
+    const [generosList, setGenerosList] = useState<any[]>([])
+    const [gruposList, setGruposList] = useState<any[]>([])
 
     // NUEVO: Estado para variantes de color con imágenes
     type ColorVariant = {
         color: string      // Hex code
+        color2?: string    // Nuevo: Segundo color opcional
         nombre: string     // Nombre del color
         imagen: string     // URL de la imagen (después de subir)
         imageFile?: File   // Archivo temporal antes de subir
@@ -66,6 +75,8 @@ export default function ProductosAdmin() {
         precio: '',
         categoria: 'Deportivo',
         subcategoria: '',
+        genero: '', // Ahora vacío por defecto para obligar selección o usar fallback
+        grupo_talla: '',
         tallas: '',
         colores: '',
         etiquetas: [] as string[],
@@ -76,21 +87,29 @@ export default function ProductosAdmin() {
     useEffect(() => {
         checkAuth()
         loadProductos()
-        loadMarcas()
+        loadListas()
     }, [])
 
-    const loadMarcas = async () => {
-        const { data } = await supabase.from('marcas').select('*').eq('active', true).order('nombre')
-        if (data && data.length > 0) {
-            setMarcasList(data)
-        } else {
-            // Fallback default brands if DB is empty
-            setMarcasList([
-                { nombre: 'Golero' }, { nombre: 'Grasep' }, { nombre: 'Gasper' }, { nombre: 'Buss' }, { nombre: 'Bolka' },
-                { nombre: 'Nike' }, { nombre: 'Adidas' }, { nombre: 'Puma' }, { nombre: 'Reebok' },
-                { nombre: 'Jordan' }, { nombre: 'Vans' }, { nombre: 'Generico' }
-            ])
-        }
+    const loadListas = async () => {
+        // Cargar Marcas
+        const { data: marcas } = await supabase.from('marcas').select('*').eq('active', true).order('nombre')
+        if (marcas) setMarcasList(marcas)
+
+        // Cargar Categorias
+        const { data: cats } = await supabase.from('categorias').select('*').eq('activa', true).order('orden')
+        if (cats) setCategoriasList(cats)
+
+        // Cargar Subcategorías
+        const { data: subcats } = await supabase.from('subcategorias').select('*').eq('activa', true).order('orden')
+        if (subcats) setSubcategoriasList(subcats)
+
+        // Cargar Géneros
+        const { data: gens } = await supabase.from('generos').select('*').eq('activa', true).order('orden')
+        if (gens) setGenerosList(gens)
+
+        // Cargar Grupos
+        const { data: grps } = await supabase.from('grupos_tallas').select('*').eq('activa', true).order('orden')
+        if (grps) setGruposList(grps)
     }
 
     const checkAuth = async () => {
@@ -170,6 +189,7 @@ export default function ProductosAdmin() {
 
                     return {
                         color: variant.color,
+                        color2: variant.color2 || undefined,
                         nombre: variant.nombre,
                         imagen: imageUrl
                     }
@@ -193,6 +213,8 @@ export default function ProductosAdmin() {
                 precio: 0, // Venta por mayor, precio oculto/negociable/docena
                 categoria: formData.categoria,
                 subcategoria: formData.subcategoria || null,
+                genero: formData.genero || 'Unisex',
+                grupo_talla: formData.grupo_talla || 'Adulto',
                 tallas: formData.tallas ? formData.tallas.split(',').map(t => t.trim()).filter(t => t) : [],
                 // ACTUALIZADO: Guardar variantes completas si existen, sino array vacío
                 colores: variantsWithUrls.length > 0 ? variantsWithUrls : [],
@@ -268,6 +290,7 @@ export default function ProductosAdmin() {
                     // Formato nuevo: array de objetos con color, nombre, imagen
                     const loadedVariants = producto.colores.map((c: any) => ({
                         color: c.color || '#000000',
+                        color2: c.color2 || undefined,
                         nombre: c.nombre || 'Color',
                         imagen: c.imagen || ''
                     }))
@@ -289,6 +312,8 @@ export default function ProductosAdmin() {
                 precio: producto.precio.toString(),
                 categoria: producto.categoria,
                 subcategoria: (producto as any).subcategoria || '',
+                genero: (producto as any).genero || 'Unisex',
+                grupo_talla: (producto as any).grupo_talla || 'Adulto',
                 tallas: producto.tallas?.join(', ') || '',
                 colores: '', // Ya no usamos esto
                 etiquetas: producto.etiquetas || [],
@@ -304,6 +329,8 @@ export default function ProductosAdmin() {
                 precio: '', // Se limpia
                 categoria: 'Deportivo',
                 subcategoria: '',
+                genero: 'Unisex',
+                grupo_talla: 'Adulto',
                 tallas: '',
                 colores: '',
                 etiquetas: [],
@@ -346,10 +373,10 @@ export default function ProductosAdmin() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 relative">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative transition-colors duration-300">
             {/* Notificación Toast Flotante */}
             <div className={`fixed bottom-8 right-8 z-50 transition-all duration-500 transform ${notification.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
-                <div className={`flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl border backdrop-blur-md ${notification.type === 'success' ? 'bg-white/95 border-green-500/30 text-slate-800' : 'bg-white/95 border-red-500/30 text-slate-800'}`}>
+                <div className={`flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl border backdrop-blur-md ${notification.type === 'success' ? 'bg-white/95 dark:bg-slate-900/95 border-green-500/30 text-slate-800 dark:text-slate-100' : 'bg-white/95 dark:bg-slate-900/95 border-red-500/30 text-slate-800 dark:text-slate-100'}`}>
                     <div className={`p-2 rounded-full shrink-0 ${notification.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
                         {notification.type === 'success' ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
                     </div>
@@ -361,7 +388,7 @@ export default function ProductosAdmin() {
                     </div>
                     <button
                         onClick={() => setNotification(prev => ({ ...prev, show: false }))}
-                        className="ml-2 bg-slate-100 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition-colors"
+                        className="ml-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-full text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                     >
                         <X size={14} />
                     </button>
@@ -369,7 +396,7 @@ export default function ProductosAdmin() {
             </div>
 
             {/* Header Moderno Responsive */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700 shadow-lg text-white sticky top-0 z-30">
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-slate-950 border-b border-slate-700 dark:border-slate-800 shadow-lg text-white sticky top-0 z-30 transition-colors duration-300">
                 <div className="max-w-7xl mx-auto px-4 py-4 md:px-6 md:py-8">
                     <div className="flex justify-between items-center gap-4">
                         <div className="flex items-center gap-3 md:gap-4">
@@ -424,14 +451,14 @@ export default function ProductosAdmin() {
                     {filteredProductos.map((producto, index) => (
                         <div
                             key={producto.id}
-                            className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl hover:border-orange-200 transition-all duration-300 group flex flex-col h-full animate-slide-up"
+                            className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-xl hover:border-orange-200 dark:hover:border-orange-500/30 transition-all duration-300 group flex flex-col h-full animate-slide-up"
                             style={{ animationDelay: `${index * 50}ms` }}
                         >
-                            <div className="aspect-square bg-white relative p-6 flex items-center justify-center group-hover:bg-slate-50 transition-colors">
+                            <div className="aspect-square bg-white dark:bg-slate-800/50 relative p-6 flex items-center justify-center group-hover:bg-slate-50 dark:group-hover:bg-slate-800 transition-colors">
                                 <img
                                     src={producto.url_imagen}
                                     alt={producto.nombre}
-                                    className="w-full h-full object-contain transform group-hover:scale-110 transition-transform duration-500"
+                                    className="w-full h-full object-contain transform group-hover:scale-110 transition-transform duration-500 drop-shadow-sm"
                                 />
                                 <div className="absolute top-4 right-4 flex flex-col gap-2">
                                     {!producto.disponible && (
@@ -452,14 +479,14 @@ export default function ProductosAdmin() {
                                     <span className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1 block">
                                         {producto.categoria}
                                     </span>
-                                    <h3 className="font-bold text-lg text-slate-800 line-clamp-2 leading-tight group-hover:text-orange-600 transition-colors">
+                                    <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                                         {producto.nombre}
                                     </h3>
                                 </div>
 
                                 <div className="flex items-end justify-between mb-4">
                                     {/* Precio puede estar oculto o mostrarse como 'Consultar' en modo mayorista */}
-                                    <p className="text-lg font-bold text-slate-900">
+                                    <p className="text-lg font-bold text-slate-900 dark:text-slate-200">
                                         Mayorista
                                     </p>
                                     <div className="flex -space-x-2">
@@ -467,11 +494,15 @@ export default function ProductosAdmin() {
                                             <div
                                                 key={idx}
                                                 className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                                                style={{ backgroundColor: color }}
+                                                style={{
+                                                    background: color.color2
+                                                        ? `linear-gradient(135deg, ${color.color} 50%, ${color.color2} 50%)`
+                                                        : color.color || color
+                                                }}
                                             />
                                         ))}
                                         {producto.colores?.length > 3 && (
-                                            <div className="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] text-slate-500 font-bold">
+                                            <div className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-700 bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] text-slate-500 dark:text-slate-300 font-bold">
                                                 +{producto.colores.length - 3}
                                             </div>
                                         )}
@@ -479,12 +510,12 @@ export default function ProductosAdmin() {
                                 </div>
 
                                 {/* Actions */}
-                                <div className="flex gap-2 pt-4 border-t border-slate-100">
+                                <div className="flex gap-2 pt-4 border-t border-slate-100 dark:border-slate-800/50">
                                     <button
                                         onClick={() => toggleDisponible(producto)}
                                         className={`flex-1 flex items-center justify-center h-10 rounded-lg transition-colors ${producto.disponible
-                                            ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                            ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
                                             }`}
                                         title={producto.disponible ? 'Ocultar' : 'Mostrar'}
                                     >
@@ -492,14 +523,14 @@ export default function ProductosAdmin() {
                                     </button>
                                     <button
                                         onClick={() => openModal(producto)}
-                                        className="flex-1 flex items-center justify-center h-10 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                                        className="flex-1 flex items-center justify-center h-10 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                                         title="Editar"
                                     >
                                         <Edit size={18} />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(producto.id)}
-                                        className="flex-1 flex items-center justify-center h-10 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                                        className="flex-1 flex items-center justify-center h-10 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                                         title="Eliminar"
                                     >
                                         <Trash2 size={18} />
@@ -515,8 +546,8 @@ export default function ProductosAdmin() {
                             <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
                                 <Search className="text-slate-300" size={40} />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-2">No se encontraron productos</h3>
-                            <p className="text-slate-500">Intenta con otros términos o crea un nuevo producto.</p>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">No se encontraron productos</h3>
+                            <p className="text-slate-500 dark:text-slate-400">Intenta con otros términos o crea un nuevo producto.</p>
                         </div>
                     )}
                 </div>
@@ -524,10 +555,10 @@ export default function ProductosAdmin() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-0 md:p-4">
-                    <div className="bg-white w-full h-full md:h-auto md:max-h-[92vh] md:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-0 md:p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-slate-900 w-full h-full md:h-auto md:max-h-[92vh] md:rounded-2xl shadow-2xl overflow-hidden flex flex-col border dark:border-slate-800">
                         {/* Header */}
-                        <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-slate-600 shrink-0">
+                        <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-slate-600 dark:border-slate-800 shrink-0">
                             <div>
                                 <h2 className="text-xl font-bold text-white tracking-tight">
                                     {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
@@ -549,31 +580,31 @@ export default function ProductosAdmin() {
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Columna Izquierda */}
                                 <div className="space-y-4">
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50">
+                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
                                             <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
                                             Información Básica
                                         </h3>
 
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Nombre del Producto</label>
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Nombre del Producto</label>
                                                 <input
                                                     type="text"
                                                     value={formData.nombre}
                                                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
                                                     placeholder="Ej: Zapato Deportivo Nike Air"
                                                     required
                                                 />
                                             </div>
 
                                             <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Descripción</label>
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Descripción</label>
                                                 <textarea
                                                     value={formData.descripcion}
                                                     onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all resize-none"
+                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all resize-none placeholder-slate-400"
                                                     rows={4}
                                                     placeholder="Describe las características principales del producto..."
                                                 />
@@ -581,30 +612,40 @@ export default function ProductosAdmin() {
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50">
+                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
                                             <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
                                             Configuración de Venta por Mayor
                                         </h3>
 
                                         <div className="space-y-4">
                                             <div>
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Curva de Tallas</label>
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
+                                                    Serie de Tallas <span className="text-slate-400 font-normal">(Opcional)</span>
+                                                </label>
                                                 <input
                                                     type="text"
                                                     value={formData.tallas}
                                                     onChange={(e) => setFormData({ ...formData, tallas: e.target.value })}
-                                                    placeholder="Ej: 35-40 (2/3/3/2/1/1)"
-                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                    placeholder="Ej: 30, 31, 32, 33, 34"
+                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
                                                 />
-                                                <p className="text-[10px] text-slate-500 mt-1">Especifique la distribución de tallas en el bulto.</p>
+
+                                                {/* Hint Dinámico */}
+                                                {formData.grupo_talla && gruposList.find(g => g.nombre === formData.grupo_talla)?.rango_tallas ? (
+                                                    <p className="text-[10px] text-blue-500 mt-1 font-medium">
+                                                        ℹ️ Rango sugerido para {formData.grupo_talla}: {gruposList.find(g => g.nombre === formData.grupo_talla)?.rango_tallas}
+                                                    </p>
+                                                ) : (
+                                                    <p className="text-[10px] text-slate-500 mt-1">Escribe las tallas específicas separadas por coma.</p>
+                                                )}
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Pares por Bulto</label>
+                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Pares por Bulto</label>
                                                     <select
-                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
                                                         onChange={(e) => {
                                                             const val = e.target.value;
                                                             if (!val) return;
@@ -625,43 +666,75 @@ export default function ProductosAdmin() {
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Categoría *</label>
+                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Categoría *</label>
                                                     <select
                                                         value={formData.categoria}
                                                         onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
                                                         required
                                                     >
                                                         <option value="">Seleccionar...</option>
-                                                        <option value="Deportivo">Deportivo</option>
-                                                        <option value="Casual">Casual</option>
-                                                        <option value="Semicasual">Semicasual</option>
-                                                        <option value="Tenis">Tenis</option>
+                                                        {categoriasList.map((cat: any) => (
+                                                            <option key={cat.nombre} value={cat.nombre}>{cat.nombre}</option>
+                                                        ))}
                                                     </select>
                                                 </div>
                                             </div>
 
                                             {/* Subcategoría (Nuevo) */}
                                             <div className="mt-4">
-                                                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                                                    Subcategoría <span className="text-slate-400 font-normal">(Opcional)</span>
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
+                                                    Subcategoría / Tipo <span className="text-slate-400 font-normal">(Opcional)</span>
                                                 </label>
                                                 <select
                                                     value={(formData as any).subcategoria || ''}
                                                     onChange={(e) => setFormData({ ...formData, subcategoria: e.target.value } as any)}
-                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white transition-all"
+                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
                                                 >
                                                     <option value="">Sin subcategoría</option>
-                                                    <option value="Turf o Trilla">Turf o Trilla</option>
-                                                    <option value="Chutera">Chutera</option>
-                                                    <option value="Salonera">Salonera</option>
+                                                    {subcategoriasList
+                                                        .filter((sub: any) => !sub.categoria_relacionada || sub.categoria_relacionada === formData.categoria || sub.categoria_relacionada === '')
+                                                        .map((sub: any) => (
+                                                            <option key={sub.id} value={sub.nombre}>{sub.nombre}</option>
+                                                        ))
+                                                    }
                                                 </select>
-                                                <p className="text-[10px] text-slate-500 mt-1">Para calzado deportivo específico</p>
+                                                <p className="text-[10px] text-slate-500 mt-1">Depende de la categoría seleccionada</p>
+                                            </div>
+
+                                            {/* Género y Talla (Nuevos Filtros) */}
+                                            <div className="grid grid-cols-2 gap-4 mt-4">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Género</label>
+                                                    <select
+                                                        value={formData.genero}
+                                                        onChange={(e) => setFormData({ ...formData, genero: e.target.value } as any)}
+                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
+                                                    >
+                                                        <option value="">Seleccionar...</option>
+                                                        {generosList.map((g: any) => (
+                                                            <option key={g.nombre} value={g.nombre}>{g.nombre}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Grupo</label>
+                                                    <select
+                                                        value={formData.grupo_talla}
+                                                        onChange={(e) => setFormData({ ...formData, grupo_talla: e.target.value } as any)}
+                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
+                                                    >
+                                                        <option value="">Seleccionar...</option>
+                                                        {gruposList.map((g: any) => (
+                                                            <option key={g.nombre} value={g.nombre}>{g.nombre}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
 
                                             {/* Selector de Marca (Reemplaza Origen) */}
-                                            <div className="mt-4 pt-4 border-t border-slate-200">
-                                                <label className="block text-xs font-semibold text-slate-600 mb-2">Marca</label>
+                                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">Marca</label>
                                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                                     {marcasList.map((m) => (
                                                         <button
@@ -669,8 +742,8 @@ export default function ProductosAdmin() {
                                                             type="button"
                                                             onClick={() => setFormData({ ...formData, origen: m.nombre })}
                                                             className={`flex items-center justify-center p-2 rounded-lg border text-xs font-bold uppercase transition-all ${formData.origen === m.nombre
-                                                                ? 'border-orange-500 bg-orange-50 text-orange-700 ring-1 ring-orange-200'
-                                                                : 'border-slate-200 bg-white hover:border-slate-300 text-slate-500 hover:text-slate-700'
+                                                                ? 'border-orange-500 bg-orange-50 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 ring-1 ring-orange-200 dark:ring-orange-900'
+                                                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-700 dark:hover:text-slate-300'
                                                                 }`}
                                                         >
                                                             {m.nombre}
@@ -681,8 +754,8 @@ export default function ProductosAdmin() {
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50">
+                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
                                             <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
                                             Variantes de Color con Imágenes
                                         </h3>
@@ -692,14 +765,14 @@ export default function ProductosAdmin() {
                                             {colorVariants.map((variant, index) => (
                                                 <div
                                                     key={index}
-                                                    className="bg-white p-3 rounded-lg border border-slate-200 flex items-center gap-3 hover:border-orange-300 transition-colors cursor-pointer group"
+                                                    className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-3 hover:border-orange-300 dark:hover:border-orange-500/50 transition-colors cursor-pointer group"
                                                     onClick={() => {
                                                         setEditingVariantIndex(index)
                                                         setShowVariantModal(true)
                                                     }}
                                                 >
                                                     {/* Preview de imagen */}
-                                                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-200 flex-shrink-0">
+                                                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 flex-shrink-0">
                                                         {variant.imageFile ? (
                                                             <img
                                                                 src={URL.createObjectURL(variant.imageFile)}
@@ -723,10 +796,14 @@ export default function ProductosAdmin() {
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-2">
                                                             <div
-                                                                className="w-5 h-5 rounded-full border-2 border-white shadow-sm"
-                                                                style={{ backgroundColor: variant.color }}
+                                                                className="w-5 h-5 rounded-full border-2 border-white dark:border-slate-700 shadow-sm"
+                                                                style={{
+                                                                    background: variant.color2
+                                                                        ? `linear-gradient(135deg, ${variant.color} 50%, ${variant.color2} 50%)`
+                                                                        : variant.color
+                                                                }}
                                                             />
-                                                            <span className="font-bold text-sm text-slate-700">{variant.nombre}</span>
+                                                            <span className="font-bold text-sm text-slate-700 dark:text-slate-200">{variant.nombre}</span>
                                                         </div>
                                                         <p className="text-xs text-slate-400 mt-0.5">{variant.color}</p>
                                                     </div>
@@ -739,7 +816,7 @@ export default function ProductosAdmin() {
                                                             setEditingVariantIndex(index)
                                                             setShowVariantModal(true)
                                                         }}
-                                                        className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                                                        className="p-2 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                                                     >
                                                         <Edit size={18} />
                                                     </button>
@@ -751,7 +828,7 @@ export default function ProductosAdmin() {
                                                             e.stopPropagation()
                                                             setColorVariants(colorVariants.filter((_, i) => i !== index))
                                                         }}
-                                                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                                     >
                                                         <X size={18} />
                                                     </button>
@@ -765,11 +842,12 @@ export default function ProductosAdmin() {
                                                     // Agregar una variante vacía
                                                     setColorVariants([...colorVariants, {
                                                         color: '#000000',
+                                                        color2: undefined,
                                                         nombre: 'Nuevo Color',
                                                         imagen: ''
                                                     }])
                                                 }}
-                                                className="w-full py-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-orange-400 hover:text-orange-600 hover:bg-orange-50/50 transition-all flex items-center justify-center gap-2 font-medium text-sm"
+                                                className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-500 dark:text-slate-400 hover:border-orange-400 dark:hover:border-orange-500 hover:text-orange-600 dark:hover:text-orange-500 hover:bg-orange-50/50 dark:hover:bg-orange-900/10 transition-all flex items-center justify-center gap-2 font-medium text-sm"
                                             >
                                                 <Plus size={18} />
                                                 Agregar Variante de Color
@@ -784,8 +862,8 @@ export default function ProductosAdmin() {
 
                                 {/* Columna Derecha */}
                                 <div className="space-y-4">
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50">
+                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
                                             <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
                                             Etiquetas de Producto
                                         </h3>
@@ -798,7 +876,7 @@ export default function ProductosAdmin() {
                                                     onClick={() => toggleEtiqueta(tag)}
                                                     className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all uppercase ${formData.etiquetas.includes(tag)
                                                         ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
-                                                        : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-orange-400 hover:text-orange-600'
+                                                        : 'bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-orange-400 dark:hover:border-orange-500 hover:text-orange-600 dark:hover:text-orange-500'
                                                         }`}
                                                 >
                                                     {tag.replace('_', ' ')}
@@ -807,8 +885,8 @@ export default function ProductosAdmin() {
                                         </div>
                                     </div>
 
-                                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50">
+                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
                                             <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
                                             Estado del Producto
                                         </h3>
@@ -821,12 +899,12 @@ export default function ProductosAdmin() {
                                                     onChange={(e) => setFormData({ ...formData, disponible: e.target.checked })}
                                                     className="sr-only peer"
                                                 />
-                                                <div className="w-11 h-6 bg-slate-300 rounded-full peer peer-checked:bg-orange-500 transition-colors"></div>
+                                                <div className="w-11 h-6 bg-slate-300 dark:bg-slate-600 rounded-full peer peer-checked:bg-orange-500 transition-colors"></div>
                                                 <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
                                             </div>
                                             <div>
-                                                <p className="text-sm font-semibold text-slate-700">Producto Disponible</p>
-                                                <p className="text-xs text-slate-500">El producto estará visible en la tienda</p>
+                                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Producto Disponible</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">El producto estará visible en la tienda</p>
                                             </div>
                                         </label>
                                     </div>
@@ -834,11 +912,11 @@ export default function ProductosAdmin() {
                             </div>
 
                             {/* Footer con botones */}
-                            <div className="sticky bottom-0 bg-white border-t border-slate-200 px-4 py-3 md:px-6 md:py-4 flex gap-3 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                            <div className="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-3 md:px-6 md:py-4 flex gap-3 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                                 <button
                                     type="button"
                                     onClick={closeModal}
-                                    className="flex-1 px-6 py-3 bg-white border-2 border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 hover:border-slate-400 transition-all text-sm"
+                                    className="flex-1 px-6 py-3 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-slate-400 dark:hover:border-slate-600 transition-all text-sm"
                                 >
                                     Cancelar
                                 </button>
@@ -851,111 +929,216 @@ export default function ProductosAdmin() {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div >
             )}
 
+
             {/* Modal de Edición de Variante de Color */}
-            {showVariantModal && editingVariantIndex !== null && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
-                        {/* Header */}
-                        <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex items-center justify-between">
-                            <h2 className="text-xl font-bold text-white">Editar Variante de Color</h2>
-                            <button
-                                onClick={() => setShowVariantModal(false)}
-                                className="text-white/80 hover:text-white transition-colors"
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        {/* Body */}
-                        <div className="p-6 space-y-4">
-                            {/* Selector de Color */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Color</label>
-                                <div className="grid grid-cols-6 gap-2 mb-3">
-                                    {[
-                                        { hex: '#000000', name: 'Negro' },
-                                        { hex: '#FFFFFF', name: 'Blanco' },
-                                        { hex: '#5D4037', name: 'Café' },
-                                        { hex: '#1E40AF', name: 'Azul' },
-                                        { hex: '#DC2626', name: 'Rojo' },
-                                        { hex: '#F59E0B', name: 'Mostaza' },
-                                        { hex: '#E5E7EB', name: 'Gris' },
-                                        { hex: '#10B981', name: 'Verde' },
-                                        { hex: '#EC4899', name: 'Rosa' },
-                                        { hex: '#FCD34D', name: 'Dorado' },
-                                        { hex: '#8B4513', name: 'Marrón' },
-                                        { hex: '#4B5563', name: 'Plomo' }
-                                    ].map((c) => (
-                                        <button
-                                            key={c.hex}
-                                            type="button"
-                                            onClick={() => {
-                                                const updated = [...colorVariants]
-                                                updated[editingVariantIndex] = {
-                                                    ...updated[editingVariantIndex],
-                                                    color: c.hex,
-                                                    nombre: c.name
-                                                }
-                                                setColorVariants(updated)
-                                            }}
-                                            className={`w-10 h-10 rounded-full border-2 transition-all ${colorVariants[editingVariantIndex].color === c.hex
-                                                ? 'border-orange-500 ring-2 ring-orange-200 scale-110'
-                                                : 'border-slate-200 hover:scale-105'
-                                                }`}
-                                            style={{ backgroundColor: c.hex }}
-                                            title={c.name}
-                                        />
-                                    ))}
-                                </div>
-                                <input
-                                    type="text"
-                                    value={colorVariants[editingVariantIndex].color}
-                                    onChange={(e) => {
-                                        const updated = [...colorVariants]
-                                        updated[editingVariantIndex].color = e.target.value
-                                        setColorVariants(updated)
-                                    }}
-                                    placeholder="#000000"
-                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                                />
+            {
+                showVariantModal && editingVariantIndex !== null && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden border dark:border-slate-800 flex flex-col">
+                            {/* Header */}
+                            <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex items-center justify-between shrink-0">
+                                <h2 className="text-xl font-bold text-white">Editar Variante de Color</h2>
+                                <button
+                                    onClick={() => setShowVariantModal(false)}
+                                    className="text-white/80 hover:text-white transition-colors"
+                                >
+                                    <X size={24} />
+                                </button>
                             </div>
 
-                            {/* Nombre del Color */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Nombre del Color</label>
-                                <input
-                                    type="text"
-                                    value={colorVariants[editingVariantIndex].nombre}
-                                    onChange={(e) => {
-                                        const updated = [...colorVariants]
-                                        updated[editingVariantIndex].nombre = e.target.value
-                                        setColorVariants(updated)
-                                    }}
-                                    placeholder="Ej: Negro, Blanco, Azul"
-                                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500"
-                                />
-                            </div>
-
-                            {/* Subir Imagen */}
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-2">Imagen del Zapato en este Color</label>
-                                <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-orange-400 transition-colors">
-                                    {colorVariants[editingVariantIndex].imageFile || colorVariants[editingVariantIndex].imagen ? (
-                                        <div className="space-y-3">
-                                            <img
-                                                src={
-                                                    colorVariants[editingVariantIndex].imageFile
-                                                        ? URL.createObjectURL(colorVariants[editingVariantIndex].imageFile!)
-                                                        : colorVariants[editingVariantIndex].imagen
-                                                }
-                                                alt="Preview"
-                                                className="w-32 h-32 object-cover mx-auto rounded-lg"
+                            {/* Body Scrollable */}
+                            <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+                                {/* Selector de Color */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Color</label>
+                                    <div className="grid grid-cols-6 gap-2 mb-3">
+                                        {[
+                                            { hex: '#000000', name: 'Negro' },
+                                            { hex: '#FFFFFF', name: 'Blanco' },
+                                            { hex: '#5D4037', name: 'Café' },
+                                            { hex: '#1E40AF', name: 'Azul' },
+                                            { hex: '#DC2626', name: 'Rojo' },
+                                            { hex: '#F59E0B', name: 'Mostaza' },
+                                            { hex: '#E5E7EB', name: 'Gris' },
+                                            { hex: '#10B981', name: 'Verde' },
+                                            { hex: '#EC4899', name: 'Rosa' },
+                                            { hex: '#FCD34D', name: 'Dorado' },
+                                            { hex: '#8B4513', name: 'Marrón' },
+                                            { hex: '#4B5563', name: 'Plomo' }
+                                        ].map((c) => (
+                                            <button
+                                                key={c.hex}
+                                                type="button"
+                                                onClick={() => {
+                                                    const updated = [...colorVariants]
+                                                    updated[editingVariantIndex] = {
+                                                        ...updated[editingVariantIndex],
+                                                        color: c.hex,
+                                                        nombre: c.name
+                                                    }
+                                                    setColorVariants(updated)
+                                                }}
+                                                className={`w-10 h-10 rounded-full border-2 transition-all ${colorVariants[editingVariantIndex].color === c.hex
+                                                    ? 'border-orange-500 ring-2 ring-orange-200 dark:ring-orange-900 scale-110'
+                                                    : 'border-slate-200 dark:border-slate-600 hover:scale-105'
+                                                    }`}
+                                                style={{ backgroundColor: c.hex }}
+                                                title={c.name}
                                             />
-                                            <label className="inline-block px-4 py-2 bg-orange-500 text-white rounded-lg cursor-pointer hover:bg-orange-600 transition-colors text-sm font-medium">
-                                                Cambiar Imagen
+                                        ))}
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={colorVariants[editingVariantIndex].color}
+                                        onChange={(e) => {
+                                            const updated = [...colorVariants]
+                                            updated[editingVariantIndex].color = e.target.value
+                                            setColorVariants(updated)
+                                        }}
+                                        placeholder="#000000"
+                                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                                    />
+
+                                    {/* SEGUNDO COLOR (OPCIONAL) */}
+                                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">
+                                                Segundo Color (Opcional)
+                                            </label>
+                                            {colorVariants[editingVariantIndex].color2 ? (
+                                                <button
+                                                    onClick={() => {
+                                                        const updated = [...colorVariants]
+                                                        updated[editingVariantIndex].color2 = undefined
+                                                        setColorVariants(updated)
+                                                    }}
+                                                    className="text-xs text-red-500 hover:text-red-700 font-medium"
+                                                >
+                                                    Quitar segundo color
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => {
+                                                        const updated = [...colorVariants]
+                                                        updated[editingVariantIndex].color2 = '#FFFFFF'
+                                                        setColorVariants(updated)
+                                                    }}
+                                                    className="text-xs text-orange-500 hover:text-orange-700 font-medium"
+                                                >
+                                                    Agregar color combinado
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {colorVariants[editingVariantIndex].color2 && (
+                                            <div className="animate-fade-in">
+                                                <div className="grid grid-cols-6 gap-2 mb-3">
+                                                    {[
+                                                        { hex: '#000000', name: 'Negro' },
+                                                        { hex: '#FFFFFF', name: 'Blanco' },
+                                                        { hex: '#5D4037', name: 'Café' },
+                                                        { hex: '#1E40AF', name: 'Azul' },
+                                                        { hex: '#DC2626', name: 'Rojo' },
+                                                        { hex: '#F59E0B', name: 'Mostaza' },
+                                                        { hex: '#E5E7EB', name: 'Gris' },
+                                                        { hex: '#10B981', name: 'Verde' },
+                                                        { hex: '#EC4899', name: 'Rosa' },
+                                                        { hex: '#FCD34D', name: 'Dorado' },
+                                                        { hex: '#8B4513', name: 'Marrón' },
+                                                        { hex: '#4B5563', name: 'Plomo' }
+                                                    ].map((c) => (
+                                                        <button
+                                                            key={`color2-${c.hex}`}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const updated = [...colorVariants]
+                                                                updated[editingVariantIndex] = {
+                                                                    ...updated[editingVariantIndex],
+                                                                    color2: c.hex
+                                                                }
+                                                                setColorVariants(updated)
+                                                            }}
+                                                            className={`w-10 h-10 rounded-full border-2 transition-all ${colorVariants[editingVariantIndex].color2 === c.hex
+                                                                ? 'border-orange-500 ring-2 ring-orange-200 dark:ring-orange-900 scale-110'
+                                                                : 'border-slate-200 dark:border-slate-600 hover:scale-105'
+                                                                }`}
+                                                            style={{ backgroundColor: c.hex }}
+                                                            title={c.name}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={colorVariants[editingVariantIndex].color2}
+                                                    onChange={(e) => {
+                                                        const updated = [...colorVariants]
+                                                        updated[editingVariantIndex].color2 = e.target.value
+                                                        setColorVariants(updated)
+                                                    }}
+                                                    placeholder="#000000"
+                                                    className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Nombre del Color */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Nombre del Color</label>
+                                    <input
+                                        type="text"
+                                        value={colorVariants[editingVariantIndex].nombre}
+                                        onChange={(e) => {
+                                            const updated = [...colorVariants]
+                                            updated[editingVariantIndex].nombre = e.target.value
+                                            setColorVariants(updated)
+                                        }}
+                                        placeholder="Ej: Negro, Blanco, Azul"
+                                        className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                                    />
+                                </div>
+
+                                {/* Subir Imagen */}
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Imagen del Zapato en este Color</label>
+                                    <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-4 text-center hover:border-orange-400 dark:hover:border-orange-500 transition-colors">
+                                        {colorVariants[editingVariantIndex].imageFile || colorVariants[editingVariantIndex].imagen ? (
+                                            <div className="space-y-3">
+                                                <img
+                                                    src={
+                                                        colorVariants[editingVariantIndex].imageFile
+                                                            ? URL.createObjectURL(colorVariants[editingVariantIndex].imageFile!)
+                                                            : colorVariants[editingVariantIndex].imagen
+                                                    }
+                                                    alt="Preview"
+                                                    className="w-32 h-32 object-cover mx-auto rounded-lg"
+                                                />
+                                                <label className="inline-block px-4 py-2 bg-orange-500 text-white rounded-lg cursor-pointer hover:bg-orange-600 transition-colors text-sm font-medium">
+                                                    Cambiar Imagen
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0]
+                                                            if (file) {
+                                                                const updated = [...colorVariants]
+                                                                updated[editingVariantIndex].imageFile = file
+                                                                setColorVariants(updated)
+                                                            }
+                                                        }}
+                                                    />
+                                                </label>
+                                            </div>
+                                        ) : (
+                                            <label className="cursor-pointer block">
+                                                <Upload className="mx-auto text-slate-400 mb-2" size={32} />
+                                                <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Haz clic para subir imagen</p>
+                                                <p className="text-xs text-slate-400 mt-1">JPG, PNG (máx. 5MB)</p>
                                                 <input
                                                     type="file"
                                                     accept="image/*"
@@ -970,49 +1153,30 @@ export default function ProductosAdmin() {
                                                     }}
                                                 />
                                             </label>
-                                        </div>
-                                    ) : (
-                                        <label className="cursor-pointer block">
-                                            <Upload className="mx-auto text-slate-400 mb-2" size={32} />
-                                            <p className="text-sm text-slate-600 font-medium">Haz clic para subir imagen</p>
-                                            <p className="text-xs text-slate-400 mt-1">JPG, PNG (máx. 5MB)</p>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                    const file = e.target.files?.[0]
-                                                    if (file) {
-                                                        const updated = [...colorVariants]
-                                                        updated[editingVariantIndex].imageFile = file
-                                                        setColorVariants(updated)
-                                                    }
-                                                }}
-                                            />
-                                        </label>
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Footer */}
-                        <div className="px-6 py-4 bg-slate-50 flex gap-3">
-                            <button
-                                onClick={() => setShowVariantModal(false)}
-                                className="flex-1 px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors"
-                            >
-                                Cerrar
-                            </button>
-                            <button
-                                onClick={() => setShowVariantModal(false)}
-                                className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
-                            >
-                                Guardar
-                            </button>
+                            {/* Footer */}
+                            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 flex gap-3 shrink-0">
+                                <button
+                                    onClick={() => setShowVariantModal(false)}
+                                    className="flex-1 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                                >
+                                    Cerrar
+                                </button>
+                                <button
+                                    onClick={() => setShowVariantModal(false)}
+                                    className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+                                >
+                                    Guardar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     )
 }

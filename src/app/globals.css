@@ -7,21 +7,27 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 255, 255, 255;
   --background-end-rgb: 245, 245, 245;
-  
+
   /* Colores de Marca */
-  --pk-orange: 255, 87, 34; /* Orange form Logo */
-  --pk-black: 15, 23, 42;   /* Deep Tech Black */
-  
+  --pk-orange: 255, 87, 34;
+  /* Orange form Logo */
+  --pk-black: 15, 23, 42;
+  /* Deep Tech Black */
+
   --primary-glow: conic-gradient(from 180deg at 50% 50%, #ffccb3 0deg, #ff5722 55deg, #ffccb3 120deg, #ff5722 160deg, transparent 360deg);
 }
 
 /* Modo Oscuro */
+/* Modo Oscuro - Slate/Plomo (Rich Dark Grey) */
 .dark {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 10, 10, 10;
-  --background-end-rgb: 0, 0, 0;
-  
-  --primary-glow: radial-gradient(rgba(255, 87, 34, 0.4), rgba(1, 65, 255, 0));
+  --foreground-rgb: 226, 232, 240;
+  /* Slate 200 */
+  --background-start-rgb: 15, 23, 42;
+  /* Slate 900 (#0f172a) - Tono Plomo Oscuro */
+  --background-end-rgb: 2, 6, 23;
+  /* Slate 950 (#020617) */
+
+  --primary-glow: radial-gradient(rgba(255, 87, 34, 0.2), rgba(15, 23, 42, 0));
 }
 
 body {
@@ -127,6 +133,7 @@ body {
 .delay-300 {
   animation-delay: 0.3s;
 }
+
 @keyframes shimmer {
   100% {
     transform: translateX(100%);

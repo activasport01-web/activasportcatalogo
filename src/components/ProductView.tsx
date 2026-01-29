@@ -122,19 +122,20 @@ export default function ProductView({ producto, productosRelacionados }: Product
         window.open(url, '_blank')
     }
 
+    // Removed totalItem calculation since price is no longer displayed or used for user-facing totals locally
     const handleAddToCart = () => {
-        const totalItem = producto.precio * cantidadCajon
+        // const totalItem = producto.precio * cantidadCajon // Removed
 
         addToCart({
             id_producto: producto.id,
             nombre: producto.nombre,
-            precio_unitario: producto.precio,
+            precio_unitario: producto.precio, // Still passing to context for backend/whatsapp logic if needed
             imagen: selectedImage || producto.url_imagen,
             tipo_curva: tipoCurva as any,
             cantidad_pares: cantidadCajon,
             color: 'Colores Variados',
             marca: producto.marca,
-            total_item: totalItem
+            total_item: 0 // Set to 0 or internal value since we don't show price
         })
 
         // Notificación temporal
@@ -151,28 +152,28 @@ export default function ProductView({ producto, productosRelacionados }: Product
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 pt-28 pb-12">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-28 pb-12 transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
                 {/* Breadcrumbs */}
-                <div className="flex items-center gap-2 mb-6 text-sm text-slate-500">
+                <div className="flex items-center gap-2 mb-6 text-sm text-slate-500 dark:text-slate-400">
                     <Link href="/" className="hover:text-orange-500 flex items-center gap-1">
                         <ArrowLeft size={16} /> Volver al catálogo
                     </Link>
                     <span>/</span>
-                    <span className="uppercase text-slate-800 font-semibold">{producto.categoria}</span>
+                    <span className="uppercase text-slate-800 dark:text-slate-200 font-semibold">{producto.categoria}</span>
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
+                <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-colors duration-300">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
 
                         {/* Columna Izquierda: Imagen con Carrusel */}
-                        <div className="bg-slate-50 p-6 lg:p-12 flex flex-col items-center justify-center relative group">
+                        <div className="bg-slate-50 dark:bg-slate-950/50 p-6 lg:p-12 flex flex-col items-center justify-center relative group">
                             <div className="relative w-full aspect-square max-w-lg mx-auto">
                                 <img
                                     src={selectedImage}
                                     alt={producto.nombre}
-                                    className="w-full h-full object-contain mix-blend-multiply transition-all duration-500 hover:scale-105 drop-shadow-xl"
+                                    className="w-full h-full object-contain transition-all duration-500 hover:scale-105 drop-shadow-xl"
                                 />
 
                                 {/* Flechas de navegación (solo si hay múltiples imágenes) */}
@@ -181,7 +182,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                         {/* Flecha Izquierda */}
                                         <button
                                             onClick={prevImage}
-                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-white p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"
                                             aria-label="Imagen anterior"
                                         >
                                             <ChevronLeft size={24} />
@@ -190,7 +191,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                         {/* Flecha Derecha */}
                                         <button
                                             onClick={nextImage}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-700 p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-white p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"
                                             aria-label="Siguiente imagen"
                                         >
                                             <ChevronRight size={24} />
@@ -231,8 +232,8 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                             disponible: producto.disponible ?? true
                                         })}
                                         className={`p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${isFavorite(producto.id)
-                                            ? 'bg-red-50 text-red-500 shadow-red-100'
-                                            : 'bg-white text-slate-400 hover:text-red-500'
+                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-500 shadow-red-100 dark:shadow-none'
+                                            : 'bg-white dark:bg-slate-800 text-slate-400 hover:text-red-500'
                                             }`}
                                         title={isFavorite(producto.id) ? "Quitar de favoritos" : "Guardar en favoritos"}
                                     >
@@ -258,23 +259,23 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                         <span className="text-2xl drop-shadow-sm filter">
                                             {producto.origen === 'Brazilero' ? '🇧🇷' : producto.origen === 'Peruano' ? '🇵🇪' : '🇧🇴'}
                                         </span>
-                                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded">
+                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
                                             Calidad {producto.origen}
                                         </span>
                                     </div>
                                 )}
-                                <h1 className="text-3xl lg:text-4xl font-black text-slate-900 mb-2 leading-tight">
+                                <h1 className="text-3xl lg:text-4xl font-black text-slate-900 dark:text-white mb-2 leading-tight">
                                     {producto.nombre}
                                 </h1>
 
                                 {/* Descripción del Producto */}
                                 {producto.descripcion && (
-                                    <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                        <h3 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                    <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2 flex items-center gap-2">
                                             <Info size={16} className="text-orange-500" />
                                             Descripción
                                         </h3>
-                                        <p className="text-slate-600 text-sm leading-relaxed">
+                                        <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
                                             {producto.descripcion}
                                         </p>
                                     </div>
@@ -284,32 +285,32 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                 <div className="mb-6 grid grid-cols-2 gap-3">
                                     {/* Categoría */}
                                     {producto.categoria && (
-                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                        <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <p className="text-xs text-slate-400 font-medium mb-1">Categoría</p>
-                                            <p className="text-sm font-bold text-slate-800 capitalize">{producto.categoria}</p>
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">{producto.categoria}</p>
                                         </div>
                                     )}
 
                                     {/* Subcategoría */}
                                     {producto.subcategoria && (
-                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                        <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <p className="text-xs text-slate-400 font-medium mb-1">Tipo</p>
-                                            <p className="text-sm font-bold text-slate-800 capitalize">{producto.subcategoria}</p>
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">{producto.subcategoria}</p>
                                         </div>
                                     )}
 
                                     {/* Marca */}
                                     {producto.marca && (
-                                        <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                        <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <p className="text-xs text-slate-400 font-medium mb-1">Marca</p>
                                             <p className="text-sm font-bold text-orange-600 uppercase">{producto.marca}</p>
                                         </div>
                                     )}
 
                                     {/* Tallas Disponibles */}
-                                    <div className="bg-white p-3 rounded-lg border border-slate-200">
+                                    <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                                         <p className="text-xs text-slate-400 font-medium mb-1">Tallas</p>
-                                        <p className="text-sm font-bold text-slate-800">{tipoCurva}</p>
+                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tipoCurva}</p>
                                     </div>
                                 </div>
 
@@ -323,31 +324,31 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                         <button
                                             onClick={() => setCantidadCajon(6)}
                                             className={`flex-1 py-3 px-4 rounded-xl border-2 flex items-center justify-between gap-2 transition-all ${cantidadCajon === 6
-                                                ? 'border-orange-500 bg-orange-50/50 shadow-sm'
-                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                                ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 shadow-sm'
+                                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'
                                                 }`}
                                         >
-                                            <span className={`font-bold ${cantidadCajon === 6 ? 'text-orange-800' : 'text-slate-600'}`}>Media Docena</span>
-                                            <span className="text-xs bg-white border border-slate-200 px-2 py-1 rounded font-medium text-slate-500">6 pares</span>
+                                            <span className={`font-bold ${cantidadCajon === 6 ? 'text-orange-800 dark:text-orange-400' : 'text-slate-600 dark:text-slate-300'}`}>Media Docena</span>
+                                            <span className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded font-medium text-slate-500 dark:text-slate-400">6 pares</span>
                                         </button>
 
                                         <button
                                             onClick={() => setCantidadCajon(12)}
                                             className={`flex-1 py-3 px-4 rounded-xl border-2 flex items-center justify-between gap-2 transition-all ${cantidadCajon === 12
-                                                ? 'border-orange-500 bg-orange-50/50 shadow-sm'
-                                                : 'border-slate-200 bg-white hover:border-slate-300'
+                                                ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 shadow-sm'
+                                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'
                                                 }`}
                                         >
-                                            <span className={`font-bold ${cantidadCajon === 12 ? 'text-orange-800' : 'text-slate-600'}`}>Docena</span>
-                                            <span className="text-xs bg-white border border-slate-200 px-2 py-1 rounded font-medium text-slate-500">12 pares</span>
+                                            <span className={`font-bold ${cantidadCajon === 12 ? 'text-orange-800 dark:text-orange-400' : 'text-slate-600 dark:text-slate-300'}`}>Docena</span>
+                                            <span className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded font-medium text-slate-500 dark:text-slate-400">12 pares</span>
                                         </button>
                                     </div>
                                 </div>
 
                                 {/* Colores Disponibles - Con Imágenes Clickeables */}
                                 {coloresDisponibles && coloresDisponibles.length > 0 && (
-                                    <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                        <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                                    <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
+                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
                                             <Info size={16} className="text-slate-400" />
                                             Colores disponibles - Haz clic para ver
                                         </h3>
@@ -356,6 +357,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                                 const imagen = getColorImage(colorData)
                                                 const nombre = getColorName(colorData)
                                                 const hex = getColorHex(colorData)
+                                                const hex2 = typeof colorData === 'object' ? colorData.color2 : null
                                                 const isSelected = selectedImage === imagen
 
                                                 return (
@@ -363,8 +365,8 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                                         key={idx}
                                                         onClick={() => setSelectedImage(imagen)}
                                                         className={`group relative aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${isSelected
-                                                            ? 'border-orange-500 ring-2 ring-orange-200 shadow-lg'
-                                                            : 'border-slate-200 hover:border-orange-300'
+                                                            ? 'border-orange-500 ring-2 ring-orange-200 dark:ring-orange-900 shadow-lg'
+                                                            : 'border-slate-200 dark:border-slate-700 hover:border-orange-300'
                                                             }`}
                                                         title={nombre}
                                                     >
@@ -378,7 +380,11 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                                         {/* Indicador de color en esquina */}
                                                         <div
                                                             className="absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white shadow-md"
-                                                            style={{ backgroundColor: hex }}
+                                                            style={{
+                                                                background: hex2
+                                                                    ? `linear-gradient(135deg, ${hex} 50%, ${hex2} 50%)`
+                                                                    : hex
+                                                            }}
                                                         />
 
                                                         {/* Overlay de selección */}
@@ -404,34 +410,34 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                     </div>
                                 )}
 
-                                {/* Resumen del Pedido */}
+                                {/* Resumen del Pedido - PRECIO ELIMINADO */}
                             </div>
 
                             {/* Botones de Acción */}
                             <div className="flex flex-col gap-3">
                                 <button
-                                    id="add-btn"
-                                    onClick={handleAddToCart}
-                                    className={`w-full py-4 text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all ${true
-                                        ? 'bg-orange-500 hover:bg-orange-600 hover:shadow-orange-500/30 hover:translate-y-[-2px]'
-                                        : 'bg-slate-300 cursor-not-allowed grayscale'
-                                        }`}
+                                    onClick={handleWhatsAppClick}
+                                    className="w-full py-4 text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all bg-green-600 hover:bg-green-700 hover:shadow-green-500/30 hover:translate-y-[-2px] animate-pulse-slow"
                                 >
-                                    <ShoppingBag size={24} />
-                                    Agregar al Pedido
+                                    <MessageCircle size={24} />
+                                    Hacer la consulta
                                 </button>
 
                                 <button
-                                    onClick={handleWhatsAppClick}
-                                    className="w-full py-3 bg-white border-2 border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center justify-center gap-2"
+                                    id="add-btn"
+                                    onClick={handleAddToCart}
+                                    className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border-2 ${true
+                                        ? 'border-orange-200 text-orange-600 dark:border-orange-900/50 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                                        : 'cursor-not-allowed grayscale bg-slate-100'
+                                        }`}
                                 >
-                                    <MessageCircle size={20} />
-                                    Tengo una duda antes de pedir
+                                    <ShoppingBag size={18} />
+                                    Agregar al Pedido (Carrito)
                                 </button>
                             </div>
 
                             {/* Garantías */}
-                            <div className="flex items-center justify-around mt-6 pt-6 border-t border-slate-100 text-slate-400 text-xs font-medium">
+                            <div className="flex items-center justify-around mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 text-slate-400 text-xs font-medium">
                                 <div className="flex items-center gap-2"><Truck size={14} /> Envíos Nacionales</div>
                                 <div className="flex items-center gap-2"><Package size={14} /> Venta Mayorista</div>
                             </div>
@@ -444,7 +450,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                 {productosRelacionados && productosRelacionados.length > 0 && (
                     <div className="mt-16 animate-fade-in-up">
                         <div className="flex items-center justify-between mb-8">
-                            <h2 className="text-2xl md:text-3xl font-black text-slate-900">
+                            <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">
                                 También te podría interesar
                             </h2>
                             <Link href="/catalogo" className="text-orange-600 font-bold text-sm hover:underline flex items-center gap-1">

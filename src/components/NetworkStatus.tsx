@@ -37,10 +37,10 @@ export default function NetworkStatus() {
     if (!showToast && isOnline) return null
 
     return (
-        <div className={`fixed bottom-24 left-1/2 transform -translate-x-1/2 z-[100] transition-all duration-500 ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+        <div className={`fixed bottom-32 left-1/2 transform -translate-x-1/2 z-[100] transition-all duration-500 ${showToast ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
             <div className={`flex items-center gap-3 px-6 py-3 rounded-full shadow-2xl backdrop-blur-md border ${isOnline
-                    ? 'bg-green-500/90 text-white border-green-400'
-                    : 'bg-red-500/90 text-white border-red-400'
+                ? 'bg-green-500/90 text-white border-green-400'
+                : 'bg-red-500/90 text-white border-red-400'
                 }`}>
                 {isOnline ? (
                     <>

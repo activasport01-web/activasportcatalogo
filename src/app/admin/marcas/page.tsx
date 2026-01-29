@@ -168,9 +168,9 @@ export default function MarcasAdmin() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
             {/* Header */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700 shadow-lg text-white">
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-slate-950 border-b border-slate-700 dark:border-slate-800 shadow-lg text-white transition-colors">
                 <div className="max-w-4xl mx-auto px-6 py-8">
                     <div className="flex justify-between items-center gap-6">
                         <div className="flex items-center gap-4">
@@ -200,13 +200,13 @@ export default function MarcasAdmin() {
             <div className="max-w-4xl mx-auto px-6 py-10">
                 {/* Alerta SQL si está vacío */}
                 {marcas.length === 0 && !loading && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-4">
-                        <div className="p-2 bg-blue-100 rounded-full text-blue-600 shrink-0">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 flex items-start gap-4">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full text-blue-600 dark:text-blue-400 shrink-0">
                             <AlertCircle size={20} />
                         </div>
                         <div>
-                            <h4 className="font-bold text-blue-800">¿No ves marcas?</h4>
-                            <p className="text-sm text-blue-600 mt-1">
+                            <h4 className="font-bold text-blue-800 dark:text-blue-300">¿No ves marcas?</h4>
+                            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
                                 Asegúrate de haber creado la tabla <code>marcas</code> en tu base de datos Supabase.
                                 <br />
                                 Ejecuta el script SQL que se encuentra en los comentarios de este archivo.
@@ -215,12 +215,12 @@ export default function MarcasAdmin() {
                     </div>
                 )}
 
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                     <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {marcas.map((marca) => (
-                            <div key={marca.id} className="group bg-white rounded-2xl p-6 border-2 border-slate-200 hover:border-orange-500 transition-all shadow-sm hover:shadow-lg">
+                            <div key={marca.id} className="group bg-white dark:bg-slate-800/50 rounded-2xl p-6 border-2 border-slate-200 dark:border-slate-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all shadow-sm hover:shadow-lg">
                                 {/* Logo */}
-                                <div className="aspect-square bg-slate-50 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
+                                <div className="aspect-square bg-slate-50 dark:bg-slate-800 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
                                     {marca.logo_url ? (
                                         <img
                                             src={marca.logo_url}
@@ -228,16 +228,16 @@ export default function MarcasAdmin() {
                                             className="w-full h-full object-contain p-4"
                                         />
                                     ) : (
-                                        <div className="text-6xl font-black text-slate-200">
+                                        <div className="text-6xl font-black text-slate-200 dark:text-slate-700">
                                             {marca.nombre.charAt(0)}
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Info */}
-                                <h3 className="font-bold text-lg text-slate-900 mb-2">{marca.nombre}</h3>
+                                <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100 mb-2">{marca.nombre}</h3>
                                 <div className="flex items-center gap-2 mb-4">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${marca.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${marca.active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
                                         {marca.active ? 'Activa' : 'Inactiva'}
                                     </span>
                                 </div>
@@ -246,14 +246,14 @@ export default function MarcasAdmin() {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => openModal(marca)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg font-semibold text-slate-700 transition-all"
+                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg font-semibold text-slate-700 dark:text-slate-300 transition-all"
                                     >
                                         <Edit size={16} />
                                         Editar
                                     </button>
                                     <button
                                         onClick={() => handleDelete(marca.id)}
-                                        className="px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg text-red-700 transition-all"
+                                        className="px-4 py-2 bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/40 rounded-lg text-red-700 dark:text-red-400 transition-all"
                                     >
                                         <Trash2 size={16} />
                                     </button>
@@ -271,31 +271,31 @@ export default function MarcasAdmin() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="bg-slate-800 px-6 py-4 flex justify-between items-center text-white">
+                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border dark:border-slate-800">
+                        <div className="bg-slate-800 dark:bg-slate-950 px-6 py-4 flex justify-between items-center text-white border-b border-slate-700 dark:border-slate-800">
                             <h3 className="font-bold text-lg">{editingMarca ? 'Editar Marca' : 'Nueva Marca'}</h3>
                             <button onClick={closeModal} className="text-slate-400 hover:text-white"><X size={20} /></button>
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Nombre de la Marca</label>
+                                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-2">Nombre de la Marca</label>
                                 <input
                                     type="text"
                                     value={formData.nombre}
                                     onChange={e => setFormData({ ...formData, nombre: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-orange-500 outline-none transition-all font-bold text-slate-800 placeholder-slate-400"
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-orange-500 outline-none transition-all font-bold text-slate-800 dark:text-slate-100 placeholder-slate-400"
                                     placeholder="Ej: GRACEP"
                                     autoFocus
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Logo de la Marca</label>
+                                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-2">Logo de la Marca</label>
                                 <input
                                     type="file"
                                     accept="image/*"
                                     onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                                    className="w-full px-3 py-2.5 text-sm border-2 border-slate-200 rounded-lg file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
+                                    className="w-full px-3 py-2.5 text-sm border-2 border-slate-200 dark:border-slate-700 rounded-lg file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-orange-50 dark:file:bg-orange-900/30 file:text-orange-700 dark:file:text-orange-400 hover:file:bg-orange-100 dark:hover:file:bg-orange-900/50 cursor-pointer text-slate-500 dark:text-slate-400"
                                 />
                                 {editingMarca?.logo_url && !logoFile && (
                                     <p className="text-xs text-slate-500 mt-1">Logo actual cargado</p>
@@ -307,16 +307,16 @@ export default function MarcasAdmin() {
                                         type="checkbox"
                                         checked={formData.active}
                                         onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                                        className="w-5 h-5 rounded border-2 border-slate-300 checked:bg-orange-500 checked:border-orange-500"
+                                        className="w-5 h-5 rounded border-2 border-slate-300 dark:border-slate-600 checked:bg-orange-500 checked:border-orange-500"
                                     />
-                                    <span className="text-sm font-semibold text-slate-700">Marca Activa</span>
+                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Marca Activa</span>
                                 </label>
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button
                                     type="button"
                                     onClick={closeModal}
-                                    className="flex-1 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors"
+                                    className="flex-1 py-3 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                                 >
                                     Cancelar
                                 </button>

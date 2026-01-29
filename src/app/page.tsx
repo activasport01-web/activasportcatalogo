@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import HeroSection from '@/components/HeroSection'
+import PromoCarousel from '@/components/PromoCarousel'
 import ProductCard from '@/components/ProductCard'
 import BrandsCarousel from '@/components/BrandsCarousel'
 import { Sparkles, TrendingUp, Award, ArrowRight } from 'lucide-react'
@@ -9,53 +10,87 @@ import { Sparkles, TrendingUp, Award, ArrowRight } from 'lucide-react'
 export const revalidate = 0;
 
 export default async function Home() {
-  // 1. Obtener Banner Activo
-  const { data: heroData } = await supabase
+  // 1. Obtener Portada Destacada (Para el Slide Principal)
+  const { data: portada } = await supabase
     .from('portada_destacada')
     .select('*')
     .eq('activo', true)
     .single()
 
-  // 2. Obtener Zapatos Disponibles
+  // 2. Obtener Zapatos Disponibles (Para Slides de Novedades/Tendencias)
   const { data: zapatos } = await supabase
     .from('zapatos')
     .select('*')
     .eq('disponible', true)
     .order('fecha_creacion', { ascending: false })
+    .limit(10)
 
-  // Preparar datos para el Carrusel (HeroSection)
+  // Preparar datos para el Carrusel Principal (HeroSection)
+  // SUGERENCIA DEL USUARIO: Mostrar solo Novedades, Tendencias y Branding aquí.
   const slides = [];
 
-  // 1. Si hay una portada destacada manual, va primero
-  if (heroData) {
+  // SLIDE 1: Portada Principal (Configurable desde Admin > Portada)
+  // Ideal para: Mensaje Institucional, Bienvenida Mayorista, o Aviso Importante.
+  if (portada) {
     slides.push({
       id: 'portada-main',
-      title: heroData.titulo,
-      description: heroData.descripcion,
-      image_url: heroData.url_imagen,
-      product_link: heroData.id_producto ? `/producto/${heroData.id_producto}` : '/catalogo',
+      title: portada.titulo,
+      description: portada.descripcion,
+      image_url: portada.url_imagen,
+      product_link: '/catalogo', // Link general al catálogo
       tag: '⭐ DESTACADO'
     });
   }
 
-  // 2. Rellenar con los últimos 4 productos nuevos para tener variedad
-  if (zapatos) {
-    const nuevos = zapatos.slice(0, 4).map((z: any) => ({
-      id: z.id,
-      title: z.nombre,
-      description: `¡Tendencia de temporada! Disponible ahora`,
-      image_url: z.url_imagen,
-      product_link: `/producto/${z.id}`,
+  // SLIDE 2: Él Último Ingreso (Automático)
+  // Ideal para: Mostrar que la tienda se actualiza constantemente.
+  if (zapatos && zapatos.length > 0) {
+    const nuevo = zapatos[0];
+    slides.push({
+      id: `new-${nuevo.id}`,
+      title: '¡Acaba de Llegar!',
+      description: `Nuevo ${nuevo.nombre} disponible en curvas completas.`,
+      image_url: nuevo.url_imagen,
+      product_link: `/producto/${nuevo.id}`,
       tag: '✨ NUEVO INGRESO'
-    }));
-    slides.push(...nuevos);
+    });
   }
 
-  // 3. Filtrar productos y preparar datos visuales destacados
-  // Aseguramos que existan datos antes de acceder
+  // SLIDE 3: Tendencia / Popular (Lógica "Nike" o "TN" o el segundo más nuevo)
+  // Ideal para: Mostrar productos de alta demanda.
+  if (zapatos && zapatos.length > 1) {
+    const popular = zapatos.find((z: any) =>
+      (z.nombre.toLowerCase().includes('nike') || z.nombre.toLowerCase().includes('tn')) && z.id !== zapatos[0].id
+    ) || zapatos[1];
+
+    if (popular) {
+      slides.push({
+        id: `trend-${popular.id}`,
+        title: 'Tendencia Mayorista',
+        description: 'Los modelos más buscados por tus clientes.',
+        image_url: popular.url_imagen,
+        product_link: `/producto/${popular.id}`,
+        tag: '🔥 MÁS VENDIDO'
+      });
+    }
+  }
+
+  // Fallback si no hay nada (raro, pero por seguridad visual)
+  if (slides.length === 0) {
+    slides.push({
+      id: 'fallback',
+      title: 'Catálogo 2024',
+      description: 'Explora nuestra colección completa de calzados al por mayor.',
+      image_url: null, // HeroSection manejará el fallback visual
+      product_link: '/catalogo',
+      tag: '👟 ACTIVA SPORT'
+    })
+  }
+
+  // 3. Filtrar productos para las tarjetas destacadas inferiores
   const pNuevo = zapatos && zapatos.length > 0 ? zapatos[0] : null
 
-  // Buscar un producto que sea Nike o TN, si no, usar el segundo más nuevo
+  // Buscar el producto popular para la tarjeta (reutilizando lógica)
   const pPopular = zapatos && zapatos.length > 0 ? (
     zapatos.find((z: any) => z.nombre.toLowerCase().includes('nike') || z.nombre.toLowerCase().includes('tn'))
     || zapatos[1]
@@ -72,12 +107,15 @@ export default async function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black relative overflow-hidden transition-colors duration-300">
+    <main className="min-h-screen bg-white dark:bg-slate-950 relative overflow-hidden transition-colors duration-300">
       {/* Navbar */}
       {/* Navbar - Global en Layout */}
 
       {/* Banner Principal */}
       <HeroSection slides={slides} />
+
+      {/* Promociones Activas */}
+      <PromoCarousel />
 
       {/* Carrusel de Marcas */}
       <BrandsCarousel />
@@ -88,7 +126,7 @@ export default async function Home() {
 
           {/* 1. NUEVO INGRESO (Dinámico) */}
           <Link href={pNuevo ? `/producto/${pNuevo.id}` : '/catalogo?sort=recientes'} className="h-64 group">
-            <div className="relative bg-gradient-to-br from-black to-zinc-900 rounded-[2rem] p-6 overflow-hidden shadow-2xl h-full flex flex-col justify-between transform hover:-translate-y-2 hover:shadow-brand-orange/20 transition-all border border-brand-orange/20">
+            <div className="relative bg-gradient-to-br from-slate-950 to-slate-900 rounded-[2rem] p-6 overflow-hidden shadow-2xl h-full flex flex-col justify-between transform hover:-translate-y-2 hover:shadow-brand-orange/20 transition-all border border-brand-orange/20">
 
               {/* Texto a la Izquierda */}
               <div className="relative z-20 max-w-[50%]">
@@ -117,7 +155,7 @@ export default async function Home() {
 
           {/* 2. MÁS POPULAR (Dinámico) */}
           <Link href={pPopular ? `/producto/${pPopular.id}` : '/catalogo'} className="h-64 group">
-            <div className="relative bg-zinc-100 dark:bg-zinc-900 rounded-[2rem] p-6 overflow-hidden shadow-xl h-full flex flex-col justify-between transform hover:-translate-y-2 transition-all border border-transparent dark:border-white/10 hover:border-brand-orange/20">
+            <div className="relative bg-zinc-100 dark:bg-slate-900 rounded-[2rem] p-6 overflow-hidden shadow-xl h-full flex flex-col justify-between transform hover:-translate-y-2 transition-all border border-transparent dark:border-slate-800 hover:border-brand-orange/20">
 
               <div className="relative z-20 max-w-[50%]">
                 <div className="inline-block bg-black dark:bg-white px-3 py-1 rounded-full text-xs font-bold text-white dark:text-black mb-3">
@@ -145,7 +183,7 @@ export default async function Home() {
 
           {/* 3. MEJOR OFERTA (Dinámico) */}
           <Link href={pOferta ? `/producto/${pOferta.id}` : '/ofertas'} className="h-64 group">
-            <div className="relative bg-white dark:bg-black rounded-[2rem] p-6 overflow-hidden shadow-xl h-full flex flex-col justify-between transform hover:-translate-y-2 transition-all border-2 border-dashed border-gray-200 dark:border-zinc-800 hover:border-brand-orange dark:hover:border-brand-orange">
+            <div className="relative bg-white dark:bg-slate-950 rounded-[2rem] p-6 overflow-hidden shadow-xl h-full flex flex-col justify-between transform hover:-translate-y-2 transition-all border-2 border-dashed border-gray-200 dark:border-slate-800 hover:border-brand-orange dark:hover:border-brand-orange">
 
               <div className="relative z-20 max-w-[50%]">
                 <div className="inline-block bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold mb-3">
@@ -187,17 +225,17 @@ export default async function Home() {
               </button>
             </Link>
             <Link href="/catalogo/adulto">
-              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-zinc-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
+              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-slate-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
                 Adulto
               </button>
             </Link>
             <Link href="/catalogo/niño">
-              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-zinc-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
+              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-slate-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
                 Niño
               </button>
             </Link>
             <Link href="/catalogo/deportivo">
-              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-zinc-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
+              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-slate-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
                 Deportivo
               </button>
             </Link>

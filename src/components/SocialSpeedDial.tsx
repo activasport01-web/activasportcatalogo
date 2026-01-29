@@ -53,7 +53,7 @@ export default function SocialSpeedDial() {
     ]
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-4">
+        <div className="fixed bottom-28 right-6 z-50 flex flex-col items-center gap-4">
             {/* Burbujas de Redes Sociales */}
             <div className="flex flex-col-reverse gap-3">
                 {socials.map((social, index) => (

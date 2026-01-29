@@ -15,7 +15,7 @@ export default async function NuevosPage() {
         .order('fecha_creacion', { ascending: false })
 
     return (
-        <main className="min-h-screen bg-gray-50">
+        <main className="min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors duration-300">
 
 
             {/* Hero */}
@@ -30,10 +30,10 @@ export default async function NuevosPage() {
             {/* Productos */}
             <section className="max-w-7xl mx-auto px-4 py-12">
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900">
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                         {zapatos?.length || 0} Productos Nuevos
                     </h2>
-                    <p className="text-gray-600 mt-1">Recién llegados a nuestra tienda</p>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">Recién llegados a nuestra tienda</p>
                 </div>
 
                 {zapatos && zapatos.length > 0 ? (
@@ -45,8 +45,8 @@ export default async function NuevosPage() {
                 ) : (
                     <div className="text-center py-20">
                         <div className="text-6xl mb-4">📦</div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">Pronto habrá nuevos productos</h3>
-                        <p className="text-gray-600">Estamos preparando nuevas sorpresas para ti</p>
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Pronto habrá nuevos productos</h3>
+                        <p className="text-gray-600 dark:text-gray-400">Estamos preparando nuevas sorpresas para ti</p>
                     </div>
                 )}
             </section>

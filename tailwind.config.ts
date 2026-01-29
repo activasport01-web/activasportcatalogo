@@ -12,22 +12,19 @@ const config: Config = {
             colors: {
                 background: "var(--background)",
                 foreground: "var(--foreground)",
-                // Nueva Paleta Importadora Fernández (I.F.)
-                'neon': {
-                    400: '#D9FF3A', // Apoyo
-                    500: '#C7F000', // Principal
-                    600: '#A4C600', // Hover
-                },
-                'camo': {
-                    100: '#E0E0E0', // Claro
-                    300: '#B7B7B7', // Base (Fondo)
-                    800: '#8F8F8F', // Oscuro
-                },
+                // Activa Sport Brand Palette
                 'brand': {
-                    black: '#1A1A1A', // Principal Texto
-                    dark: '#000000',
-                }
+                    orange: '#F65703', // Primary Brand Color
+                    black: '#271d06ff',
+                    gray: '#ABABAB',
+                    light: '#F5F5F5',
+                    'dark-soft': '#0f172a', // Slate 900
+                    'dark-medium': '#1e293b', // Slate 800
+                },
             },
+            fontFamily: {
+                sans: ['Helvetica', 'Arial', 'sans-serif'],
+            }
         },
     },
     plugins: [],

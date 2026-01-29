@@ -15,7 +15,7 @@ export default async function OfertasPage() {
         .order('fecha_creacion', { ascending: false })
 
     return (
-        <main className="min-h-screen bg-gray-50">
+        <main className="min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors duration-300">
 
 
             {/* Hero */}
@@ -30,10 +30,10 @@ export default async function OfertasPage() {
             {/* Productos */}
             <section className="max-w-7xl mx-auto px-4 py-12">
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900">
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
                         {zapatos?.length || 0} Productos en Oferta
                     </h2>
-                    <p className="text-gray-600 mt-1">¡Aprovecha estos precios increíbles!</p>
+                    <p className="text-gray-600 dark:text-slate-400 mt-1">¡Aprovecha estos precios increíbles!</p>
                 </div>
 
                 {zapatos && zapatos.length > 0 ? (
@@ -45,8 +45,8 @@ export default async function OfertasPage() {
                 ) : (
                     <div className="text-center py-20">
                         <div className="text-6xl mb-4">🎁</div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">No hay ofertas activas en este momento</h3>
-                        <p className="text-gray-600">Suscríbete para recibir notificaciones de nuestras próximas ofertas</p>
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No hay ofertas activas en este momento</h3>
+                        <p className="text-gray-600 dark:text-slate-400">Suscríbete para recibir notificaciones de nuestras próximas ofertas</p>
                     </div>
                 )}
             </section>

@@ -275,9 +275,9 @@ export default function CategoriasAdmin() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
             {/* Header Moderno con Gradiente */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-900 border-b border-slate-700 shadow-lg text-white">
+            <div className="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-slate-950 border-b border-slate-700 dark:border-slate-800 shadow-lg text-white transition-colors">
                 <div className="max-w-7xl mx-auto px-6 py-8">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                         <div className="flex items-start gap-4">
@@ -338,11 +338,11 @@ export default function CategoriasAdmin() {
                     {filteredCategorias.map((categoria, index) => (
                         <div
                             key={categoria.id}
-                            className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl hover:border-orange-200 transition-all duration-300 group flex flex-col h-full animate-slide-up"
+                            className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-xl hover:border-orange-200 dark:hover:border-orange-500/30 transition-all duration-300 group flex flex-col h-full animate-slide-up"
                             style={{ animationDelay: `${index * 100}ms` }}
                         >
                             {/* Imagen de Portada */}
-                            <div className="aspect-[16/9] bg-slate-100 relative overflow-hidden group-hover:opacity-95 transition-opacity">
+                            <div className="aspect-[16/9] bg-slate-100 dark:bg-slate-800 relative overflow-hidden group-hover:opacity-95 transition-opacity">
                                 <img
                                     src={categoria.imagen_url || '/placeholder-category.jpg'}
                                     alt={categoria.nombre}
@@ -353,8 +353,8 @@ export default function CategoriasAdmin() {
                                 {/* Badge de Estado */}
                                 <div className="absolute top-4 right-4">
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md flex items-center gap-1.5 shadow-sm ${categoria.activa
-                                            ? 'bg-green-500/90 text-white border-white/20'
-                                            : 'bg-slate-500/90 text-white border-white/20'
+                                        ? 'bg-green-500/90 text-white border-white/20'
+                                        : 'bg-slate-500/90 text-white border-white/20'
                                         }`}>
                                         <div className={`w-2 h-2 rounded-full ${categoria.activa ? 'bg-white animate-pulse' : 'bg-slate-300'}`}></div>
                                         {categoria.activa ? 'ACTIVA' : 'INACTIVA'}
@@ -362,14 +362,14 @@ export default function CategoriasAdmin() {
                                 </div>
 
                                 {/* Emoji Flotante */}
-                                <div className="absolute -bottom-6 right-6 w-16 h-16 bg-white rounded-2xl shadow-lg border-4 border-slate-50 flex items-center justify-center text-3xl transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 z-10">
+                                <div className="absolute -bottom-6 right-6 w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border-4 border-slate-50 dark:border-slate-700 flex items-center justify-center text-3xl transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 z-10">
                                     {categoria.emoji}
                                 </div>
                             </div>
 
                             <div className="p-6 pt-8 flex-1 flex flex-col">
                                 <div className="mb-4">
-                                    <h3 className="font-bold text-xl text-slate-800 mb-1 group-hover:text-orange-600 transition-colors">
+                                    <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100 mb-1 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                                         {categoria.nombre}
                                     </h3>
                                     <p className="text-slate-400 text-xs font-mono font-medium tracking-wide">
@@ -377,7 +377,7 @@ export default function CategoriasAdmin() {
                                     </p>
                                 </div>
 
-                                <p className="text-sm text-slate-600 mb-6 flex-1 line-clamp-2">
+                                <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 flex-1 line-clamp-2">
                                     {categoria.descripcion || 'Sin descripción disponible'}
                                 </p>
 
@@ -392,7 +392,7 @@ export default function CategoriasAdmin() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => openModal(categoria)}
-                                            className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                                            className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
                                             title="Editar"
                                         >
                                             <Edit size={16} />
@@ -400,8 +400,8 @@ export default function CategoriasAdmin() {
                                         <button
                                             onClick={() => toggleActiva(categoria)}
                                             className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${categoria.activa
-                                                    ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
                                                 }`}
                                             title={categoria.activa ? 'Desactivar' : 'Activar'}
                                         >
@@ -423,11 +423,11 @@ export default function CategoriasAdmin() {
                     {/* Empty State */}
                     {filteredCategorias.length === 0 && (
                         <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-20">
-                            <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Search className="text-slate-300" size={40} />
+                            <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Search className="text-slate-300 dark:text-slate-600" size={40} />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-2">No se encontraron categorías</h3>
-                            <p className="text-slate-500">Intenta con otros términos de búsqueda o crea una nueva.</p>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">No se encontraron categorías</h3>
+                            <p className="text-slate-500 dark:text-slate-400">Intenta con otros términos de búsqueda o crea una nueva.</p>
                         </div>
                     )}
                 </div>
@@ -436,9 +436,9 @@ export default function CategoriasAdmin() {
             {/* Modal Profesional */}
             {showModal && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden animate-slide-up">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden animate-slide-up border dark:border-slate-800">
                         {/* Modal Header */}
-                        <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 px-8 py-6 flex justify-between items-center">
+                        <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-8 py-6 flex justify-between items-center border-b dark:border-slate-800">
                             <div>
                                 <h2 className="text-2xl font-bold text-white flex items-center gap-3">
                                     {editingCategoria ? <Edit size={24} className="text-orange-400" /> : <Plus size={24} className="text-orange-400" />}
@@ -461,7 +461,7 @@ export default function CategoriasAdmin() {
                                 {/* Columna Izquierda: Info Básica */}
                                 <div className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                                        <label className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
                                             Nombre de Categoría <span className="text-red-500">*</span>
                                         </label>
                                         <input
@@ -472,7 +472,7 @@ export default function CategoriasAdmin() {
                                                 setFormData({ ...formData, nombre: e.target.value, slug: generateSlug(e.target.value) })
                                             }}
                                             placeholder="Ej. Deportivos Mujer"
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-slate-900 font-medium placeholder-slate-400"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-slate-900 dark:text-slate-100 font-medium placeholder-slate-400"
                                         />
                                     </div>
 
@@ -488,7 +488,7 @@ export default function CategoriasAdmin() {
                                                 required
                                                 value={formData.slug}
                                                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                                                className="w-full pl-8 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-orange-500 outline-none text-slate-600 font-mono text-sm"
+                                                className="w-full pl-8 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 outline-none text-slate-600 dark:text-slate-400 font-mono text-sm"
                                             />
                                         </div>
                                     </div>
@@ -500,7 +500,7 @@ export default function CategoriasAdmin() {
                                                 type="text"
                                                 value={formData.emoji}
                                                 onChange={(e) => setFormData({ ...formData, emoji: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-orange-500 outline-none text-2xl text-center"
+                                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 outline-none text-2xl text-center"
                                                 placeholder="👟"
                                             />
                                         </div>
@@ -510,7 +510,7 @@ export default function CategoriasAdmin() {
                                                 type="number"
                                                 value={formData.orden}
                                                 onChange={(e) => setFormData({ ...formData, orden: parseInt(e.target.value) })}
-                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-orange-500 outline-none font-mono text-center"
+                                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 outline-none font-mono text-center text-slate-900 dark:text-slate-100"
                                             />
                                         </div>
                                     </div>
@@ -525,7 +525,7 @@ export default function CategoriasAdmin() {
                                             onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                                             rows={2}
                                             placeholder="Breve descripción de la categoría..."
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all resize-none text-slate-900"
+                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all resize-none text-slate-900 dark:text-slate-100 placeholder-slate-400"
                                         />
                                     </div>
 
@@ -562,7 +562,7 @@ export default function CategoriasAdmin() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
                                         <div className="relative inline-block w-12 h-6 transition duration-200 ease-in-out">
                                             <input
                                                 type="checkbox"
@@ -573,15 +573,15 @@ export default function CategoriasAdmin() {
                                             />
                                             <label
                                                 htmlFor="activa"
-                                                className={`block w-12 h-6 rounded-full cursor-pointer transition-colors duration-300 ${formData.activa ? 'bg-green-500' : 'bg-slate-300'
+                                                className={`block w-12 h-6 rounded-full cursor-pointer transition-colors duration-300 ${formData.activa ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'
                                                     }`}
                                             ></label>
                                             <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${formData.activa ? 'translate-x-6' : 'translate-x-0'
                                                 }`}></div>
                                         </div>
-                                        <label htmlFor="activa" className="text-sm font-bold text-slate-700 cursor-pointer select-none">
+                                        <label htmlFor="activa" className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none">
                                             Categoría Visible
-                                            <p className="text-xs font-normal text-slate-500">
+                                            <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
                                                 Determina si la categoría aparecerá en la tienda
                                             </p>
                                         </label>

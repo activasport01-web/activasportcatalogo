@@ -15,7 +15,10 @@ import {
     Sparkles,
     Clock,
     CheckCircle2,
-    BarChart3
+    BarChart3,
+    Layers,
+    Users,
+    Ruler
 } from 'lucide-react'
 import {
     BarChart,
@@ -123,7 +126,7 @@ export default function AdminDashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 relative font-sans">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 relative font-sans transition-colors duration-300">
             {/* Background Image Fixed - Reusing the split background from login for consistency if requested, or just clean background */}
             {/* User asked for "con el unico logo de fondo que te pedi" -> likely wanting the same bg as login available here or subtle branding */}
             <div className="fixed inset-0 z-0 pointer-events-none opacity-5">
@@ -131,7 +134,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Navbar Admin Pro */}
-            <nav className="bg-black text-white shadow-xl sticky top-0 z-50 border-b border-white/10 backdrop-blur-md bg-opacity-95">
+            <nav className="bg-black dark:bg-slate-900 text-white shadow-xl sticky top-0 z-50 border-b border-white/10 dark:border-slate-800 backdrop-blur-md bg-opacity-95 transition-colors">
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <div className="flex justify-between items-center">
                         <div className="flex items-center gap-4">
@@ -172,12 +175,12 @@ export default function AdminDashboard() {
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <LayoutDashboard className="text-brand-orange" size={28} />
-                            <h2 className="text-3xl font-black text-black uppercase tracking-tight">Dashboard</h2>
+                            <h2 className="text-3xl font-black text-black dark:text-white uppercase tracking-tight">Dashboard</h2>
                         </div>
-                        <p className="text-slate-500 font-medium">Bienvenido al sistema de gestión.</p>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium">Bienvenido al sistema de gestión.</p>
                     </div>
                     <div className="text-right hidden md:block">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest bg-white border border-slate-200 py-1.5 px-4 rounded-full shadow-sm">
+                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-1.5 px-4 rounded-full shadow-sm">
                             {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                         </p>
                     </div>
@@ -186,45 +189,45 @@ export default function AdminDashboard() {
                 {/* KPI Cards - Estilo Clean Tech */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
                     {/* Total Productos */}
-                    <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 group hover:-translate-y-1 transition-all relative overflow-hidden">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-100 dark:border-slate-800 group hover:-translate-y-1 transition-all relative overflow-hidden">
                         <div className="flex justify-between items-start mb-4 relative z-10">
-                            <div className="p-3 bg-black rounded-xl text-brand-orange shadow-lg shadow-black/20">
+                            <div className="p-3 bg-black dark:bg-slate-800 rounded-xl text-brand-orange shadow-lg shadow-black/20">
                                 <Package size={24} />
                             </div>
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total</span>
+                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total</span>
                         </div>
-                        <h3 className="text-4xl font-black text-black mb-1 relative z-10">{stats.totalProductos}</h3>
-                        <p className="text-slate-500 text-sm font-medium relative z-10">Productos registrados</p>
+                        <h3 className="text-4xl font-black text-black dark:text-white mb-1 relative z-10">{stats.totalProductos}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium relative z-10">Productos registrados</p>
 
                         {/* Decorative Icon BG */}
-                        <Package className="absolute -bottom-4 -right-4 text-slate-50 opacity-50 transform rotate-12" size={100} />
+                        <Package className="absolute -bottom-4 -right-4 text-slate-50 dark:text-slate-800 opacity-50 transform rotate-12" size={100} />
                     </div>
 
                     {/* Activos */}
-                    <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 group hover:-translate-y-1 transition-all relative overflow-hidden">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-100 dark:border-slate-800 group hover:-translate-y-1 transition-all relative overflow-hidden">
                         <div className="flex justify-between items-start mb-4 relative z-10">
                             <div className="p-3 bg-green-500 rounded-xl text-white shadow-lg shadow-green-500/20">
                                 <CheckCircle2 size={24} />
                             </div>
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Activos</span>
+                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Activos</span>
                         </div>
-                        <h3 className="text-4xl font-black text-black mb-1 relative z-10">{stats.productosActivos}</h3>
-                        <p className="text-slate-500 text-sm font-medium relative z-10">Disponibles en tienda</p>
-                        <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden relative z-10">
+                        <h3 className="text-4xl font-black text-black dark:text-white mb-1 relative z-10">{stats.productosActivos}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium relative z-10">Disponibles en tienda</p>
+                        <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-4 overflow-hidden relative z-10">
                             <div className="bg-green-500 h-full rounded-full" style={{ width: `${stats.totalProductos > 0 ? (stats.productosActivos / stats.totalProductos) * 100 : 0}%` }}></div>
                         </div>
                     </div>
 
                     {/* Categorias */}
-                    <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-100 group hover:-translate-y-1 transition-all relative overflow-hidden">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xl border border-slate-100 dark:border-slate-800 group hover:-translate-y-1 transition-all relative overflow-hidden">
                         <div className="flex justify-between items-start mb-4 relative z-10">
                             <div className="p-3 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-600/20">
                                 <Tags size={24} />
                             </div>
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Categorías</span>
+                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Categorías</span>
                         </div>
-                        <h3 className="text-4xl font-black text-black mb-1 relative z-10">{stats.categorias}</h3>
-                        <p className="text-slate-500 text-sm font-medium relative z-10">Secciones activas</p>
+                        <h3 className="text-4xl font-black text-black dark:text-white mb-1 relative z-10">{stats.categorias}</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium relative z-10">Secciones activas</p>
                     </div>
 
                     {/* Nuevos */}
@@ -245,14 +248,14 @@ export default function AdminDashboard() {
                 {/* GRAPH SECTION */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
                     {/* Main Chart */}
-                    <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-xl border border-slate-100">
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 transition-colors">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-black flex items-center gap-2">
+                            <h3 className="text-lg font-bold text-black dark:text-white flex items-center gap-2">
                                 <BarChart3 className="text-brand-orange" size={20} />
                                 Inventario por Categoría
                             </h3>
                         </div>
-                        <div className="h-[300px] w-full">
+                        <div className="w-full" style={{ height: 300 }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -274,7 +277,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Quick Actions Panel */}
-                    <div className="bg-black text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden flex flex-col justify-between">
+                    <div className="bg-black dark:bg-slate-900 text-white rounded-2xl p-8 shadow-2xl relative overflow-hidden flex flex-col justify-between transition-colors">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-orange rounded-full blur-[100px] opacity-20 -mr-16 -mt-16 pointer-events-none"></div>
 
                         <div>
@@ -306,6 +309,17 @@ export default function AdminDashboard() {
                                     <ArrowUpRight className="ml-auto text-gray-600 group-hover:text-white transition-colors" size={16} />
                                 </Link>
 
+                                <Link href="/admin/subcategorias" className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
+                                    <div className="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                                        <Layers size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-sm">Tipos de Planta</h4>
+                                        <p className="text-xs text-gray-400 group-hover:text-white transition-colors">Subcategorías</p>
+                                    </div>
+                                    <ArrowUpRight className="ml-auto text-gray-600 group-hover:text-white transition-colors" size={16} />
+                                </Link>
+
                                 <Link href="/admin/marcas" className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
                                     <div className="w-10 h-10 rounded-lg bg-green-600 flex items-center justify-center text-white shadow-lg shadow-green-600/20">
                                         <CheckCircle2 size={20} />
@@ -313,6 +327,39 @@ export default function AdminDashboard() {
                                     <div>
                                         <h4 className="font-bold text-sm">Marcas</h4>
                                         <p className="text-xs text-gray-400 group-hover:text-white transition-colors">Gestión de Marcas</p>
+                                    </div>
+                                    <ArrowUpRight className="ml-auto text-gray-600 group-hover:text-white transition-colors" size={16} />
+                                </Link>
+
+                                <Link href="/admin/generos" className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
+                                    <div className="w-10 h-10 rounded-lg bg-pink-600 flex items-center justify-center text-white shadow-lg shadow-pink-600/20">
+                                        <Users size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-sm">Géneros</h4>
+                                        <p className="text-xs text-gray-400 group-hover:text-white transition-colors">Hombre/Mujer...</p>
+                                    </div>
+                                    <ArrowUpRight className="ml-auto text-gray-600 group-hover:text-white transition-colors" size={16} />
+                                </Link>
+
+                                <Link href="/admin/grupos" className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
+                                    <div className="w-10 h-10 rounded-lg bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-600/20">
+                                        <Ruler size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-sm">Grupos de Talla</h4>
+                                        <p className="text-xs text-gray-400 group-hover:text-white transition-colors">Niño/Adulto...</p>
+                                    </div>
+                                    <ArrowUpRight className="ml-auto text-gray-600 group-hover:text-white transition-colors" size={16} />
+                                </Link>
+
+                                <Link href="/admin/promociones" className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
+                                    <div className="w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center text-white shadow-lg shadow-red-500/20">
+                                        <Sparkles size={20} />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-sm">Promociones</h4>
+                                        <p className="text-xs text-gray-400 group-hover:text-white transition-colors">Ofertas y campañas</p>
                                     </div>
                                     <ArrowUpRight className="ml-auto text-gray-600 group-hover:text-white transition-colors" size={16} />
                                 </Link>

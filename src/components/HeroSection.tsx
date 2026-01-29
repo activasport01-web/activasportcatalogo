@@ -22,7 +22,7 @@ export default function HeroSection({ slides }: HeroProps) {
 
     // Si no hay slides, mostrar fallback
     if (!slides || slides.length === 0) return (
-        <div className="py-20 flex justify-center text-gray-400 bg-gradient-to-r from-gray-100 to-gray-50">
+        <div className="py-20 flex justify-center text-gray-400 dark:text-slate-500 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-slate-900 dark:to-slate-950">
             <p className="text-lg">Bienvenido. El administrador aún no configura la portada.</p>
         </div>
     );
@@ -44,7 +44,7 @@ export default function HeroSection({ slides }: HeroProps) {
 
     return (
         <section
-            className="relative bg-gradient-to-br from-camo-100 via-white to-camo-100 overflow-hidden min-h-[600px] flex items-center"
+            className="relative bg-gradient-to-br from-slate-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-950 overflow-hidden min-h-[600px] flex items-center transition-colors duration-500"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -54,16 +54,16 @@ export default function HeroSection({ slides }: HeroProps) {
                     {/* LADO IZQUIERDO: Texto con transición */}
                     <div className="space-y-8 z-10 animate-fade-in" key={`text-${current}`}>
                         {activeSlide.tag && (
-                            <span className="inline-block text-white font-black tracking-widest uppercase text-xs bg-brand-orange px-4 py-2 rounded-full ring-2 ring-orange-400 animate-pulse border border-brand-black/20">
+                            <span className="inline-block text-white font-black tracking-widest uppercase text-xs bg-brand-orange px-4 py-2 rounded-full ring-2 ring-orange-400/50 animate-pulse border border-brand-black/10 shadow-lg shadow-orange-500/30">
                                 {activeSlide.tag}
                             </span>
                         )}
 
-                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 leading-tight drop-shadow-sm">
+                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-slate-100 leading-tight drop-shadow-sm transition-colors duration-300">
                             {activeSlide.title}
                         </h1>
 
-                        <p className="text-slate-600 text-lg md:text-xl leading-relaxed max-w-lg font-medium">
+                        <p className="text-slate-600 dark:text-slate-300 text-lg md:text-xl leading-relaxed max-w-lg font-medium transition-colors duration-300">
                             {activeSlide.description}
                         </p>
 
@@ -75,7 +75,7 @@ export default function HeroSection({ slides }: HeroProps) {
                                 </button>
                             </Link>
                             <Link href="/catalogo">
-                                <button className="bg-white hover:bg-camo-100 text-brand-black font-bold py-4 px-8 rounded-full shadow-md border-2 border-brand-black/10 transition-all hover:border-brand-black/30">
+                                <button className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold py-4 px-8 rounded-full shadow-md border-2 border-slate-200 dark:border-slate-700 transition-all hover:border-brand-orange/50 dark:hover:border-slate-600">
                                     Explorar Todo
                                 </button>
                             </Link>
@@ -85,13 +85,13 @@ export default function HeroSection({ slides }: HeroProps) {
                     {/* LADO DERECHO: Imagen con transición */}
                     <div className="relative h-[400px] md:h-[500px] w-full flex items-center justify-center">
                         {/* Círculo decorativo dinámico */}
-                        <div className={`absolute inset-0 rounded-full blur-3xl opacity-30 scale-110 transition-colors duration-1000 ${current % 2 === 0 ? 'bg-gradient-to-tr from-brand-orange to-camo-300' : 'bg-gradient-to-tr from-brand-black to-orange-600'}`}></div>
+                        <div className={`absolute inset-0 rounded-full blur-3xl opacity-30 dark:opacity-20 scale-110 transition-colors duration-1000 ${current % 2 === 0 ? 'bg-gradient-to-tr from-brand-orange to-slate-300 dark:to-slate-700' : 'bg-gradient-to-tr from-slate-900 dark:from-black to-orange-600'}`}></div>
 
                         {/* Imagen del producto con bordes suaves */}
                         <div className="relative z-10 w-full h-full flex items-center justify-center p-6" key={`img-${current}`}>
                             <div className="relative group/img">
                                 {/* Efecto de resplandor detrás de la imagen */}
-                                <div className="absolute inset-0 bg-black/10 rounded-[3rem] blur-xl transform translate-y-4 scale-95 opacity-0 group-hover/img:opacity-100 transition-opacity duration-500"></div>
+                                <div className="absolute inset-0 bg-black/10 dark:bg-white/5 rounded-[3rem] blur-xl transform translate-y-4 scale-95 opacity-0 group-hover/img:opacity-100 transition-opacity duration-500"></div>
 
                                 <img
                                     src={activeSlide.image_url}
@@ -109,13 +109,13 @@ export default function HeroSection({ slides }: HeroProps) {
             {/* Flechas (Solo visibles en desktop o hover) */}
             <button
                 onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/50 hover:bg-white backdrop-blur rounded-full flex items-center justify-center shadow-lg text-slate-800 transition-all hover:scale-110 z-20 md:opacity-0 md:group-hover:opacity-100"
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 backdrop-blur rounded-full flex items-center justify-center shadow-lg text-slate-800 dark:text-white transition-all hover:scale-110 z-20 md:opacity-0 md:group-hover:opacity-100"
             >
                 <ChevronLeft size={24} />
             </button>
             <button
                 onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/50 hover:bg-white backdrop-blur rounded-full flex items-center justify-center shadow-lg text-slate-800 transition-all hover:scale-110 z-20 md:opacity-0 md:group-hover:opacity-100"
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 backdrop-blur rounded-full flex items-center justify-center shadow-lg text-slate-800 dark:text-white transition-all hover:scale-110 z-20 md:opacity-0 md:group-hover:opacity-100"
             >
                 <ChevronRight size={24} />
             </button>
@@ -127,8 +127,8 @@ export default function HeroSection({ slides }: HeroProps) {
                         key={idx}
                         onClick={() => setCurrent(idx)}
                         className={`w-3 h-3 rounded-full transition-all duration-300 ${idx === current
-                            ? 'bg-brand-black w-8 border border-brand-orange'
-                            : 'bg-camo-300 hover:bg-camo-800'
+                            ? 'bg-brand-black dark:bg-white w-8 border border-brand-orange'
+                            : 'bg-slate-300 dark:bg-slate-700 hover:bg-slate-500'
                             }`}
                         aria-label={`Ir a diapositiva ${idx + 1}`}
                     />
@@ -137,7 +137,7 @@ export default function HeroSection({ slides }: HeroProps) {
 
             {/* Decoración de ondas inferior */}
             <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
-                <svg viewBox="0 0 1440 100" fill="none" className="w-full text-gray-50" preserveAspectRatio="none">
+                <svg viewBox="0 0 1440 100" fill="none" className="w-full text-white dark:text-slate-950 transition-colors duration-300" preserveAspectRatio="none">
                     <path d="M0 100L60 90C120 80 240 60 360 50C480 40 600 40 720 45C840 50 960 60 1080 65C1200 70 1320 70 1380 70L1440 70V100H1380C1320 100 1200 100 1080 100C960 100 840 100 720 100C600 100 480 100 360 100C240 100 120 100 60 100H0Z" fill="currentColor" />
                 </svg>
             </div>

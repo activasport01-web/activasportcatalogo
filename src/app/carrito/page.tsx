@@ -76,14 +76,14 @@ export default function CarritoPage() {
 
     if (items.length === 0) {
         return (
-            <div className="min-h-screen bg-slate-50 pt-24 pb-12 flex flex-col items-center justify-center text-center px-4">
-                <div className="w-24 h-24 bg-orange-100/50 rounded-full flex items-center justify-center mb-6">
-                    <ShoppingBag size={48} className="text-orange-300" />
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-24 pb-12 flex flex-col items-center justify-center text-center px-4 transition-colors duration-300">
+                <div className="w-24 h-24 bg-orange-100/50 dark:bg-orange-900/20 rounded-full flex items-center justify-center mb-6">
+                    <ShoppingBag size={48} className="text-orange-300 dark:text-orange-500" />
                 </div>
-                <h1 className="text-2xl font-bold text-slate-800 mb-2">Tu pedido está vacío</h1>
-                <p className="text-slate-500 mb-8 max-w-sm">Aún no has agregado ninguna caja de zapatos a tu pedido mayorista.</p>
+                <h1 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Tu pedido está vacío</h1>
+                <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-sm">Aún no has agregado ninguna caja de zapatos a tu pedido mayorista.</p>
                 <Link href="/catalogo">
-                    <button className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition-all flex items-center gap-2">
+                    <button className="bg-slate-900 dark:bg-slate-800 text-white px-8 py-3 rounded-xl font-bold hover:bg-black dark:hover:bg-slate-700 transition-all flex items-center gap-2">
                         <ArrowLeft size={20} /> Ir al Catálogo
                     </button>
                 </Link>
@@ -92,16 +92,16 @@ export default function CarritoPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 pt-28 pb-12">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-28 pb-12 transition-colors duration-300">
             <div className="max-w-4xl mx-auto px-4 sm:px-6">
 
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-2xl md:text-3xl font-black text-slate-900 flex items-center gap-3">
+                    <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
                         <Package className="text-orange-500" />
                         Resumen de Pedido
                     </h1>
-                    <Link href="/catalogo" className="text-sm font-medium text-slate-500 hover:text-orange-500 flex items-center gap-1">
+                    <Link href="/catalogo" className="text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-orange-500 flex items-center gap-1">
                         <ArrowLeft size={16} /> Seguir comprando
                     </Link>
                 </div>
@@ -111,14 +111,14 @@ export default function CarritoPage() {
                     {/* Lista de Items */}
                     <div className="lg:col-span-2 space-y-4">
                         {items.map((item, index) => (
-                            <div key={index} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex gap-4 transition-all hover:shadow-md">
-                                <div className="w-24 h-24 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
+                            <div key={index} className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex gap-4 transition-all hover:shadow-md">
+                                <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100 dark:border-slate-800">
                                     <img src={item.imagen} alt={item.nombre} className="w-full h-full object-contain mix-blend-multiply" />
                                 </div>
                                 <div className="flex-1 flex flex-col justify-between">
                                     <div>
-                                        <h3 className="font-bold text-slate-800 line-clamp-1">{item.nombre}</h3>
-                                        <p className="text-sm text-slate-500 font-medium mt-1">
+                                        <h3 className="font-bold text-slate-800 dark:text-white line-clamp-1">{item.nombre}</h3>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
                                             {item.cantidad_pares} Pares • {item.tipo_curva}
                                         </p>
                                     </div>
@@ -147,22 +147,22 @@ export default function CarritoPage() {
 
                     {/* Resumen Final */}
                     <div className="lg:col-span-1">
-                        <div className="bg-white p-6 rounded-3xl shadow-xl border border-slate-100 sticky top-24">
-                            <h3 className="font-bold text-slate-900 mb-6 text-lg">Total Estimado</h3>
+                        <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 sticky top-24 transition-colors">
+                            <h3 className="font-bold text-slate-900 dark:text-white mb-6 text-lg">Total Estimado</h3>
 
                             <div className="space-y-3 mb-6">
-                                <div className="flex justify-between text-slate-500 text-sm">
+                                <div className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
                                     <span>Cantidad de Bultos:</span>
-                                    <span className="font-medium text-slate-800">{cartCount} Cajas</span>
+                                    <span className="font-medium text-slate-800 dark:text-slate-200">{cartCount} Cajas</span>
                                 </div>
-                                <div className="flex justify-between text-slate-500 text-sm">
+                                <div className="flex justify-between text-slate-500 dark:text-slate-400 text-sm">
                                     <span>Total Pares:</span>
-                                    <span className="font-medium text-slate-800">
+                                    <span className="font-medium text-slate-800 dark:text-slate-200">
                                         {items.reduce((acc, item) => acc + item.cantidad_pares, 0)} Pares
                                     </span>
                                 </div>
-                                <div className="border-t border-slate-100 my-2 pt-2">
-                                    <p className="text-sm text-slate-500 text-center">Pedido listo para enviar</p>
+                                <div className="border-t border-slate-100 dark:border-slate-800 my-2 pt-2">
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 text-center">Pedido listo para enviar</p>
                                 </div>
                             </div>
 

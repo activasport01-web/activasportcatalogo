@@ -13,7 +13,7 @@ export default function Favoritos() {
     // El Context maneja su propio estado de carga si fuera necesario, pero simplifiquemos aquí.
 
     return (
-        <main className="min-h-screen bg-slate-50 flex flex-col">
+        <main className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300">
 
 
             <div className="flex-1 pt-8 pb-12">
@@ -22,11 +22,11 @@ export default function Favoritos() {
                     {/* Header */}
                     <div className="mb-8 animate-fade-in flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-slate-800 flex items-center gap-3">
+                            <h1 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
                                 <Heart className="text-red-500 fill-red-500" size={32} />
                                 Mis Favoritos
                             </h1>
-                            <p className="text-slate-500 mt-2">
+                            <p className="text-slate-500 dark:text-slate-400 mt-2">
                                 {favorites.length} productos guardados para después.
                             </p>
                         </div>
@@ -48,16 +48,16 @@ export default function Favoritos() {
                         </div>
                     ) : (
                         // Empty State
-                        <div className="bg-white rounded-3xl shadow-xl p-12 text-center animate-fade-in border border-slate-100 max-w-2xl mx-auto mt-12">
-                            <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Heart className="text-red-400" size={48} />
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl p-12 text-center animate-fade-in border border-slate-100 dark:border-slate-800 max-w-2xl mx-auto mt-12 transition-colors">
+                            <div className="w-24 h-24 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Heart className="text-red-400 dark:text-red-500" size={48} />
                             </div>
-                            <h2 className="text-2xl font-bold text-slate-800 mb-2">Tu lista de deseos está vacía</h2>
-                            <p className="text-slate-500 mb-8">
+                            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Tu lista de deseos está vacía</h2>
+                            <p className="text-slate-500 dark:text-slate-400 mb-8">
                                 Guarda los zapatos que te encantan haciendo clic en el corazón. ¡Así no los perderás de vista!
                             </p>
                             <Link href="/">
-                                <button className="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 mx-auto">
+                                <button className="px-8 py-4 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 mx-auto">
                                     <ShoppingBag size={20} />
                                     Ver Novedades
                                 </button>
