@@ -32,98 +32,85 @@ export default function AdminLogin() {
     }
 
     return (
-        <div className="min-h-screen w-full flex bg-white overflow-hidden">
-            {/* Left Side - Branding Area (Black with White Logo) */}
-            <div className="hidden lg:flex lg:w-1/2 bg-black relative items-center justify-center overflow-hidden">
-                {/* Subtle Radial Gradient to give depth */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-black to-black opacity-80"></div>
-
-                {/* Decorative Orange Lines */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-orange to-transparent opacity-50"></div>
-
-                <div className="relative z-10 p-12 flex flex-col items-center text-center">
-                    <div className="relative w-80 h-32 mb-8 transform hover:scale-105 transition-transform duration-500">
-                        {/* Assuming logo.png is colors/black, we invert it for black background to be white if needed. 
-                             Using brightness-0 invert-1 forces it to white.
-                         */}
-                        <Image
-                            src="/logo.png"
-                            alt="ActivaSport Logo"
-                            fill
-                            sizes="320px"
-                            className="object-contain brightness-0 invert"
-                            priority
-                        />
-                    </div>
-                    <div className="space-y-4 max-w-md">
-                        <h2 className="text-3xl font-black text-white tracking-tight">
-                            PANEL ADMINISTRATIVO
-                        </h2>
-                        <p className="text-zinc-400 font-medium leading-relaxed">
-                            Accede para gestionar el catálogo, inventario y pedidos de la tienda.
-                        </p>
-                    </div>
-                </div>
-
-                {/* Background Pattern - Removed missing grid.svg */}
-                <div className="absolute inset-0 opacity-10 mix-blend-overlay bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-slate-950">
+            {/* Background Decoration */}
+            <div className="absolute inset-0 z-0">
+                {/* Gradient Mesh */}
+                <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-indigo-500/20 rounded-full blur-[100px] animate-pulse-slow"></div>
+                <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] bg-brand-orange/20 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] mix-blend-overlay"></div>
             </div>
 
-            {/* Right Side - Login Form (White) */}
-            <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-8 relative">
-                <div className="w-full max-w-[400px] space-y-8 animate-fade-in-up">
-                    {/* System Badge */}
-                    <div className="flex justify-center lg:justify-start">
-                        <div className="inline-block bg-brand-orange text-white px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest shadow-md mb-2">
-                            Sistema V2.0
+            {/* Login Card */}
+            <div className="relative z-10 w-full max-w-md p-6 mx-4">
+                <div className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl overflow-hidden p-8 sm:p-10">
+
+                    {/* Header: Logo & Title */}
+                    <div className="flex flex-col items-center text-center space-y-6 mb-10">
+                        <div className="relative w-48 h-16 transform transition-transform hover:scale-105 duration-500">
+                            {/* Logo - Removed invert so it shows original colors. Added drop-shadow for contrast */}
+                            <Image
+                                src="/logo.png"
+                                alt="ActivaSport Logo"
+                                fill
+                                sizes="200px"
+                                className="object-contain drop-shadow-lg"
+                                priority
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <h1 className="text-3xl font-black text-white tracking-tight drop-shadow-md">
+                                Panel Administrativo
+                            </h1>
+                            <p className="text-slate-300 font-medium text-sm">
+                                Ingresa tus credenciales para gestionar la tienda
+                            </p>
                         </div>
                     </div>
 
-                    <div className="text-center lg:text-left">
-                        <h1 className="text-4xl font-black text-zinc-900 mb-2">Bienvenido</h1>
-                        <p className="text-zinc-500 font-medium">Ingresa tus credenciales para continuar.</p>
-                    </div>
-
+                    {/* Form */}
                     <form onSubmit={handleLogin} className="space-y-6">
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-zinc-900 uppercase tracking-wider block">
+                            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block ml-1">
                                 Correo Electrónico
                             </label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Mail className="text-zinc-400 group-focus-within:text-brand-orange transition-colors" size={20} />
+                                    <Mail className="text-slate-400 group-focus-within:text-brand-orange transition-colors" size={20} />
                                 </div>
                                 <input
                                     type="email"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-11 pr-4 py-4 bg-zinc-50 border-2 border-zinc-100 rounded-xl focus:bg-white focus:border-brand-orange focus:ring-4 focus:ring-brand-orange/5 transition-all text-zinc-900 placeholder-zinc-400 font-bold text-sm"
+                                    className="w-full pl-11 pr-4 py-4 bg-slate-900/50 border border-slate-700 rounded-xl focus:bg-slate-900/80 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange transition-all text-white placeholder-slate-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                     placeholder="admin@activasport.com"
+                                    disabled={loading}
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-zinc-900 uppercase tracking-wider block">
+                            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block ml-1">
                                 Contraseña
                             </label>
                             <div className="relative group">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Lock className="text-zinc-400 group-focus-within:text-brand-orange transition-colors" size={20} />
+                                    <Lock className="text-slate-400 group-focus-within:text-brand-orange transition-colors" size={20} />
                                 </div>
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-11 pr-12 py-4 bg-zinc-50 border-2 border-zinc-100 rounded-xl focus:bg-white focus:border-brand-orange focus:ring-4 focus:ring-brand-orange/5 transition-all text-zinc-900 placeholder-zinc-400 font-bold text-sm"
+                                    className="w-full pl-11 pr-12 py-4 bg-slate-900/50 border border-slate-700 rounded-xl focus:bg-slate-900/80 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange transition-all text-white placeholder-slate-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                     placeholder="••••••••"
+                                    disabled={loading}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-zinc-400 hover:text-zinc-600 transition-colors"
+                                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-white transition-colors outline-none"
                                 >
                                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
@@ -133,29 +120,38 @@ export default function AdminLogin() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-black text-white py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-zinc-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 flex items-center justify-center gap-2"
+                            className="w-full bg-gradient-to-r from-brand-orange to-orange-600 hover:from-orange-500 hover:to-orange-700 text-white py-4 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:hover:scale-100 flex items-center justify-center gap-2 group mt-2"
                         >
                             {loading ? (
                                 <>
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    <span>Verificando...</span>
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                    <span>Accediendo...</span>
                                 </>
                             ) : (
                                 <>
                                     <span>Iniciar Sesión</span>
-                                    <ArrowRight size={18} />
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    <div className="pt-4 text-center lg:text-left">
-                        <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-zinc-400 hover:text-brand-orange transition-colors uppercase tracking-widest">
+                    <div className="mt-8 text-center border-t border-white/10 pt-6">
+                        <div className="inline-block bg-white/5 px-4 py-1.5 rounded-full mb-4">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sistema V2.0</span>
+                        </div>
+                        <br />
+                        <Link href="/" className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors uppercase tracking-widest hover:underline decoration-brand-orange underline-offset-4">
                             <ArrowRight className="rotate-180" size={14} />
                             Volver a la tienda
                         </Link>
                     </div>
                 </div>
+
+                {/* Footer Credits */}
+                <p className="text-center text-slate-600 text-xs mt-8">
+                    &copy; {new Date().getFullYear()} ActivaSport. Todos los derechos reservados.
+                </p>
             </div>
         </div>
     )

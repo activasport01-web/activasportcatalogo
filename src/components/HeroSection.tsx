@@ -104,31 +104,35 @@ export default function HeroSection({ slides }: HeroProps) {
                 </div>
             </div>
 
-            {/* CONTROLES DE NAVEGACIÓN */}
+            {/* CONTROLES DE NAVEGACIÓN - FLECHAS LATERALES */}
 
-            {/* Flechas (Solo visibles en desktop o hover) */}
+            {/* Flecha Izquierda */}
             <button
                 onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 backdrop-blur rounded-full flex items-center justify-center shadow-lg text-slate-800 dark:text-white transition-all hover:scale-110 z-20 md:opacity-0 md:group-hover:opacity-100"
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white text-slate-800 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-20 hover:bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:text-white dark:border-slate-700"
+                aria-label="Anterior"
             >
-                <ChevronLeft size={24} />
-            </button>
-            <button
-                onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 backdrop-blur rounded-full flex items-center justify-center shadow-lg text-slate-800 dark:text-white transition-all hover:scale-110 z-20 md:opacity-0 md:group-hover:opacity-100"
-            >
-                <ChevronRight size={24} />
+                <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
             </button>
 
-            {/* Dots (Indicadores inferiores) */}
-            <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-3 z-20">
+            {/* Flecha Derecha */}
+            <button
+                onClick={nextSlide}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white text-slate-800 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-20 hover:bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:text-white dark:border-slate-700"
+                aria-label="Siguiente"
+            >
+                <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
+            </button>
+
+            {/* Indicadores (Dots) sutiles abajo - Opcional pero útil para saber cuántos slides hay */}
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-20">
                 {slides.map((_, idx) => (
                     <button
                         key={idx}
                         onClick={() => setCurrent(idx)}
-                        className={`w-3 h-3 rounded-full transition-all duration-300 ${idx === current
-                            ? 'bg-brand-black dark:bg-white w-8 border border-brand-orange'
-                            : 'bg-slate-300 dark:bg-slate-700 hover:bg-slate-500'
+                        className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === current
+                            ? 'bg-brand-orange w-6'
+                            : 'bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
                             }`}
                         aria-label={`Ir a diapositiva ${idx + 1}`}
                     />

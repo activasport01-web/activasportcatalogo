@@ -99,11 +99,12 @@ export default function PromoCarousel() {
 
     return (
         <section className="relative z-20 max-w-7xl mx-auto px-4 py-4 -mt-6 mb-6">
+            {/* Contenedor Principal del Slide (con bordes redondeados y overflow hidden) */}
             <div
                 className={`
-                    relative w-full overflow-hidden rounded-3xl shadow-2xl transition-all duration-500
-                    bg-gradient-to-r ${currentPromo.color_fondo || 'from-slate-800 to-slate-900'}
-                    group
+                    relative w-full overflow-hidden rounded-3xl shadow-lg transition-all duration-500
+                    bg-gradient-to-r ${currentPromo.color_fondo || 'from-orange-500 to-orange-600'}
+                    group min-h-[220px] md:min-h-[280px]
                 `}
                 onMouseEnter={stopAutoPlay}
                 onMouseLeave={startAutoPlay}
@@ -111,79 +112,86 @@ export default function PromoCarousel() {
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] mix-blend-overlay pointer-events-none"></div>
 
-                <div className="flex flex-col md:flex-row items-center relative z-10 min-h-[220px] md:min-h-[280px]">
+                <div className="flex flex-col md:flex-row items-center relative z-10 h-full">
 
                     {/* Contenido Texto (Izquierda) */}
-                    <div className="flex-1 p-8 md:p-12 md:pr-4 flex flex-col justify-center items-start w-full text-center md:text-left">
-                        <span className="inline-block bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] sm:text-xs font-black tracking-widest uppercase mb-3 border border-white/10 shadow-sm">
+                    <div className="flex-1 p-6 md:p-10 flex flex-col justify-center items-start w-full text-center md:text-left">
+                        <span className="inline-block bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] sm:text-xs font-black tracking-widest uppercase mb-3 border border-white/10 shadow-sm mx-auto md:mx-0">
                             Oferta Especial
                         </span>
-                        <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight mb-3 drop-shadow-md cursor-pointer hover:underline decoration-brand-orange/50 underline-offset-4" onClick={() => handleOpenPromo(currentPromo)}>
+                        <h2
+                            className="text-2xl md:text-4xl lg:text-5xl font-black text-white leading-tight mb-3 drop-shadow-md cursor-pointer hover:underline decoration-white/50 underline-offset-4 w-full"
+                            onClick={() => handleOpenPromo(currentPromo)}
+                        >
                             {currentPromo.titulo}
                         </h2>
-                        <p className="text-white/90 text-sm md:text-lg font-medium leading-relaxed mb-6 max-w-xl mx-auto md:mx-0">
+                        <p className="text-white/90 text-sm md:text-base font-medium leading-relaxed mb-6 max-w-xl mx-auto md:mx-0 hidden md:block">
                             {currentPromo.descripcion}
                         </p>
 
                         <button
                             onClick={() => handleOpenPromo(currentPromo)}
-                            className="bg-white text-slate-900 text-sm font-bold px-8 py-3 rounded-full hover:bg-slate-100 hover:scale-105 transition-all shadow-xl flex items-center gap-2 group/btn mx-auto md:mx-0"
+                            className="bg-white text-slate-900 text-xs md:text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-100 hover:scale-105 transition-all shadow-xl flex items-center gap-2 group/btn mx-auto md:mx-0"
                         >
-                            {currentPromo.texto_boton || 'Ver Detalles'}
-                            <ArrowRight size={18} className="group-hover/btn:translate-x-1 transition-transform" />
+                            {currentPromo.texto_boton || 'Ver Oferta'}
+                            <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
                         </button>
                     </div>
 
                     {/* Imagen Principal (Derecha) */}
-                    <div className="md:w-1/2 h-full flex items-center justify-center p-6 md:p-0 relative cursor-pointer" onClick={() => handleOpenPromo(currentPromo)}>
+                    <div className="md:w-5/12 h-full flex items-center justify-center p-4 md:pr-12 relative cursor-pointer" onClick={() => handleOpenPromo(currentPromo)}>
                         {currentPromo.imagen_url ? (
-                            <div className="relative w-full max-w-xs md:max-w-md aspect-square md:aspect-auto md:h-full flex items-center justify-center">
-                                {/* Glow Effect behind image */}
-                                <div className="absolute inset-0 bg-white/20 blur-3xl rounded-full transform scale-75"></div>
-
+                            <div className="relative w-full max-w-[200px] md:max-w-xs aspect-square flex items-center justify-center transform md:translate-x-4">
+                                {/* Glow Effect */}
+                                <div className="absolute inset-0 bg-white/30 blur-2xl rounded-full transform scale-75"></div>
                                 <img
                                     src={currentPromo.imagen_url}
                                     alt="Promo"
-                                    className="relative z-10 w-full h-auto object-contain max-h-[200px] md:max-h-[300px] drop-shadow-2xl transform hover:scale-105 transition-transform duration-500"
+                                    className="relative z-10 w-full h-full object-contain drop-shadow-2xl transform hover:scale-105 transition-transform duration-500"
                                 />
                             </div>
                         ) : (
-                            <div className="w-48 h-48 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 shadow-2xl">
-                                <Gift size={80} className="text-white/80" />
+                            <div className="w-32 h-32 md:w-48 md:h-48 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 shadow-xl">
+                                <Gift size={60} className="text-white/90" />
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Navigation Controls (Only if > 1 slide) */}
-                {promos.length > 1 && (
-                    <>
+                {/* Dots dentro del contenedor para móvil principalmente */}
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 md:hidden">
+                    {promos.map((_, idx) => (
                         <button
-                            onClick={(e) => { e.preventDefault(); prevSlide() }}
-                            className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
-                        >
-                            <ChevronLeft size={24} />
-                        </button>
-                        <button
-                            onClick={(e) => { e.preventDefault(); nextSlide() }}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/40 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
-                        >
-                            <ChevronRight size={24} />
-                        </button>
-
-                        {/* Dots */}
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                            {promos.map((_, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => setCurrentIndex(idx)}
-                                    className={`w-2 h-2 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/60'}`}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
+                            key={idx}
+                            onClick={() => setCurrentIndex(idx)}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-4' : 'bg-white/40'}`}
+                        />
+                    ))}
+                </div>
             </div>
+
+            {/* Navigation Buttons (Outside Container - Clean Style) */}
+            {promos.length > 1 && (
+                <>
+                    {/* Botón Izquierdo */}
+                    <button
+                        onClick={(e) => { e.preventDefault(); prevSlide() }}
+                        className="hidden md:flex absolute left-[-24px] top-1/2 -translate-y-1/2 w-14 h-14 bg-white text-slate-700 rounded-full shadow-lg items-center justify-center border border-slate-100 z-30 hover:scale-110 transition-transform hover:shadow-xl hover:bg-slate-50"
+                        aria-label="Anterior"
+                    >
+                        <ChevronLeft size={32} strokeWidth={2.5} />
+                    </button>
+
+                    {/* Botón Derecho */}
+                    <button
+                        onClick={(e) => { e.preventDefault(); nextSlide() }}
+                        className="hidden md:flex absolute right-[-24px] top-1/2 -translate-y-1/2 w-14 h-14 bg-white text-slate-700 rounded-full shadow-lg items-center justify-center border border-slate-100 z-30 hover:scale-110 transition-transform hover:shadow-xl hover:bg-slate-50"
+                        aria-label="Siguiente"
+                    >
+                        <ChevronRight size={32} strokeWidth={2.5} />
+                    </button>
+                </>
+            )}
 
             {/* Modal de Detalle de Oferta */}
             {showModal && selectedPromo && (
