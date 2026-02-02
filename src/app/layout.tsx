@@ -43,6 +43,7 @@ import Footer from '@/components/Footer';
 import { CartProvider } from '@/context/CartContext';
 import { FavoritesProvider } from '@/context/FavoritesContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { Analytics } from "@vercel/analytics/react"
 
 export default function RootLayout({
   children,
@@ -61,6 +62,7 @@ export default function RootLayout({
               <DockNavbar />
               <CookieBanner />
               <NetworkStatus />
+              <Analytics />
 
             </FavoritesProvider>
           </CartProvider>
