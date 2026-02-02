@@ -34,6 +34,7 @@ export const metadata: Metadata = {
   },
 };
 
+import { Analytics } from '@vercel/analytics/next';
 import SocialSpeedDial from '@/components/SocialSpeedDial';
 import CookieBanner from '@/components/CookieBanner';
 import NetworkStatus from '@/components/NetworkStatus';
@@ -65,6 +66,7 @@ export default function RootLayout({
             </FavoritesProvider>
           </CartProvider>
         </ThemeProvider>
+        <Analytics />
 
         {/* Script para silenciar logs de desarrollo molestos */}
         <script
