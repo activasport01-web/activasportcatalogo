@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, MessageCircle, ShieldCheck, Truck, Package, Info, ShoppingBag, Check, ChevronLeft, ChevronRight, Heart } from 'lucide-react'
+import { ArrowLeft, MessageCircle, ShieldCheck, Truck, Package, Info, ShoppingBag, Check, ChevronLeft, ChevronRight, Heart, X, Maximize2 } from 'lucide-react'
 import ProductCard from '@/components/ProductCard' // Asegurar import
 import { useCart } from '@/context/CartContext'
 import { useFavorites } from '@/context/FavoritesContext'
 
-const WHATSAPP_NUMBER = '59163448209'
+const WHATSAPP_NUMBER = '59173643433'
 
 interface ProductViewProps {
     producto: any
@@ -36,6 +36,35 @@ export default function ProductView({ producto, productosRelacionados }: Product
         return 'Adulto (38-43)'
     })
     const [cantidadCajon, setCantidadCajon] = useState<6 | 12>(12)
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+    const [recentlyViewed, setRecentlyViewed] = useState<any[]>([])
+
+    // Historial de Vistos (LocalStorage)
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('recentlyViewed')
+            const parsed = stored ? JSON.parse(stored) : []
+
+            // Mostrar los anteriores (excluyendo el actual)
+            setRecentlyViewed(parsed.filter((p: any) => p.id !== producto.id).slice(0, 4))
+
+            // Guardar el actual al principio
+            const currentMinimal = {
+                id: producto.id,
+                nombre: producto.nombre,
+                precio: producto.precio,
+                url_imagen: producto.url_imagen,
+                categoria: producto.categoria,
+                marca: producto.marca,
+                disponible: producto.disponible
+            }
+
+            const updatedList = [currentMinimal, ...parsed.filter((p: any) => p.id !== producto.id)].slice(0, 12)
+            localStorage.setItem('recentlyViewed', JSON.stringify(updatedList))
+        } catch (e) {
+            console.error('Error with history', e)
+        }
+    }, [producto.id])
 
     // Colores disponibles - Soporte para formato nuevo y viejo
     // Formato nuevo: [{ color: "#000", nombre: "Negro", imagen: "url" }]
@@ -117,7 +146,26 @@ export default function ProductView({ producto, productosRelacionados }: Product
     const handleWhatsAppClick = async () => {
         await supabase.rpc('incrementar_consulta_zapato', { zapato_id: producto.id })
 
-        const texto = `Hola, tengo una duda sobre el modelo *${producto.nombre}*.\nLink: ${window.location.href}`
+        // Intentar identificar el color seleccionado
+        let colorNombre = 'Surtido / Foto Principal'
+        if (coloresDisponibles.length > 0) {
+            const colorFound = coloresDisponibles.find((c: any) => getColorImage(c) === selectedImage)
+            if (colorFound) colorNombre = getColorName(colorFound)
+        }
+
+        const texto = `Hola Activa Sport, me interesa este modelo:
+📸 *Foto:* ${selectedImage}
+
+👟 *Modelo:* ${producto.nombre}
+🏷️ *Marca:* ${producto.marca || 'Genérica'}
+🔖 *Código:* ${producto.codigo || 'N/A'}
+📦 *Caja:* ${producto.caja || 'N/A'}
+📏 *Curva:* ${tipoCurva}
+📦 *Cantidad:* ${cantidadCajon} pares
+🎨 *Color Ref:* ${colorNombre}
+
+🔗 *Link:* ${window.location.href}`
+
         const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(texto)}`
         window.open(url, '_blank')
     }
@@ -155,14 +203,30 @@ export default function ProductView({ producto, productosRelacionados }: Product
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-28 pb-12 transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
-                {/* Breadcrumbs */}
-                <div className="flex items-center gap-2 mb-6 text-sm text-slate-500 dark:text-slate-400">
-                    <Link href="/" className="hover:text-orange-500 flex items-center gap-1">
-                        <ArrowLeft size={16} /> Volver al catálogo
+                {/* Breadcrumbs Navigation */}
+                <nav className="flex items-center gap-2 mb-6 text-sm text-slate-500 dark:text-slate-400 overflow-x-auto whitespace-nowrap pb-1">
+                    <Link href="/" className="hover:text-brand-orange flex items-center gap-1 transition-colors">
+                        <ShoppingBag size={14} /> Inicio
                     </Link>
-                    <span>/</span>
-                    <span className="uppercase text-slate-800 dark:text-slate-200 font-semibold">{producto.categoria}</span>
-                </div>
+                    <span className="text-slate-300 dark:text-slate-600">/</span>
+                    <Link href="/catalogo" className="hover:text-brand-orange transition-colors">
+                        Catálogo
+                    </Link>
+                    <span className="text-slate-300 dark:text-slate-600">/</span>
+                    <Link href={`/catalogo?categoria=${producto.categoria}`} className="hover:text-brand-orange capitalize transition-colors">
+                        {producto.categoria}
+                    </Link>
+                    {producto.subcategoria && (
+                        <>
+                            <span className="text-slate-300 dark:text-slate-600">/</span>
+                            <span className="capitalize text-slate-400">{producto.subcategoria}</span>
+                        </>
+                    )}
+                    <span className="text-slate-300 dark:text-slate-600">/</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[150px] sm:max-w-xs block">
+                        {producto.nombre}
+                    </span>
+                </nav>
 
                 <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-colors duration-300">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
@@ -173,8 +237,15 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                 <img
                                     src={selectedImage}
                                     alt={producto.nombre}
-                                    className="w-full h-full object-contain transition-all duration-500 hover:scale-105 drop-shadow-xl"
+                                    className="w-full h-full object-contain transition-all duration-500 hover:scale-105 drop-shadow-xl cursor-zoom-in"
+                                    onClick={() => setIsLightboxOpen(true)}
                                 />
+                                <button
+                                    onClick={() => setIsLightboxOpen(true)}
+                                    className="absolute bottom-4 right-4 bg-white/90 text-slate-700 p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform z-20"
+                                >
+                                    <Maximize2 size={20} />
+                                </button>
 
                                 {/* Flechas de navegación (solo si hay múltiples imágenes) */}
                                 {allImages.length > 1 && (
@@ -182,19 +253,19 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                         {/* Flecha Izquierda */}
                                         <button
                                             onClick={prevImage}
-                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-white p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/40 backdrop-blur-md md:bg-white/90 dark:bg-black/30 md:dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-white p-1.5 md:p-3 rounded-full shadow-sm md:shadow-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:scale-110 z-10"
                                             aria-label="Imagen anterior"
                                         >
-                                            <ChevronLeft size={24} />
+                                            <ChevronLeft size={18} className="md:w-6 md:h-6" />
                                         </button>
 
                                         {/* Flecha Derecha */}
                                         <button
                                             onClick={nextImage}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-white p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all hover:scale-110 z-10"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/40 backdrop-blur-md md:bg-white/90 dark:bg-black/30 md:dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 text-slate-800 dark:text-white p-1.5 md:p-3 rounded-full shadow-sm md:shadow-lg opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:scale-110 z-10"
                                             aria-label="Siguiente imagen"
                                         >
-                                            <ChevronRight size={24} />
+                                            <ChevronRight size={18} className="md:w-6 md:h-6" />
                                         </button>
 
                                         {/* Indicadores de posición */}
@@ -242,13 +313,94 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                 </div>
 
                                 <div className="absolute top-0 left-0 flex flex-col gap-2 p-4">
+                                    {!producto.disponible && (
+                                        <span className="bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg tracking-wider border border-red-500/20">
+                                            AGOTADO
+                                        </span>
+                                    )}
+                                    {producto.etiquetas?.includes('ultimos_pares') && (
+                                        <span className="bg-yellow-400 text-black px-4 py-1.5 rounded-full text-xs font-bold shadow-lg tracking-wider animate-pulse border border-yellow-500/20">
+                                            ¡ÚLTIMOS PARES!
+                                        </span>
+                                    )}
+                                    {producto.etiquetas?.includes('proximamente') && (
+                                        <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg tracking-wider border border-blue-500/20">
+                                            LLEGA PRONTO
+                                        </span>
+                                    )}
                                     {producto.etiquetas?.includes('nuevo') && (
-                                        <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg tracking-wider">
+                                        <span className="bg-slate-900 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg tracking-wider border border-white/10">
                                             NUEVA COLECCIÓN
                                         </span>
                                     )}
                                 </div>
                             </div>
+
+                            {/* Colores Disponibles (Carrusel Horizontal Debajo de Imagen) */}
+                            {coloresDisponibles && coloresDisponibles.length > 0 && (
+                                <div className="w-full max-w-lg mt-8 relative group/colors">
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">
+                                        Variantes de Color
+                                    </h3>
+
+                                    {/* Flecha Izquierda */}
+                                    <button
+                                        onClick={() => document.getElementById('colors-scroll-container')?.scrollBy({ left: -200, behavior: 'smooth' })}
+                                        className="absolute -left-4 top-[60%] -translate-y-1/2 z-20 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 p-2 rounded-full shadow-lg border border-slate-100 dark:border-slate-700 opacity-0 group-hover/colors:opacity-100 transition-all hover:scale-110 hover:text-orange-500 disabled:opacity-0"
+                                    >
+                                        <ChevronLeft size={20} />
+                                    </button>
+
+                                    {/* Contenedor Scroll */}
+                                    <div
+                                        id="colors-scroll-container"
+                                        className="flex gap-3 overflow-x-auto pb-4 pt-1 px-1 scroll-smooth no-scrollbar snap-x"
+                                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                                    >
+                                        {coloresDisponibles.map((colorData: any, idx: number) => {
+                                            const imagen = getColorImage(colorData)
+                                            const nombre = getColorName(colorData)
+                                            const hex = getColorHex(colorData)
+                                            const hex2 = typeof colorData === 'object' ? colorData.color2 : null
+                                            const isSelected = selectedImage === imagen
+
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setSelectedImage(imagen)}
+                                                    className={`snap-start shrink-0 relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${isSelected
+                                                        ? 'border-orange-500 ring-2 ring-orange-200 dark:ring-orange-900 shadow-md scale-105'
+                                                        : 'border-slate-200 dark:border-slate-700 hover:border-orange-300 opacity-80 hover:opacity-100'
+                                                        }`}
+                                                    title={nombre}
+                                                >
+                                                    <img
+                                                        src={imagen}
+                                                        alt={nombre}
+                                                        className="w-full h-full object-cover bg-white"
+                                                    />
+                                                    <div
+                                                        className="absolute bottom-1 right-1 w-3 h-3 rounded-full border border-white shadow-sm"
+                                                        style={{
+                                                            background: hex2
+                                                                ? `linear-gradient(135deg, ${hex} 50%, ${hex2} 50%)`
+                                                                : hex
+                                                        }}
+                                                    />
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+
+                                    {/* Flecha Derecha */}
+                                    <button
+                                        onClick={() => document.getElementById('colors-scroll-container')?.scrollBy({ left: 200, behavior: 'smooth' })}
+                                        className="absolute -right-4 top-[60%] -translate-y-1/2 z-20 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 p-2 rounded-full shadow-lg border border-slate-100 dark:border-slate-700 opacity-0 group-hover/colors:opacity-100 transition-all hover:scale-110 hover:text-orange-500"
+                                    >
+                                        <ChevronRight size={20} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Columna Derecha: Selección Mayorista */}
@@ -345,70 +497,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                     </div>
                                 </div>
 
-                                {/* Colores Disponibles - Con Imágenes Clickeables */}
-                                {coloresDisponibles && coloresDisponibles.length > 0 && (
-                                    <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-slate-100 dark:border-slate-800">
-                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
-                                            <Info size={16} className="text-slate-400" />
-                                            Colores disponibles - Haz clic para ver
-                                        </h3>
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                                            {coloresDisponibles.map((colorData: any, idx: number) => {
-                                                const imagen = getColorImage(colorData)
-                                                const nombre = getColorName(colorData)
-                                                const hex = getColorHex(colorData)
-                                                const hex2 = typeof colorData === 'object' ? colorData.color2 : null
-                                                const isSelected = selectedImage === imagen
 
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => setSelectedImage(imagen)}
-                                                        className={`group relative aspect-square rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${isSelected
-                                                            ? 'border-orange-500 ring-2 ring-orange-200 dark:ring-orange-900 shadow-lg'
-                                                            : 'border-slate-200 dark:border-slate-700 hover:border-orange-300'
-                                                            }`}
-                                                        title={nombre}
-                                                    >
-                                                        {/* Imagen del zapato */}
-                                                        <img
-                                                            src={imagen}
-                                                            alt={nombre}
-                                                            className="w-full h-full object-cover bg-white"
-                                                        />
-
-                                                        {/* Indicador de color en esquina */}
-                                                        <div
-                                                            className="absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-white shadow-md"
-                                                            style={{
-                                                                background: hex2
-                                                                    ? `linear-gradient(135deg, ${hex} 50%, ${hex2} 50%)`
-                                                                    : hex
-                                                            }}
-                                                        />
-
-                                                        {/* Overlay de selección */}
-                                                        {isSelected && (
-                                                            <div className="absolute inset-0 bg-orange-500/10 flex items-center justify-center">
-                                                                <div className="bg-orange-500 text-white rounded-full p-1">
-                                                                    <Check size={16} />
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Nombre al hacer hover */}
-                                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <p className="text-white text-xs font-bold text-center truncate">{nombre}</p>
-                                                        </div>
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                        <p className="text-xs text-slate-400 mt-3 text-center">
-                                            El paquete incluye una mezcla de estos colores
-                                        </p>
-                                    </div>
-                                )}
 
                                 {/* Resumen del Pedido - PRECIO ELIMINADO */}
                             </div>
@@ -425,14 +514,24 @@ export default function ProductView({ producto, productosRelacionados }: Product
 
                                 <button
                                     id="add-btn"
+                                    disabled={!producto.disponible}
                                     onClick={handleAddToCart}
-                                    className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border-2 ${true
+                                    className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border-2 ${producto.disponible
                                         ? 'border-orange-200 text-orange-600 dark:border-orange-900/50 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-                                        : 'cursor-not-allowed grayscale bg-slate-100'
+                                        : 'border-slate-200 text-slate-400 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 cursor-not-allowed'
                                         }`}
                                 >
-                                    <ShoppingBag size={18} />
-                                    Agregar al Pedido (Carrito)
+                                    {producto.disponible ? (
+                                        <>
+                                            <ShoppingBag size={18} />
+                                            Agregar al Pedido (Carrito)
+                                        </>
+                                    ) : (
+                                        <>
+                                            <X size={18} />
+                                            Producto Agotado
+                                        </>
+                                    )}
                                 </button>
                             </div>
 
@@ -458,14 +557,55 @@ export default function ProductView({ producto, productosRelacionados }: Product
                             </Link>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                             {productosRelacionados.map((relacionado) => (
                                 <ProductCard key={relacionado.id} zapato={relacionado} />
                             ))}
                         </div>
                     </div>
                 )}
+
+                {/* VISTOS RECIENTEMENTE */}
+                {recentlyViewed.length > 0 && (
+                    <div className="mt-16 border-t border-slate-100 dark:border-slate-800 pt-16">
+                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 text-center">
+                            Vistos Recientemente
+                        </h3>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 opacity-75 hover:opacity-100 transition-opacity">
+                            {recentlyViewed.map((item) => (
+                                <ProductCard key={item.id} zapato={item} />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* LIGHTBOX ZOOM (Pantalla Completa) */}
+            {isLightboxOpen && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center animate-fade-in cursor-zoom-out"
+                    onClick={() => setIsLightboxOpen(false)}
+                >
+                    <button
+                        onClick={() => setIsLightboxOpen(false)}
+                        className="absolute top-6 right-6 text-white/80 hover:text-white p-2 hover:bg-white/10 rounded-full transition-colors z-50"
+                    >
+                        <X size={40} />
+                    </button>
+
+                    <img
+                        src={selectedImage}
+                        alt={producto.nombre}
+                        className="max-w-[95vw] max-h-[95vh] object-contain select-none shadow-2xl"
+                    />
+
+                    <div className="absolute bottom-10 left-0 right-0 text-center pointer-events-none">
+                        <span className="bg-black/50 text-white px-4 py-2 rounded-full text-sm backdrop-blur-md">
+                            Toca en cualquier lugar para cerrar
+                        </span>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

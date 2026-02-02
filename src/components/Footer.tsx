@@ -1,8 +1,9 @@
 'use client'
 
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, ChevronRight } from 'lucide-react'
+import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, ChevronRight, Truck, CreditCard, Headphones, ShieldCheck } from 'lucide-react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 
@@ -44,7 +45,55 @@ export default function Footer() {
     }, [])
 
     return (
-        <footer className="relative z-10 bg-gray-50 dark:bg-slate-950 text-gray-800 dark:text-gray-200 mt-20 transition-colors duration-300 border-t border-gray-200 dark:border-slate-900">
+        <footer className="relative z-10 bg-gray-50 dark:bg-slate-950 text-gray-800 dark:text-gray-200 mt-0 transition-colors duration-300 border-t border-gray-200 dark:border-slate-900">
+            {/* Features Bar (Pre-Footer) */}
+            <div className="bg-slate-900 text-white py-10 border-b border-white/5 relative overflow-hidden">
+                {/* Pattern ligero de fondo opcional */}
+                <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5 pointer-events-none"></div>
+
+                <div className="max-w-7xl mx-auto px-4 relative z-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+
+                        {/* 1. Envíos */}
+                        <div className="flex gap-4 items-start group">
+                            <Truck size={32} strokeWidth={1.5} className="text-brand-orange mt-1 group-hover:scale-110 transition-transform duration-300" />
+                            <div>
+                                <h4 className="font-bold text-lg mb-1">Envíos a todo el país</h4>
+                                <p className="text-gray-400 text-sm leading-relaxed">Expresos, correo, comisionista y envíos a domicilio.</p>
+                            </div>
+                        </div>
+
+                        {/* 2. Pagos */}
+                        <div className="flex gap-4 items-start group">
+                            <CreditCard size={32} strokeWidth={1.5} className="text-brand-orange mt-1 group-hover:scale-110 transition-transform duration-300" />
+                            <div>
+                                <h4 className="font-bold text-lg mb-1">Todos los medios de pago</h4>
+                                <p className="text-gray-400 text-sm leading-relaxed">QR, Transferencia, Depósito y Efectivo.</p>
+                            </div>
+                        </div>
+
+                        {/* 3. Whatsapp/Atención */}
+                        <div className="flex gap-4 items-start group">
+                            <Headphones size={32} strokeWidth={1.5} className="text-brand-orange mt-1 group-hover:scale-110 transition-transform duration-300" />
+                            <div>
+                                <h4 className="font-bold text-lg mb-1">Atención Personalizada</h4>
+                                <p className="text-gray-400 text-sm leading-relaxed">Te asesoramos por Whatsapp todos los días.</p>
+                            </div>
+                        </div>
+
+                        {/* 4. Seguridad */}
+                        <div className="flex gap-4 items-start group">
+                            <ShieldCheck size={32} strokeWidth={1.5} className="text-brand-orange mt-1 group-hover:scale-110 transition-transform duration-300" />
+                            <div>
+                                <h4 className="font-bold text-lg mb-1">Compra Segura</h4>
+                                <p className="text-gray-400 text-sm leading-relaxed">Tus datos protegidos y empaques 100% cerrados.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
             <div className="max-w-7xl mx-auto px-4 py-16">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
                     {/* Columna 1: Branding */}
@@ -154,15 +203,20 @@ export default function Footer() {
                         <ul className="space-y-4 text-sm">
                             <li className="flex items-start gap-3">
                                 <MapPin size={18} className="text-brand-orange mt-0.5 flex-shrink-0" />
-                                <span className="text-gray-600 dark:text-gray-400 capitalize">
-                                    Av. Carmelo Ortiz, Av. Dr. Carmelo Ortiz Taborga<br />
-                                    Santa Cruz de la Sierra, Bolivia
-                                </span>
+                                <a
+                                    href="https://maps.app.goo.gl/nqfMXkK48BTLa26E6?g_st=aw"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-gray-600 dark:text-gray-400 hover:text-brand-orange transition"
+                                >
+                                    Feria Barrio Lindo / Comercial Tiluchi<br />
+                                    Pasillo X / K12
+                                </a>
                             </li>
                             <li className="flex items-center gap-3">
                                 <Phone size={18} className="text-brand-orange flex-shrink-0" />
-                                <a href="tel:+59163448209" className="text-gray-600 dark:text-gray-400 hover:text-brand-orange transition">
-                                    +591 63448209
+                                <a href="tel:+59173643433" className="text-gray-600 dark:text-gray-400 hover:text-brand-orange transition">
+                                    +591 73643433
                                 </a>
                             </li>
                         </ul>
@@ -176,12 +230,12 @@ export default function Footer() {
                             © {new Date().getFullYear()} ActivaSport. Todos los derechos reservados.
                         </p>
                         <div className="flex gap-6 text-xs">
-                            <a href="#" className="text-gray-500 dark:text-gray-500 hover:text-brand-orange dark:hover:text-brand-orange transition">
+                            <Link href="/terminos" className="text-gray-500 dark:text-gray-500 hover:text-brand-orange dark:hover:text-brand-orange transition">
                                 Términos y Condiciones
-                            </a>
-                            <a href="#" className="text-gray-500 dark:text-gray-500 hover:text-brand-orange dark:hover:text-brand-orange transition">
+                            </Link>
+                            <Link href="/privacidad" className="text-gray-500 dark:text-gray-500 hover:text-brand-orange dark:hover:text-brand-orange transition">
                                 Política de Privacidad
-                            </a>
+                            </Link>
                         </div>
                     </div>
                 </div>

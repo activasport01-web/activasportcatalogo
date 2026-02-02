@@ -22,15 +22,14 @@ export default function HeroSection({ slides }: HeroProps) {
 
     // Si no hay slides, mostrar fallback
     if (!slides || slides.length === 0) return (
-        <div className="py-20 flex justify-center text-gray-400 dark:text-slate-500 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-slate-900 dark:to-slate-950">
-            <p className="text-lg">Bienvenido. El administrador aún no configura la portada.</p>
+        <div className="py-20 flex justify-center text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-900">
+            <p className="text-sm">Portada no configurada.</p>
         </div>
     );
 
     // Auto-advance
     useEffect(() => {
-        if (isHovered) return // Pausar si el mouse está encima
-
+        if (isHovered) return
         const interval = setInterval(() => {
             setCurrent((prev) => (prev + 1) % slides.length)
         }, 5000)
@@ -44,106 +43,91 @@ export default function HeroSection({ slides }: HeroProps) {
 
     return (
         <section
-            className="relative bg-gradient-to-br from-slate-50 via-white to-orange-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-950 overflow-hidden min-h-[600px] flex items-center transition-colors duration-500"
+            className="relative w-full h-[65vh] min-h-[450px] md:h-[550px] overflow-hidden bg-slate-100 dark:bg-slate-950 group"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            <div className="max-w-7xl mx-auto px-4 w-full pt-10 pb-20 md:py-10">
-                <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* BACKGROUND / IMAGE LAYER */}
+            {slides.map((slide, index) => (
+                <div
+                    key={slide.id}
+                    className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                >
+                    {/* Fondo base oscuro/color para evitar espacios blancos feos si la imagen no carga o es transparente */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900" />
 
-                    {/* LADO IZQUIERDO: Texto con transición */}
-                    <div className="space-y-8 z-10 animate-fade-in" key={`text-${current}`}>
-                        {activeSlide.tag && (
-                            <span className="inline-block text-white font-black tracking-widest uppercase text-xs bg-brand-orange px-4 py-2 rounded-full ring-2 ring-orange-400/50 animate-pulse border border-brand-black/10 shadow-lg shadow-orange-500/30">
-                                {activeSlide.tag}
-                            </span>
-                        )}
+                    <img
+                        src={slide.image_url}
+                        alt={slide.title}
+                        className="absolute inset-0 w-full h-full object-cover md:object-contain md:scale-90"
+                        style={{ objectPosition: 'center' }}
+                    />
 
-                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-slate-100 leading-tight drop-shadow-sm transition-colors duration-300">
-                            {activeSlide.title}
-                        </h1>
+                    {/* Overlay Gradiente SUPERIOR e INFERIOR para leer textos (Estilo Instagram/TikTok) */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/80 z-20" />
+                </div>
+            ))}
 
-                        <p className="text-slate-600 dark:text-slate-300 text-lg md:text-xl leading-relaxed max-w-lg font-medium transition-colors duration-300">
-                            {activeSlide.description}
-                        </p>
+            {/* CONTENT LAYER (OVERLAY) */}
+            <div className="absolute inset-0 z-30 flex flex-col justify-end pb-12 px-6 md:justify-center md:items-start md:px-16 md:pb-0 pointer-events-none">
+                <div className="max-w-xl text-center md:text-left mx-auto md:mx-0 pointer-events-auto">
 
-                        <div className="flex flex-wrap gap-4 pt-4">
-                            <Link href={activeSlide.product_link}>
-                                <button className="bg-brand-black hover:bg-brand-orange hover:text-white text-brand-orange font-bold py-4 px-10 rounded-full shadow-xl transition-all transform hover:scale-105 hover:shadow-2xl flex items-center gap-3 group border border-brand-orange/50">
-                                    Ver Ahora
-                                    <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-                                </button>
-                            </Link>
-                            <Link href="/catalogo">
-                                <button className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold py-4 px-8 rounded-full shadow-md border-2 border-slate-200 dark:border-slate-700 transition-all hover:border-brand-orange/50 dark:hover:border-slate-600">
-                                    Explorar Todo
-                                </button>
-                            </Link>
-                        </div>
-                    </div>
+                    {/* Tag pequeña */}
+                    {activeSlide.tag && (
+                        <span className="inline-block text-[10px] font-bold tracking-[0.2em] uppercase text-white/90 mb-2 border border-white/20 px-2 py-1 rounded bg-black/20 backdrop-blur-sm">
+                            {activeSlide.tag}
+                        </span>
+                    )}
 
-                    {/* LADO DERECHO: Imagen con transición */}
-                    <div className="relative h-[400px] md:h-[500px] w-full flex items-center justify-center">
-                        {/* Círculo decorativo dinámico */}
-                        <div className={`absolute inset-0 rounded-full blur-3xl opacity-30 dark:opacity-20 scale-110 transition-colors duration-1000 ${current % 2 === 0 ? 'bg-gradient-to-tr from-brand-orange to-slate-300 dark:to-slate-700' : 'bg-gradient-to-tr from-slate-900 dark:from-black to-orange-600'}`}></div>
+                    {/* Título Principal */}
+                    <h1 className="text-3xl md:text-5xl font-black text-white leading-tight drop-shadow-xl mb-2 text-balance">
+                        {activeSlide.title}
+                    </h1>
 
-                        {/* Imagen del producto con bordes suaves */}
-                        <div className="relative z-10 w-full h-full flex items-center justify-center p-6" key={`img-${current}`}>
-                            <div className="relative group/img">
-                                {/* Efecto de resplandor detrás de la imagen */}
-                                <div className="absolute inset-0 bg-black/10 dark:bg-white/5 rounded-[3rem] blur-xl transform translate-y-4 scale-95 opacity-0 group-hover/img:opacity-100 transition-opacity duration-500"></div>
+                    {/* Descripción Corta */}
+                    <p className="text-slate-200 text-sm md:text-lg font-medium mb-6 line-clamp-2 md:line-clamp-3 drop-shadow-md">
+                        {activeSlide.description}
+                    </p>
 
-                                <img
-                                    src={activeSlide.image_url}
-                                    alt={activeSlide.title}
-                                    className="relative max-w-full max-h-[450px] object-contain rounded-[3rem] shadow-2xl animate-slide-up hover:scale-105 transition-all duration-700"
-                                />
-                            </div>
-                        </div>
+                    {/* Botones de Acción */}
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
+                        <Link href={activeSlide.product_link} className="w-full sm:w-auto">
+                            <button className="w-full sm:w-auto bg-brand-orange hover:bg-orange-600 text-white text-sm font-bold py-3 px-8 rounded shadow-lg shadow-orange-900/50 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                                VER OFERTA
+                                <ArrowRight size={16} />
+                            </button>
+                        </Link>
                     </div>
                 </div>
             </div>
 
-            {/* CONTROLES DE NAVEGACIÓN - FLECHAS LATERALES */}
-
-            {/* Flecha Izquierda */}
+            {/* CONTROLES (Flechas Minimalistas) */}
             <button
-                onClick={prevSlide}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white text-slate-800 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-20 hover:bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:text-white dark:border-slate-700"
-                aria-label="Anterior"
+                onClick={(e) => { e.stopPropagation(); prevSlide() }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white hover:bg-black/30 rounded-full transition-all z-40"
             >
-                <ChevronLeft className="w-6 h-6 md:w-8 md:h-8" />
+                <ChevronLeft size={32} />
             </button>
 
-            {/* Flecha Derecha */}
             <button
-                onClick={nextSlide}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-14 md:h-14 bg-white text-slate-800 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-20 hover:bg-slate-50 border border-slate-100 dark:bg-slate-800 dark:text-white dark:border-slate-700"
-                aria-label="Siguiente"
+                onClick={(e) => { e.stopPropagation(); nextSlide() }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white hover:bg-black/30 rounded-full transition-all z-40"
             >
-                <ChevronRight className="w-6 h-6 md:w-8 md:h-8" />
+                <ChevronRight size={32} />
             </button>
 
-            {/* Indicadores (Dots) sutiles abajo - Opcional pero útil para saber cuántos slides hay */}
-            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-20">
+            {/* Indicadores (Puntos) */}
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-40">
                 {slides.map((_, idx) => (
                     <button
                         key={idx}
                         onClick={() => setCurrent(idx)}
-                        className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === current
-                            ? 'bg-brand-orange w-6'
-                            : 'bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
+                        className={`transition-all duration-300 rounded-full shadow-sm ${idx === current
+                            ? 'bg-white w-6 h-1.5'
+                            : 'bg-white/40 w-1.5 h-1.5 hover:bg-white/70'
                             }`}
-                        aria-label={`Ir a diapositiva ${idx + 1}`}
                     />
                 ))}
-            </div>
-
-            {/* Decoración de ondas inferior */}
-            <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
-                <svg viewBox="0 0 1440 100" fill="none" className="w-full text-white dark:text-slate-950 transition-colors duration-300" preserveAspectRatio="none">
-                    <path d="M0 100L60 90C120 80 240 60 360 50C480 40 600 40 720 45C840 50 960 60 1080 65C1200 70 1320 70 1380 70L1440 70V100H1380C1320 100 1200 100 1080 100C960 100 840 100 720 100C600 100 480 100 360 100C240 100 120 100 60 100H0Z" fill="currentColor" />
-                </svg>
             </div>
         </section>
     )

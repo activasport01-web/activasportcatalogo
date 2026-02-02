@@ -35,6 +35,7 @@ export const metadata: Metadata = {
 };
 
 import SocialSpeedDial from '@/components/SocialSpeedDial';
+import CookieBanner from '@/components/CookieBanner';
 import NetworkStatus from '@/components/NetworkStatus';
 import TopHeader from '@/components/TopHeader';
 import DockNavbar from '@/components/DockNavbar';
@@ -58,8 +59,9 @@ export default function RootLayout({
               {children}
               <Footer />
               <DockNavbar />
+              <CookieBanner />
               <NetworkStatus />
-              <SocialSpeedDial />
+
             </FavoritesProvider>
           </CartProvider>
         </ThemeProvider>

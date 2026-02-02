@@ -65,35 +65,37 @@ export default function BrandsCarousel() {
     const currentMarca = marcas[currentIndex]
 
     return (
-        <section className="py-12 bg-white">
-            <div className="max-w-6xl mx-auto px-4">
+        <section className="py-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+            <div className="max-w-7xl mx-auto md:px-4">
                 {/* Header */}
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-black text-slate-900 mb-2">
-                        Nuestras Marcas
-                    </h2>
-                    <p className="text-slate-500 text-sm">
-                        Explora productos de las mejores marcas
-                    </p>
+                <div className="flex items-center justify-between px-4 mb-4 md:mb-6">
+                    <div>
+                        <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                            Nuestras Marcas
+                        </h2>
+                    </div>
+                    <div className="text-xs font-bold text-slate-400">
+                        {currentIndex + 1} / {marcas.length}
+                    </div>
                 </div>
 
                 {/* Carousel Container */}
-                <div className="relative">
-                    {/* Navigation Buttons */}
+                <div className="relative px-2 md:px-0">
+                    {/* Navigation Buttons (Hidden on mobile for clean look, visible on desktop) */}
                     <button
                         onClick={prevSlide}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hover:scale-110"
+                        className="flex absolute left-2 md:-left-4 top-1/2 -translate-y-1/2 z-20 bg-white/40 backdrop-blur-md md:bg-white dark:bg-black/30 md:dark:bg-slate-800 hover:bg-slate-50 border border-white/20 md:border-slate-200 dark:border-slate-700 p-1.5 md:p-3 rounded-full shadow-sm md:shadow-lg transition-all hover:scale-110"
                         aria-label="Anterior"
                     >
-                        <ChevronLeft size={24} className="text-slate-700" />
+                        <ChevronLeft size={18} className="text-slate-900 dark:text-white md:w-6 md:h-6" />
                     </button>
 
                     <button
                         onClick={nextSlide}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hover:scale-110"
+                        className="flex absolute right-2 md:-right-4 top-1/2 -translate-y-1/2 z-20 bg-white/40 backdrop-blur-md md:bg-white dark:bg-black/30 md:dark:bg-slate-800 hover:bg-slate-50 border border-white/20 md:border-slate-200 dark:border-slate-700 p-1.5 md:p-3 rounded-full shadow-sm md:shadow-lg transition-all hover:scale-110"
                         aria-label="Siguiente"
                     >
-                        <ChevronRight size={24} className="text-slate-700" />
+                        <ChevronRight size={18} className="text-slate-900 dark:text-white md:w-6 md:h-6" />
                     </button>
 
                     {/* Main Slide */}
@@ -101,80 +103,50 @@ export default function BrandsCarousel() {
                         href={`/catalogo?marca=${encodeURIComponent(currentMarca.nombre)}`}
                         className="block group"
                     >
-                        <div className="relative overflow-hidden rounded-2xl bg-slate-50 transition-all hover:shadow-xl">
-                            {/* Logo - Aspect ratio 16:9 */}
-                            <div className="aspect-video flex items-center justify-center p-12">
+                        <div className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800 shadow-sm transition-all hover:shadow-md h-[250px] md:h-[350px]">
+                            {/* Logo Area - FULL WIDTH/HEIGHT BACKGROUND */}
+                            <div className="absolute inset-0 flex items-center justify-center bg-white">
                                 {currentMarca.logo_url ? (
                                     <img
                                         src={currentMarca.logo_url}
                                         alt={currentMarca.nombre}
-                                        className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                                        className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="text-8xl font-black text-slate-200">
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-100 text-6xl font-black text-slate-300">
                                         {currentMarca.nombre.charAt(0)}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Brand Name Overlay */}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
-                                <h3 className="text-white text-2xl font-black mb-1">
-                                    {currentMarca.nombre}
-                                </h3>
-                                <p className="text-white/80 text-sm">
-                                    Ver todos los modelos →
-                                </p>
+                            {/* Brand Name & CTA Bar - Overlay at bottom */}
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 md:p-6 flex justify-between items-end">
+                                <div>
+                                    <h3 className="text-white text-xl md:text-3xl font-black uppercase tracking-wider drop-shadow-md">
+                                        {currentMarca.nombre}
+                                    </h3>
+                                    <p className="text-white/80 text-xs md:text-sm font-medium mt-1">Colección 2024</p>
+                                </div>
+                                <span className="bg-white text-black text-xs font-bold px-4 py-2 rounded-full uppercase shadow-lg transform translate-y-0 group-hover:-translate-y-1 transition-transform">
+                                    Ver Todo
+                                </span>
                             </div>
                         </div>
                     </Link>
-
-                    {/* Counter */}
-                    <div className="text-center mt-4 text-slate-400 text-sm font-medium">
-                        {currentIndex + 1} / {marcas.length}
-                    </div>
                 </div>
 
-                {/* Dots */}
-                <div className="flex justify-center gap-2 mt-6">
+                {/* Puntos (Dots) para navegación minimalista */}
+                <div className="flex justify-center gap-1.5 mt-4">
                     {marcas.map((_, index) => (
                         <button
                             key={index}
                             onClick={() => goToSlide(index)}
-                            className={`h-2 rounded-full transition-all ${index === currentIndex
-                                    ? 'bg-orange-500 w-8'
-                                    : 'bg-slate-300 hover:bg-slate-400 w-2'
+                            className={`h-1.5 rounded-full transition-all duration-300 ${index === currentIndex
+                                ? 'bg-slate-800 dark:bg-white w-6'
+                                : 'bg-slate-300 dark:bg-slate-700 w-1.5'
                                 }`}
                             aria-label={`Ir a marca ${index + 1}`}
                         />
-                    ))}
-                </div>
-
-                {/* Thumbnails */}
-                <div className="flex justify-center gap-3 mt-8">
-                    {marcas.map((marca, index) => (
-                        <button
-                            key={marca.id}
-                            onClick={() => goToSlide(index)}
-                            className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${index === currentIndex
-                                    ? 'border-orange-500 scale-110 shadow-md'
-                                    : 'border-slate-200 opacity-50 hover:opacity-100 hover:border-slate-300'
-                                }`}
-                        >
-                            <div className="w-full h-full bg-white p-1.5 flex items-center justify-center">
-                                {marca.logo_url ? (
-                                    <img
-                                        src={marca.logo_url}
-                                        alt={marca.nombre}
-                                        className="w-full h-full object-contain"
-                                    />
-                                ) : (
-                                    <div className="text-lg font-black text-slate-300">
-                                        {marca.nombre.charAt(0)}
-                                    </div>
-                                )}
-                            </div>
-                        </button>
                     ))}
                 </div>
             </div>

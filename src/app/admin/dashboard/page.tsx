@@ -287,6 +287,19 @@ export default function AdminDashboard() {
                             </h3>
 
                             <div className="space-y-3">
+                                {/* NUEVO: Gestión de Pedidos - Prioridad Alta */}
+                                <Link href="/admin/pedidos" className="flex items-center gap-4 p-4 rounded-xl bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 transition-all group relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors"></div>
+                                    <div className="w-10 h-10 rounded-lg bg-green-500 flex items-center justify-center text-white shadow-lg shadow-green-500/20 z-10">
+                                        <Package size={20} />
+                                    </div>
+                                    <div className="z-10">
+                                        <h4 className="font-bold text-sm text-green-400 group-hover:text-green-300">PEDIDOS Y VENTAS</h4>
+                                        <p className="text-xs text-gray-400 group-hover:text-white transition-colors">Ver pedidos recibidos</p>
+                                    </div>
+                                    <ArrowUpRight className="ml-auto text-green-500 group-hover:text-green-300 transition-colors z-10" size={16} />
+                                </Link>
+
                                 <Link href="/admin/productos" className="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
                                     <div className="w-10 h-10 rounded-lg bg-brand-orange flex items-center justify-center text-white shadow-lg shadow-brand-orange/20">
                                         <Package size={20} />

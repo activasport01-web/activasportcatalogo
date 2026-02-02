@@ -34,24 +34,15 @@ export default async function CatalogoPage() {
         <main className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
 
 
-            {/* Header del Catálogo (Estático) */}
-            <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
-                <div className="max-w-7xl mx-auto px-4 py-12 md:py-16 text-center">
-                    <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">
-                        Catálogo Completo
-                    </h1>
-                    <p className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">
-                        Explora nuestra colección mayorista. Calidad premium, precios de fábrica y envíos a todo el país.
-                    </p>
-                </div>
-            </div>
+            {/* Header eliminado para dar paso a la UI dinámica en CatalogView */}
+
 
             {/* Vista Interactiva (Filtros + Grid) */}
             <CatalogView
                 initialProducts={zapatos || []}
                 availCategorias={categorias || []}
                 availSubcategorias={subcategorias || []}
-                availMarcas={marcas || []}
+                availMarcas={marcas?.filter(m => m.nombre !== 'Pito') || []}
             />
 
 

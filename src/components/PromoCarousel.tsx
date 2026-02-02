@@ -44,19 +44,12 @@ export default function PromoCarousel() {
         }
     }
 
-    // Auto Play Logic
-    useEffect(() => {
-        if (promos.length > 1 && !showModal) {
-            startAutoPlay()
-        }
-        return () => stopAutoPlay()
-    }, [currentIndex, promos.length, showModal])
+    const nextSlide = () => {
+        setCurrentIndex((prev) => (prev + 1) % promos.length)
+    }
 
-    const startAutoPlay = () => {
-        stopAutoPlay()
-        autoPlayRef.current = setTimeout(() => {
-            nextSlide()
-        }, 5000) // 5 seconds per slide
+    const prevSlide = () => {
+        setCurrentIndex((prev) => (prev - 1 + promos.length) % promos.length)
     }
 
     const stopAutoPlay = () => {
@@ -66,13 +59,20 @@ export default function PromoCarousel() {
         }
     }
 
-    const nextSlide = () => {
-        setCurrentIndex((prev) => (prev + 1) % promos.length)
+    const startAutoPlay = () => {
+        stopAutoPlay()
+        autoPlayRef.current = setTimeout(() => {
+            nextSlide()
+        }, 5000) // 5 seconds per slide
     }
 
-    const prevSlide = () => {
-        setCurrentIndex((prev) => (prev - 1 + promos.length) % promos.length)
-    }
+    // Auto Play Logic
+    useEffect(() => {
+        if (promos.length > 1 && !showModal) {
+            startAutoPlay()
+        }
+        return () => stopAutoPlay()
+    }, [currentIndex, promos.length, showModal])
 
     const handleOpenPromo = (promo: Promocion) => {
         setSelectedPromo(promo)
@@ -87,7 +87,13 @@ export default function PromoCarousel() {
     }
 
     const handleConsultar = (promo: Promocion) => {
-        const message = `Hola! Estoy interesado en la oferta: *${promo.titulo}*. ¿Sigue disponible?`
+        const message = `Hola Activa Sport, me interesa esta Oferta Especial:
+${promo.imagen_url ? `*Imagen:* ${promo.imagen_url}\n` : ''}
+🔥 *Promo:* ${promo.titulo}
+📝 *Detalle:* ${promo.descripcion}
+
+🔗 *Visto en:* ${window.location.href}`
+
         const url = `https://wa.me/59163448209?text=${encodeURIComponent(message)}`
         window.open(url, '_blank')
     }
@@ -98,73 +104,60 @@ export default function PromoCarousel() {
     const currentPromo = promos[currentIndex]
 
     return (
-        <section className="relative z-20 max-w-7xl mx-auto px-4 py-4 -mt-6 mb-6">
-            {/* Contenedor Principal del Slide (con bordes redondeados y overflow hidden) */}
+        <section className="relative z-20 max-w-7xl mx-auto px-4 mt-8 mb-12">
+            {/* Contenedor Principal del Slide (Full Image Background) */}
             <div
-                className={`
-                    relative w-full overflow-hidden rounded-3xl shadow-lg transition-all duration-500
-                    bg-gradient-to-r ${currentPromo.color_fondo || 'from-orange-500 to-orange-600'}
-                    group min-h-[220px] md:min-h-[280px]
-                `}
+                className="relative w-full overflow-hidden rounded-2xl shadow-lg transition-all duration-500 group min-h-[400px] md:min-h-[450px]"
                 onMouseEnter={stopAutoPlay}
                 onMouseLeave={startAutoPlay}
+                onClick={() => handleOpenPromo(currentPromo)}
             >
-                {/* Background Pattern */}
-                <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] mix-blend-overlay pointer-events-none"></div>
+                {/* 1. IMAGEN DE FONDO (FULL BLEED) */}
+                {currentPromo.imagen_url ? (
+                    <img
+                        src={currentPromo.imagen_url}
+                        alt="Promo"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                ) : (
+                    // Fallback si no hay imagen: Fondo de color sólido
+                    <div className={`absolute inset-0 w-full h-full bg-gradient-to-r ${currentPromo.color_fondo || 'from-orange-500 to-orange-600'}`} />
+                )}
 
-                <div className="flex flex-col md:flex-row items-center relative z-10 h-full">
+                {/* 2. OVERLAY GRADIENTE (Para leer el texto) */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none" />
 
-                    {/* Contenido Texto (Izquierda) */}
-                    <div className="flex-1 p-6 md:p-10 flex flex-col justify-center items-start w-full text-center md:text-left">
-                        <span className="inline-block bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] sm:text-xs font-black tracking-widest uppercase mb-3 border border-white/10 shadow-sm mx-auto md:mx-0">
-                            Oferta Especial
-                        </span>
-                        <h2
-                            className="text-2xl md:text-4xl lg:text-5xl font-black text-white leading-tight mb-3 drop-shadow-md cursor-pointer hover:underline decoration-white/50 underline-offset-4 w-full"
-                            onClick={() => handleOpenPromo(currentPromo)}
-                        >
-                            {currentPromo.titulo}
-                        </h2>
-                        <p className="text-white/90 text-sm md:text-base font-medium leading-relaxed mb-6 max-w-xl mx-auto md:mx-0 hidden md:block">
+                {/* 3. CONTENIDO (Texto Superpuesto Abajo) */}
+                <div className="absolute inset-0 flex flex-col justify-end items-center text-center p-8 pb-12 z-10 pointer-events-none">
+                    <span className="inline-block bg-brand-orange text-white px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-3 shadow-lg pointer-events-auto">
+                        Oferta Especial
+                    </span>
+
+                    <h2 className="text-3xl md:text-5xl font-black text-white leading-tight mb-2 drop-shadow-xl pointer-events-auto">
+                        {currentPromo.titulo}
+                    </h2>
+
+                    {currentPromo.descripcion && (
+                        <p className="text-white/90 text-sm md:text-lg font-medium leading-relaxed mb-6 max-w-xl drop-shadow-md hidden md:block pointer-events-auto">
                             {currentPromo.descripcion}
                         </p>
+                    )}
 
-                        <button
-                            onClick={() => handleOpenPromo(currentPromo)}
-                            className="bg-white text-slate-900 text-xs md:text-sm font-bold px-6 py-2.5 rounded-full hover:bg-slate-100 hover:scale-105 transition-all shadow-xl flex items-center gap-2 group/btn mx-auto md:mx-0"
-                        >
+                    <div className="pointer-events-auto">
+                        <button className="bg-white text-black text-xs md:text-sm font-bold px-8 py-3 rounded-full hover:bg-slate-100 hover:scale-105 transition-all shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center gap-2 group/btn">
                             {currentPromo.texto_boton || 'Ver Oferta'}
                             <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
                         </button>
                     </div>
-
-                    {/* Imagen Principal (Derecha) */}
-                    <div className="md:w-5/12 h-full flex items-center justify-center p-4 md:pr-12 relative cursor-pointer" onClick={() => handleOpenPromo(currentPromo)}>
-                        {currentPromo.imagen_url ? (
-                            <div className="relative w-full max-w-[200px] md:max-w-xs aspect-square flex items-center justify-center transform md:translate-x-4">
-                                {/* Glow Effect */}
-                                <div className="absolute inset-0 bg-white/30 blur-2xl rounded-full transform scale-75"></div>
-                                <img
-                                    src={currentPromo.imagen_url}
-                                    alt="Promo"
-                                    className="relative z-10 w-full h-full object-contain drop-shadow-2xl transform hover:scale-105 transition-transform duration-500"
-                                />
-                            </div>
-                        ) : (
-                            <div className="w-32 h-32 md:w-48 md:h-48 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md border border-white/20 shadow-xl">
-                                <Gift size={60} className="text-white/90" />
-                            </div>
-                        )}
-                    </div>
                 </div>
 
                 {/* Dots dentro del contenedor para móvil principalmente */}
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 md:hidden">
+                <div className="absolute top-4 right-4 flex gap-1.5 z-20 md:hidden bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm">
                     {promos.map((_, idx) => (
                         <button
                             key={idx}
                             onClick={() => setCurrentIndex(idx)}
-                            className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-4' : 'bg-white/40'}`}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex ? 'bg-white w-3' : 'bg-white/40'}`}
                         />
                     ))}
                 </div>
@@ -173,22 +166,22 @@ export default function PromoCarousel() {
             {/* Navigation Buttons (Outside Container - Clean Style) */}
             {promos.length > 1 && (
                 <>
-                    {/* Botón Izquierdo */}
+                    {/* Botón Izquierdo - Sutil en Móvil */}
                     <button
                         onClick={(e) => { e.preventDefault(); prevSlide() }}
-                        className="hidden md:flex absolute left-[-24px] top-1/2 -translate-y-1/2 w-14 h-14 bg-white text-slate-700 rounded-full shadow-lg items-center justify-center border border-slate-100 z-30 hover:scale-110 transition-transform hover:shadow-xl hover:bg-slate-50"
+                        className="flex absolute left-2 md:left-[-24px] top-1/2 -translate-y-1/2 w-8 h-8 md:w-14 md:h-14 bg-white/30 backdrop-blur-md md:bg-white text-white md:text-slate-700 rounded-full shadow-sm md:shadow-lg items-center justify-center border border-white/20 md:border-slate-100 z-30 hover:scale-110 transition-transform"
                         aria-label="Anterior"
                     >
-                        <ChevronLeft size={32} strokeWidth={2.5} />
+                        <ChevronLeft size={18} className="md:w-8 md:h-8 drop-shadow-md md:drop-shadow-none" strokeWidth={2.5} />
                     </button>
 
                     {/* Botón Derecho */}
                     <button
                         onClick={(e) => { e.preventDefault(); nextSlide() }}
-                        className="hidden md:flex absolute right-[-24px] top-1/2 -translate-y-1/2 w-14 h-14 bg-white text-slate-700 rounded-full shadow-lg items-center justify-center border border-slate-100 z-30 hover:scale-110 transition-transform hover:shadow-xl hover:bg-slate-50"
+                        className="flex absolute right-2 md:right-[-24px] top-1/2 -translate-y-1/2 w-8 h-8 md:w-14 md:h-14 bg-white/30 backdrop-blur-md md:bg-white text-white md:text-slate-700 rounded-full shadow-sm md:shadow-lg items-center justify-center border border-white/20 md:border-slate-100 z-30 hover:scale-110 transition-transform"
                         aria-label="Siguiente"
                     >
-                        <ChevronRight size={32} strokeWidth={2.5} />
+                        <ChevronRight size={18} className="md:w-8 md:h-8 drop-shadow-md md:drop-shadow-none" strokeWidth={2.5} />
                     </button>
                 </>
             )}

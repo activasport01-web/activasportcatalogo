@@ -18,16 +18,16 @@
 }
 
 /* Modo Oscuro */
-/* Modo Oscuro - Slate/Plomo (Rich Dark Grey) */
+/* Modo Oscuro - Neutral/Gris Puro (Pure Dark Grey, No Blue) */
 .dark {
-  --foreground-rgb: 226, 232, 240;
-  /* Slate 200 */
-  --background-start-rgb: 15, 23, 42;
-  /* Slate 900 (#0f172a) - Tono Plomo Oscuro */
-  --background-end-rgb: 2, 6, 23;
-  /* Slate 950 (#020617) */
+  --foreground-rgb: 229, 229, 229;
+  /* Neutral 200 */
+  --background-start-rgb: 23, 23, 23;
+  /* Neutral 900 (#171717) */
+  --background-end-rgb: 10, 10, 10;
+  /* Neutral 950 (#0a0a0a) */
 
-  --primary-glow: radial-gradient(rgba(255, 87, 34, 0.2), rgba(15, 23, 42, 0));
+  --primary-glow: radial-gradient(rgba(255, 87, 34, 0.2), rgba(23, 23, 23, 0));
 }
 
 body {

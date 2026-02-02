@@ -86,11 +86,24 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
 
     const [searchQuery, setSearchQuery] = useState('')
 
+    // Mapa de IDs de Marcas a Nombres (Para reparar desincronización)
+    const brandIdToName = useMemo(() => {
+        const map: Record<number, string> = {}
+        if (availMarcas) {
+            availMarcas.forEach(m => {
+                if (m.id && m.nombre) {
+                    map[m.id] = m.nombre.trim().toLowerCase()
+                }
+            })
+        }
+        return map
+    }, [availMarcas])
+
     // Lógica de Filtrado
     const filteredProducts = useMemo(() => {
         let result = [...initialProducts]
 
-        // 0. Búsqueda por Texto (Search Bar) - NUEVO
+        // 0. Búsqueda por Texto
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase().trim()
             result = result.filter(p =>
@@ -110,22 +123,53 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
             result = result.filter(p => p.subcategoria && selectedSubcategories.some(sub => p.subcategoria.toLowerCase().includes(sub.toLowerCase())))
         }
 
-        // 3. Género (Nuevo)
+        // 3. Género (Lógica Inteligente)
         if (selectedGenders.length > 0) {
-            result = result.filter(p => p.genero && selectedGenders.some(Gen => p.genero.toLowerCase() === Gen.toLowerCase()))
+            result = result.filter(p => {
+                const pGen = p.genero ? p.genero.trim().toLowerCase() : '';
+                return selectedGenders.some(selected => {
+                    const sGen = selected.trim().toLowerCase();
+                    if (pGen === sGen) return true;
+                    if (pGen === 'unisex' && (sGen === 'hombre' || sGen === 'mujer')) return true;
+                    return false;
+                });
+            });
         }
 
-        // 4. Grupo/Edad (Nuevo)
+        // 4. Grupo
         if (selectedGroups.length > 0) {
-            result = result.filter(p => p.grupo_talla && selectedGroups.some(grp => p.grupo_talla.toLowerCase() === grp.toLowerCase()))
+            // A veces grupo_talla puede ser null
+            result = result.filter(p => p.grupo_talla && selectedGroups.some(grp => p.grupo_talla.trim().toLowerCase() === grp.trim().toLowerCase()))
         }
 
-        // 5. Marca (case-insensitive)
+        // 5. Marca (Robustez Extrema: Origen, String, ID, o Fallback)
         if (selectedBrands.length > 0) {
             result = result.filter(p =>
-                p.marca && selectedBrands.some(brand =>
-                    brand.toLowerCase() === p.marca.toLowerCase()
-                )
+                selectedBrands.some(brand => {
+                    const brandClean = brand.trim().toLowerCase()
+
+                    // 1. Chequeo por Campo 'origen' (Visto en DB del usuario)
+                    if (p.origen && p.origen.trim().toLowerCase() === brandClean) return true
+
+                    // 2. Chequeo Directo (Campo 'marca')
+                    if (p.marca && p.marca.trim().toLowerCase() === brandClean) return true
+
+                    // 3. Coincidencia por ID (Si 'marca' string está vacío pero 'marca_id' existe)
+                    if (p.marca_id) {
+                        const brandObjName = brandIdToName[p.marca_id]
+                        if (brandObjName === brandClean) return true
+                    }
+
+                    // 4. Fallback: Nombre del producto
+                    if (p.nombre && p.nombre.toLowerCase().includes(brandClean)) return true
+
+                    // 5. Fix específico para typos comunes en el nombre (Gracep vs Grasep)
+                    if ((brandClean === 'grasep' || brandClean === 'gracep') && p.nombre.toLowerCase().includes('gra')) {
+                        if (p.nombre.toLowerCase().includes('gracep') || p.nombre.toLowerCase().includes('grasep')) return true
+                    }
+
+                    return false
+                })
             )
         }
 
@@ -141,7 +185,7 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
         // 'recientes' ya viene ordenado del servidor por fecha descendente
 
         return result
-    }, [initialProducts, searchQuery, selectedCategories, selectedSubcategories, selectedBrands, selectedGenders, selectedGroups, priceRange, sortBy])
+    }, [initialProducts, searchQuery, selectedCategories, selectedSubcategories, selectedBrands, selectedGenders, selectedGroups, priceRange, sortBy, brandIdToName])
 
     const toggleCategory = (cat: string) => {
         setSelectedCategories(prev =>
@@ -178,311 +222,207 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
     }
 
     return (
-        <section className="max-w-7xl mx-auto px-4 py-8">
-            <div className="flex flex-col lg:flex-row gap-8">
+        <section className="min-h-screen">
+            {/* --- MOBILE/DESKTOP HEADER DINÁMICO --- */}
+            <div className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+                <div className="max-w-7xl mx-auto px-4 py-3 space-y-3">
 
-                {/* Mobile Filter Trigger */}
-                <button
-                    onClick={() => setIsMobileFilterOpen(true)}
-                    className="lg:hidden w-full flex items-center justify-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl font-bold text-slate-700 dark:text-slate-200 shadow-sm transition-colors"
-                >
-                    <SlidersHorizontal size={18} /> Filtros y Ordenar
-                </button>
-
-                {/* Sidebar Filtros (Desktop: Static | Mobile: Fixed Overlay) */}
-                <aside className={`
-                    fixed inset-0 z-50 bg-white dark:bg-slate-950 lg:bg-transparent lg:static lg:z-auto lg:w-64 lg:block
-                    transition-transform duration-300 ease-in-out
-                    ${isMobileFilterOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-                    overflow-y-auto
-                `}>
-                    <div className="p-6 lg:p-0">
-                        <div className="flex justify-between items-center lg:hidden mb-6">
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Filtros</h2>
-                            <button onClick={() => setIsMobileFilterOpen(false)} className="dark:text-white"><X size={24} /></button>
-                        </div>
-
-                        {/* Contenedor de Filtros (Sticky en Desktop) */}
-                        <div className="lg:sticky lg:top-24 space-y-6">
-
-                            {/* Header Filtros Desktop */}
-                            <div className="hidden lg:flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg flex items-center gap-2 text-slate-900 dark:text-white">
-                                    <Filter size={20} /> Filtros
-                                </h3>
-                                {(selectedCategories.length > 0 || selectedGenders.length > 0 || selectedGroups.length > 0 || selectedBrands.length > 0) && (
-                                    <button
-                                        onClick={clearFilters}
-                                        className="text-xs text-red-500 font-bold hover:underline"
-                                    >
-                                        Limpiar
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Filtro Categorías */}
-                            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-                                <button
-                                    className="w-full flex justify-between items-center mb-3 font-bold text-slate-800 dark:text-slate-200"
-                                    onClick={() => setIsCatOpen(!isCatOpen)}
-                                >
-                                    Categorías
-                                    {isCatOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </button>
-
-                                {isCatOpen && (
-                                    <div className="space-y-2 animate-fade-in">
-                                        {CATEGORIAS.map(cat => (
-                                            <label key={cat.value} className="flex items-center gap-3 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors">
-                                                <div className="relative flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="peer h-5 w-5 border-2 border-slate-300 dark:border-slate-600 rounded checked:bg-orange-500 checked:border-orange-500 focus:ring-orange-200 dark:focus:ring-orange-900 transition-all cursor-pointer appearance-none"
-                                                        checked={selectedCategories.includes(cat.value)}
-                                                        onChange={() => toggleCategory(cat.value)}
-                                                    />
-                                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none">
-                                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                    </div>
-                                                </div>
-                                                <span className={`text-sm ${selectedCategories.includes(cat.value) ? 'font-bold text-slate-800 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                    {cat.label}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Filtro Subcategorías */}
-                            {SUBCATEGORIAS.length > 0 && (
-                                <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-                                    <button
-                                        className="w-full flex justify-between items-center mb-3 font-bold text-slate-800 dark:text-slate-200"
-                                        onClick={() => setIsSubcatOpen(!isSubcatOpen)}
-                                    >
-                                        Tipos de Planta
-                                        {isSubcatOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                    </button>
-
-                                    {isSubcatOpen && (
-                                        <div className="space-y-2 animate-fade-in">
-                                            {SUBCATEGORIAS
-                                                .filter(sub => selectedCategories.length === 0 || !sub.catRel || selectedCategories.some(c => c.toLowerCase() === sub.catRel?.toLowerCase()))
-                                                .map(sub => (
-                                                    <label key={sub.value} className="flex items-center gap-3 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors">
-                                                        <div className="relative flex items-center">
-                                                            <input
-                                                                type="checkbox"
-                                                                className="peer h-5 w-5 border-2 border-slate-300 dark:border-slate-600 rounded checked:bg-orange-500 checked:border-orange-500 focus:ring-orange-200 dark:focus:ring-orange-900 transition-all cursor-pointer appearance-none"
-                                                                checked={selectedSubcategories.includes(sub.value)}
-                                                                onChange={() => toggleSubcategory(sub.value)}
-                                                            />
-                                                            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none">
-                                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                            </div>
-                                                        </div>
-                                                        <span className={`text-sm ${selectedSubcategories.includes(sub.value) ? 'font-bold text-slate-800 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                            {sub.label}
-                                                        </span>
-                                                    </label>
-                                                ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* NUEVO: Filtro Género */}
-                            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-                                <button
-                                    className="w-full flex justify-between items-center mb-3 font-bold text-slate-800 dark:text-slate-200"
-                                    onClick={() => setIsGenderOpen(!isGenderOpen)}
-                                >
-                                    Género
-                                    {isGenderOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </button>
-
-                                {isGenderOpen && (
-                                    <div className="space-y-2 animate-fade-in">
-                                        {GENDER_OPTIONS.map(opt => (
-                                            <label key={opt.value} className="flex items-center gap-3 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors">
-                                                <div className="relative flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="peer h-5 w-5 border-2 border-slate-300 dark:border-slate-600 rounded checked:bg-orange-500 checked:border-orange-500 focus:ring-orange-200 dark:focus:ring-orange-900 transition-all cursor-pointer appearance-none"
-                                                        checked={selectedGenders.includes(opt.value)}
-                                                        onChange={() => toggleGender(opt.value)}
-                                                    />
-                                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none">
-                                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                    </div>
-                                                </div>
-                                                <span className={`text-sm ${selectedGenders.includes(opt.value) ? 'font-bold text-slate-800 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                    {opt.label}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* NUEVO: Filtro Grupo/Talla (Niño/Joven/Adulto) */}
-                            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-                                <button
-                                    className="w-full flex justify-between items-center mb-3 font-bold text-slate-800 dark:text-slate-200"
-                                    onClick={() => setIsGroupOpen(!isGroupOpen)}
-                                >
-                                    Grupo
-                                    {isGroupOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </button>
-
-                                {isGroupOpen && (
-                                    <div className="space-y-2 animate-fade-in">
-                                        {GROUP_OPTIONS.map(opt => (
-                                            <label key={opt.value} className="flex items-center gap-3 cursor-pointer group hover:bg-slate-50 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors">
-                                                <div className="relative flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="peer h-5 w-5 border-2 border-slate-300 dark:border-slate-600 rounded checked:bg-orange-500 checked:border-orange-500 focus:ring-orange-200 dark:focus:ring-orange-900 transition-all cursor-pointer appearance-none"
-                                                        checked={selectedGroups.includes(opt.value)}
-                                                        onChange={() => toggleGroup(opt.value)}
-                                                    />
-                                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none">
-                                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                    </div>
-                                                </div>
-                                                <span className={`text-sm ${selectedGroups.includes(opt.value) ? 'font-bold text-slate-800 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                    {opt.label}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Filtro Marcas */}
-                            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-                                <button
-                                    className="w-full flex justify-between items-center mb-3 font-bold text-slate-800 dark:text-slate-200"
-                                    onClick={() => setIsBrandOpen(!isBrandOpen)}
-                                >
-                                    Marcas
-                                    {isBrandOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </button>
-
-                                {isBrandOpen && (
-                                    <div className="space-y-2 animate-fade-in">
-                                        {MARCAS.map((marca: string) => (
-                                            <label key={marca} className="flex items-center gap-3 cursor-pointer group hover:bg-slate-50 p-1.5 rounded-lg transition-colors">
-                                                <div className="relative flex items-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="peer h-5 w-5 border-2 border-slate-300 dark:border-slate-600 rounded checked:bg-orange-500 checked:border-orange-500 focus:ring-orange-200 dark:focus:ring-orange-900 transition-all cursor-pointer appearance-none"
-                                                        checked={selectedBrands.some(b => b.toLowerCase() === marca.toLowerCase())}
-                                                        onChange={() => {
-                                                            const isSelected = selectedBrands.some(b => b.toLowerCase() === marca.toLowerCase())
-                                                            if (isSelected) {
-                                                                setSelectedBrands(prev => prev.filter(b => b.toLowerCase() !== marca.toLowerCase()))
-                                                            } else {
-                                                                setSelectedBrands(prev => [...prev, marca])
-                                                            }
-                                                        }}
-                                                    />
-                                                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none">
-                                                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                    </div>
-                                                </div>
-                                                <span className={`text-sm ${selectedBrands.some(b => b.toLowerCase() === marca.toLowerCase()) ? 'font-bold text-slate-800 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
-                                                    {marca}
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                        </div>
-                    </div>
-                </aside>
-
-                {/* Main Content */}
-                <div className="flex-1">
-                    {/* Header Resultados y Ordenar */}
-                    <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                        <h2 className="text-xl font-bold text-slate-900 dark:text-white hidden md:block">
-                            Resultados <span className="text-slate-400 dark:text-slate-500 font-normal">({filteredProducts.length})</span>
-                        </h2>
-
-                        {/* Search Bar - NUEVO */}
-                        <div className="relative w-full sm:max-w-md mx-6">
+                    {/* 1. BARRA DE BÚSQUEDA + ORDENAR */}
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
                             <input
                                 type="text"
-                                placeholder="Buscar modelo, marca o estilo..."
+                                placeholder="Buscar zapatillas, botas..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-orange/50 focus:border-brand-orange outline-none transition-all"
+                                className="w-full pl-9 pr-4 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-transparent focus:bg-white dark:focus:bg-slate-950 focus:border-brand-orange text-sm font-medium text-slate-900 dark:text-white transition-all outline-none"
                             />
-                            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                             {searchQuery && (
-                                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white">
-                                    <X size={16} />
+                                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                    <X size={14} />
                                 </button>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <span className="text-sm font-medium text-slate-500 dark:text-slate-400 hidden lg:block">Ordenar:</span>
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="w-full sm:w-auto px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100 dark:focus:ring-orange-900 outline-none cursor-pointer"
-                            >
-                                <option value="recientes">Más Recientes</option>
-                                {/* Opciones de precio eliminadas por solicitud */}
-                            </select>
-                        </div>
+
                     </div>
 
-                    {/* Grid de Productos */}
-                    {filteredProducts.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                            {filteredProducts.map((zapato) => (
-                                <ProductCard
-                                    key={zapato.id}
-                                    zapato={zapato}
-                                    onQuickView={(p) => {
-                                        setQuickViewProduct(p)
-                                        setIsQuickViewOpen(true)
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
-                            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                                <Filter className="text-slate-300 dark:text-slate-500" size={32} />
+                    {/* 2. FILTROS RÁPIDOS (SCROLL HORIZONTAL) */}
+                    <div className="flex flex-col gap-3 py-2">
+
+                        {/* Fila 1: Filtros Principales (Géreno, Grupo, Categoría) */}
+                        {/* Fila 1: Filtros Agrupados (Estilo Personalizado: Rojo, Naranja, Monocromo) */}
+                        <div className="flex gap-2 overflow-x-auto scrollbar-hide px-4 py-1 items-center">
+
+                            {/* GRUPO 1: TOD0 + GÉNERO (Rojo Pálido) */}
+                            <div className="flex items-center p-0.5 rounded-full bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-500/20 flex-shrink-0 relative overflow-hidden group">
+                                <button
+                                    onClick={clearFilters}
+                                    className={`relative z-10 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-300 ${selectedCategories.length === 0 && selectedGenders.length === 0 && selectedBrands.length === 0 && selectedGroups.length === 0
+                                        ? 'bg-red-500 text-white shadow-sm'
+                                        : 'text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-white hover:bg-red-100 dark:hover:bg-red-500/10'
+                                        }`}
+                                >
+                                    Todo
+                                </button>
+                                {GENDER_OPTIONS.map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => toggleGender(opt.value)}
+                                        className={`relative z-10 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-300 ${selectedGenders.includes(opt.value)
+                                            ? 'bg-red-500 text-white shadow-sm'
+                                            : 'text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-white hover:bg-red-100 dark:hover:bg-red-500/10'
+                                            }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
                             </div>
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-white">No encontramos resultados</h3>
-                            <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Prueba ajustando los filtros de búsqueda</p>
-                            <button
-                                onClick={clearFilters}
-                                className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition-all shadow-lg hover:shadow-orange-500/30"
-                            >
-                                Limpiar Filtros
-                            </button>
+
+                            {/* GRUPO 2: EDAD / GRUPO (Naranja / Transparente) */}
+                            <div className="flex items-center p-0.5 rounded-full bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex-shrink-0 relative overflow-hidden group">
+                                {GROUP_OPTIONS.map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => toggleGroup(opt.value)}
+                                        className={`relative z-10 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-300 ${selectedGroups.includes(opt.value)
+                                            ? 'bg-orange-500 text-white shadow-sm'
+                                            : 'text-slate-500 dark:text-slate-400 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-500/10'
+                                            }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* GRUPO 3: CATEGORÍA (Negro / Blanco / Transparente) */}
+                            <div className="flex items-center p-0.5 rounded-full bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex-shrink-0 relative overflow-hidden group">
+                                {CATEGORIAS.slice(0, 8).map(cat => (
+                                    <button
+                                        key={cat.value}
+                                        onClick={() => toggleCategory(cat.value)}
+                                        className={`relative z-10 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all duration-300 ${selectedCategories.includes(cat.value)
+                                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'
+                                            }`}
+                                    >
+                                        {cat.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* GRUPO 4: TIPO DE PLANTA (Solo si es Deportivo) */}
+                            {selectedCategories.some(c => c.toLowerCase() === 'deportivo') && SUBCATEGORIAS.some(s => s.catRel?.toLowerCase() === 'deportivo') && (
+                                <div className="flex items-center p-0.5 rounded-full bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex-shrink-0 relative overflow-hidden group animate-fade-in-left">
+                                    <span className="pl-3 pr-1 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Planta:
+                                    </span>
+                                    {SUBCATEGORIAS
+                                        .filter(s => s.catRel?.toLowerCase() === 'deportivo')
+                                        .map(sub => (
+                                            <button
+                                                key={sub.value}
+                                                onClick={() => toggleSubcategory(sub.value)}
+                                                className={`relative z-10 px-3 py-1.5 my-0.5 mr-1 rounded-full text-[11px] font-bold transition-all duration-300 ${selectedSubcategories.includes(sub.value)
+                                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10'
+                                                    }`}
+                                            >
+                                                {sub.label}
+                                            </button>
+                                        ))}
+                                </div>
+                            )}
                         </div>
-                    )}
+
+                        {/* Fila 2: Marcas (Estilo Naranja Pálido) */}
+                        {/* Fila 2: Marcas (Estilo Burbuja Contenida) */}
+                        <div className="overflow-x-auto scrollbar-hide px-4 py-1">
+                            <div className="flex items-center p-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-max">
+                                {MARCAS.map(marca => (
+                                    <button
+                                        key={marca}
+                                        onClick={() => {
+                                            if (selectedBrands.includes(marca)) {
+                                                setSelectedBrands(prev => prev.filter(b => b !== marca))
+                                            } else {
+                                                setSelectedBrands(prev => [...prev, marca])
+                                            }
+                                        }}
+                                        className={`px-4 py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all ${selectedBrands.includes(marca)
+                                            ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                            }`}
+                                    >
+                                        {marca}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Quick View Modal */}
-            <QuickViewModal
-                producto={quickViewProduct}
-                isOpen={isQuickViewOpen}
-                onClose={() => setIsQuickViewOpen(false)}
-            />
+            {/* CONTENIDO PRINCIPAL */}
+            <div className="max-w-7xl mx-auto px-2 py-6">
+                <div className="flex flex-col lg:flex-row gap-8">
+
+                    {/* (Sidebar de Filtros PC eliminado visualmente en móvil, mantenemos lógica si se quiere expandir en PC, pero por ahora oculto/simplificado) */}
+
+                    {/* Main Content */}
+                    <div className="flex-1">
+                        {/* Header Resultados Simple */}
+                        {filteredProducts.length > 0 && (
+                            <div className="mb-4 px-2 flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                    {filteredProducts.length} Estilos Encontrados
+                                </span>
+                            </div>
+                        )}
+
+
+                        {/* Grid de Productos - Mobile 2 Columns Forced */}
+                        {filteredProducts.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-x-3 gap-y-6 md:gap-6">
+                                {filteredProducts.map((zapato) => (
+                                    <ProductCard
+                                        key={zapato.id}
+                                        zapato={zapato}
+                                        onQuickView={(p) => {
+                                            setQuickViewProduct(p)
+                                            setIsQuickViewOpen(true)
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
+                                <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                                    <Filter className="text-slate-300 dark:text-slate-500" size={32} />
+                                </div>
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-white">No encontramos resultados</h3>
+                                <p className="text-slate-500 dark:text-slate-400 mb-6 text-sm">Prueba ajustando los filtros de búsqueda</p>
+                                <button
+                                    onClick={clearFilters}
+                                    className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold transition-all shadow-lg hover:shadow-orange-500/30"
+                                >
+                                    Limpiar Filtros
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Quick View Modal */}
+                <QuickViewModal
+                    producto={quickViewProduct}
+                    isOpen={isQuickViewOpen}
+                    onClose={() => setIsQuickViewOpen(false)}
+                />
+            </div>
         </section>
     )
 }

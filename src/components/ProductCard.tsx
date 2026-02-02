@@ -33,124 +33,99 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
     const colores = zapato.colores || ['#000000', '#FFFFFF', '#1E40AF', '#DC2626']
 
     return (
-        <Link href={`/producto/${zapato.id}`} className="group block">
-            <div
-                className="bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 relative border border-slate-100 dark:border-slate-800 h-full flex flex-col"
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-            >
-                {/* Imagen */}
-                <div className="relative h-64 overflow-hidden bg-slate-50 dark:bg-slate-200 flex items-center justify-center p-6">
-                    <div className={`absolute inset-0 bg-gradient-to-t from-black/5 to-transparent transition-opacity duration-300 ${isHovered ? 'opacity-100' : 'opacity-0'}`}></div>
+        <Link href={`/producto/${zapato.id}`} className="group block h-full">
+            <div className="flex flex-col h-full bg-white dark:bg-slate-900/50 rounded-xl overflow-hidden border border-transparent dark:border-slate-800 p-2 transition-all hover:shadow-lg">
+                {/* Contenedor Imagen (Cuadrado Universal) */}
+                <div className="relative aspect-square overflow-hidden mb-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+
+                    {/* Badges (Esquina Superior Izquierda) */}
+                    <div className="absolute top-0 left-0 z-20 flex flex-col gap-1 p-1">
+                        {/* Badges de Estado */}
+                        {zapato.etiquetas?.includes('ultimos_pares') && (
+                            <span className="bg-yellow-400 text-black text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm animate-pulse border border-yellow-500/20">
+                                ÚLTIMOS
+                            </span>
+                        )}
+                        {zapato.etiquetas?.includes('proximamente') && (
+                            <span className="bg-blue-600 text-white text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm border border-blue-500/20">
+                                PRONTO
+                            </span>
+                        )}
+                        {zapato.etiquetas?.includes('nuevo') && (
+                            <span className="bg-white/90 text-black text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm border border-black/5">
+                                NEW
+                            </span>
+                        )}
+                        {zapato.etiquetas?.includes('oferta') && (
+                            <span className="bg-red-600 text-white text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm">
+                                SALE
+                            </span>
+                        )}
+                        {!zapato.disponible && (
+                            <span className="bg-black text-white text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm">
+                                AGOTADO
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Botón Favorito (Flotando arriba derecha) - Más pequeño */}
+                    <button
+                        onClick={handleLike}
+                        className="absolute top-1 right-1 z-20 p-1.5 rounded-full bg-white/50 backdrop-blur-sm hover:bg-white text-slate-900 transition-all active:scale-95"
+                    >
+                        <Heart size={16} className={liked ? "fill-red-500 text-red-500" : "text-slate-900"} strokeWidth={1.5} />
+                    </button>
 
                     {/* Imagen Principal */}
                     <img
                         src={zapato.url_imagen}
                         alt={zapato.nombre}
-                        className={`absolute inset-0 w-full h-full object-contain p-6 transition-all duration-700 ease-out ${isHovered && zapato.imagen_hover ? 'opacity-0' : 'opacity-100 scale-100'} ${isHovered && !zapato.imagen_hover ? 'scale-110' : ''}`}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
                     />
 
-                    {/* Imagen Secundaria (Hover) - Solo si existe */}
+                    {/* Imagen Secundaria (Hover en Desktop) */}
                     {zapato.imagen_hover && (
                         <img
                             src={zapato.imagen_hover}
                             alt={`${zapato.nombre} vista 2`}
-                            className={`absolute inset-0 w-full h-full object-contain p-6 transition-all duration-700 ease-out ${isHovered ? 'opacity-100 scale-110' : 'opacity-0 scale-95'}`}
+                            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out opacity-0 group-hover:opacity-100"
                         />
                     )}
-
-                    {/* Badges */}
-                    <div className="absolute top-4 left-4 flex flex-col gap-2">
-                        {zapato.etiquetas?.includes('nuevo') && (
-                            <span className="bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
-                                Nuevo
-                            </span>
-                        )}
-                        {/* Badge de Origen (Solo si es importado para destacar) */}
-                        {zapato.origen && zapato.origen !== 'Nacional' && (
-                            <span className="bg-slate-900 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-md flex items-center gap-1">
-                                <span className="text-sm">{zapato.origen === 'Brazilero' ? '🇧🇷' : '🇵🇪'}</span>
-                                {zapato.origen}
-                            </span>
-                        )}
-                        {!zapato.disponible && (
-                            <span className="bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
-                                Agotado
-                            </span>
-                        )}
-                        {/* Badge de Oferta (Solo si tiene etiqueta explícita 'oferta') */}
-                        {zapato.etiquetas?.includes('oferta') && (
-                            <span className="bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-md">
-                                Oferta
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Acciones Rápidas (Overlay) */}
-                    <div className={`absolute bottom-4 left-0 right-0 flex justify-center gap-3 transition-all duration-300 ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-                        <button
-                            onClick={handleQuickView}
-                            className="bg-brand-black text-brand-orange p-3 rounded-full shadow-lg hover:bg-brand-orange hover:text-white transition-colors flex items-center justify-center group/btn border border-brand-orange/50"
-                            title="Vista Rápida"
-                        >
-                            <Eye size={20} />
-                        </button>
-                    </div>
                 </div>
 
-                {/* Info */}
-                <div className="p-5 flex flex-col flex-grow">
-                    <div className="mb-2">
-                        <span className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold">{zapato.categoria}</span>
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1 leading-tight group-hover:text-brand-orange transition-colors line-clamp-2">
-                        {zapato.nombre}
+                {/* Info del Producto (Ultra Compacto Mobile) */}
+                <div className="flex flex-col gap-0.5 px-0.5">
+                    <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider truncate">
+                        {zapato.marca || zapato.categoria || 'Genérico'}
                     </h3>
+                    <h2 className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-medium leading-tight line-clamp-2 min-h-[2.5em]">
+                        {zapato.nombre}
+                    </h2>
 
-                    <div className="flex items-center gap-2 mb-4">
-                        {/* Puntos de colores */}
-                        <div className="flex -space-x-1.5 overflow-hidden p-1">
-                            {colores.slice(0, 3).map((colorData: any, i: number) => {
-                                const hex = typeof colorData === 'object' ? colorData.color : colorData
-                                const hex2 = typeof colorData === 'object' ? colorData.color2 : null
+                    <div className="mt-1 flex items-center justify-between">
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                            {zapato.precio ? `$${Number(zapato.precio).toLocaleString('es-AR')}` : 'Consultar'}
+                        </span>
 
+                        <button className="text-brand-orange hover:text-orange-600 transition-colors">
+                            <div className="text-[9px] font-bold border border-brand-orange px-1.5 py-0.5 rounded-sm uppercase">
+                                +
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* Colores (Puntos pequeños) */}
+                    {colores && colores.length > 0 && (
+                        <div className="flex gap-0.5 mt-0.5">
+                            {colores.slice(0, 3).map((c: any, i: number) => {
+                                const colorHex = typeof c === 'object' ? c.color : c;
                                 return (
-                                    <div
-                                        key={i}
-                                        className="inline-block h-4 w-4 rounded-full ring-2 ring-white dark:ring-slate-900"
-                                        style={{
-                                            background: hex2
-                                                ? `linear-gradient(135deg, ${hex} 50%, ${hex2} 50%)`
-                                                : hex
-                                        }}
-                                        title={typeof colorData === 'object' ? colorData.nombre : ''}
-                                    />
+                                    <div key={i} className="w-2 h-2 rounded-full border border-slate-200" style={{ backgroundColor: colorHex }}></div>
                                 )
                             })}
-                            {colores.length > 3 && (
-                                <div className="inline-block h-4 w-4 rounded-full bg-slate-100 dark:bg-slate-800 ring-2 ring-white dark:ring-slate-900 flex items-center justify-center text-[8px] font-bold text-slate-500 dark:text-slate-400">+{colores.length - 3}</div>
-                            )}
+                            {colores.length > 3 && <span className="text-[8px] text-slate-400">+{colores.length - 3}</span>}
                         </div>
-                    </div>
-
-                    <div className="mt-auto flex items-end justify-between border-t border-slate-50 dark:border-slate-800 pt-4">
-                        {/* Botón Detalles Real */}
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleLike}
-                                className={`p-3 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm ${liked ? 'bg-red-50 dark:bg-red-900/20 text-red-500' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-400 hover:text-red-400'}`}
-                                title={liked ? "Quitar de favoritos" : "Guardar en favoritos"}
-                            >
-                                <Heart size={20} className={liked ? "fill-current" : ""} />
-                            </button>
-
-                            <span
-                                className={`p-3 rounded-full bg-brand-black text-brand-orange border border-brand-orange shadow-lg transition-transform duration-300 flex items-center justify-center ${isHovered ? 'scale-110 rotate-3 bg-brand-orange text-white' : ''}`}
-                            >
-                                <ShoppingBag size={20} />
-                            </span>
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </Link>

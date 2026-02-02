@@ -33,6 +33,8 @@ interface Producto {
     origen?: string
     genero?: string
     grupo_talla?: string // Niño, Juvenil, Adulto
+    codigo?: string
+    caja?: string
     disponible: boolean
     fecha_creacion: string
 }
@@ -71,6 +73,8 @@ export default function ProductosAdmin() {
 
     const [formData, setFormData] = useState({
         nombre: '',
+        codigo: '',
+        caja: '',
         descripcion: '',
         precio: '',
         categoria: 'Deportivo',
@@ -209,6 +213,8 @@ export default function ProductosAdmin() {
 
             const productData: any = {
                 nombre: formData.nombre,
+                codigo: formData.codigo || null,
+                caja: formData.caja || null,
                 descripcion: formData.descripcion || null,
                 precio: 0, // Venta por mayor, precio oculto/negociable/docena
                 categoria: formData.categoria,
@@ -308,6 +314,8 @@ export default function ProductosAdmin() {
 
             setFormData({
                 nombre: producto.nombre,
+                codigo: (producto as any).codigo || '',
+                caja: (producto as any).caja || '',
                 descripcion: producto.descripcion || '',
                 precio: producto.precio.toString(),
                 categoria: producto.categoria,
@@ -325,6 +333,8 @@ export default function ProductosAdmin() {
             setColorVariants([]) // Limpiar variantes
             setFormData({
                 nombre: '',
+                codigo: '',
+                caja: '',
                 descripcion: '',
                 precio: '', // Se limpia
                 categoria: 'Deportivo',
@@ -597,6 +607,29 @@ export default function ProductosAdmin() {
                                                     placeholder="Ej: Zapato Deportivo Nike Air"
                                                     required
                                                 />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Código Único (Oculto)</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.codigo}
+                                                        onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
+                                                        placeholder="Ej: 3EDS"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Detalle Caja (Oculto)</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.caja}
+                                                        onChange={(e) => setFormData({ ...formData, caja: e.target.value })}
+                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
+                                                        placeholder="Ej: Rojo con Verde"
+                                                    />
+                                                </div>
                                             </div>
 
                                             <div>
@@ -888,25 +921,77 @@ export default function ProductosAdmin() {
                                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50">
                                         <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
                                             <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                                            Estado del Producto
+                                            Estado de Inventario (Semáforo)
                                         </h3>
 
-                                        <label className="flex items-center gap-3 cursor-pointer group">
-                                            <div className="relative">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.disponible}
-                                                    onChange={(e) => setFormData({ ...formData, disponible: e.target.checked })}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-slate-300 dark:bg-slate-600 rounded-full peer peer-checked:bg-orange-500 transition-colors"></div>
-                                                <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Producto Disponible</p>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400">El producto estará visible en la tienda</p>
-                                            </div>
-                                        </label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {/* Opción 1: Disponible (Verde) */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({
+                                                    ...prev,
+                                                    disponible: true,
+                                                    etiquetas: prev.etiquetas.filter(t => t !== 'ultimos_pares' && t !== 'proximamente')
+                                                }))}
+                                                className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${formData.disponible && !formData.etiquetas.includes('ultimos_pares') && !formData.etiquetas.includes('proximamente')
+                                                        ? 'bg-green-100 border-green-500 text-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-500 ring-1 ring-green-500'
+                                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-green-300'
+                                                    }`}
+                                            >
+                                                <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
+                                                Disponible
+                                            </button>
+
+                                            {/* Opción 2: Últimos Pares (Amarillo) */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({
+                                                    ...prev,
+                                                    disponible: true,
+                                                    etiquetas: [...prev.etiquetas.filter(t => t !== 'ultimos_pares' && t !== 'proximamente'), 'ultimos_pares']
+                                                }))}
+                                                className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${formData.disponible && formData.etiquetas.includes('ultimos_pares')
+                                                        ? 'bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-500 ring-1 ring-yellow-500'
+                                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-yellow-300'
+                                                    }`}
+                                            >
+                                                <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm animate-pulse"></div>
+                                                Últimos Pares
+                                            </button>
+
+                                            {/* Opción 3: Llega Pronto (Azul) */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({
+                                                    ...prev,
+                                                    disponible: true,
+                                                    etiquetas: [...prev.etiquetas.filter(t => t !== 'ultimos_pares' && t !== 'proximamente'), 'proximamente']
+                                                }))}
+                                                className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${formData.disponible && formData.etiquetas.includes('proximamente')
+                                                        ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-500 ring-1 ring-blue-500'
+                                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-blue-300'
+                                                    }`}
+                                            >
+                                                <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div>
+                                                Llega Pronto
+                                            </button>
+
+                                            {/* Opción 4: Agotado (Rojo) */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({
+                                                    ...prev,
+                                                    disponible: false
+                                                }))}
+                                                className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${!formData.disponible
+                                                        ? 'bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-500 ring-1 ring-red-500'
+                                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-red-300'
+                                                    }`}
+                                            >
+                                                <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
+                                                Agotado
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

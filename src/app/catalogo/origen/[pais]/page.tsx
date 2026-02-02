@@ -62,7 +62,29 @@ export default async function OrigenPage({ params }: Props) {
             </div>
 
             {/* Reutilizamos el CatalogView pero ya vendrá con los productos filtrados */}
-            <CatalogView initialProducts={zapatos || []} />
+            {/* Derivar filtros del resultado actual */}
+            {(() => {
+                const uniqueCategorias = Array.from(new Set((zapatos || []).map(z => z.categoria).filter(Boolean))).map(c => ({ nombre: c }));
+
+                const uniqueSubMap = new Map();
+                (zapatos || []).forEach(z => {
+                    if (z.subcategoria && !uniqueSubMap.has(z.subcategoria)) {
+                        uniqueSubMap.set(z.subcategoria, { nombre: z.subcategoria, categoria_relacionada: z.categoria });
+                    }
+                });
+                const uniqueSubcategorias = Array.from(uniqueSubMap.values());
+
+                const uniqueMarcas = Array.from(new Set((zapatos || []).map(z => z.marca).filter(Boolean))).map(m => ({ nombre: m }));
+
+                return (
+                    <CatalogView
+                        initialProducts={zapatos || []}
+                        availCategorias={uniqueCategorias}
+                        availSubcategorias={uniqueSubcategorias}
+                        availMarcas={uniqueMarcas}
+                    />
+                );
+            })()}
 
 
         </main>

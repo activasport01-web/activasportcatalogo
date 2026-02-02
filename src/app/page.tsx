@@ -120,135 +120,107 @@ export default async function Home() {
       {/* Carrusel de Marcas */}
       <BrandsCarousel />
 
-      {/* Sección de Categorías Destacadas */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Sección de Categorías Destacadas (Mobile Grid 2x2) */}
+      <section className="relative z-10 max-w-7xl mx-auto px-2 py-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
 
-          {/* 1. NUEVO INGRESO (Dinámico) */}
-          <Link href={pNuevo ? `/producto/${pNuevo.id}` : '/catalogo?sort=recientes'} className="h-64 group">
-            <div className="relative bg-gradient-to-br from-slate-950 to-slate-900 rounded-[2rem] p-6 overflow-hidden shadow-2xl h-full flex flex-col justify-between transform hover:-translate-y-2 hover:shadow-brand-orange/20 transition-all border border-brand-orange/20">
-
-              {/* Texto a la Izquierda */}
-              <div className="relative z-20 max-w-[50%]">
-                <div className="inline-block bg-brand-orange text-white px-3 py-1 rounded-full text-xs font-black mb-3 shadow-lg shadow-brand-orange/40 uppercase tracking-widest">
-                  ✨ Nuevo
+          {/* 1. NUEVO INGRESO (Vertical Grid Item) */}
+          <Link href={pNuevo ? `/producto/${pNuevo.id}` : '/catalogo?sort=recientes'} className="group relative aspect-[3/4] overflow-hidden">
+            {pNuevo ? (
+              <>
+                <img
+                  src={pNuevo.url_imagen}
+                  alt="Nuevo"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90 transition-opacity" />
+                <div className="absolute bottom-3 left-3 right-3 text-white">
+                  <span className="block text-[10px] uppercase tracking-widest font-bold text-brand-orange mb-1">NUEVO</span>
+                  <h3 className="text-sm font-bold leading-tight line-clamp-2">{pNuevo.nombre}</h3>
                 </div>
-                <h3 className="text-white text-2xl font-black leading-tight line-clamp-2 drop-shadow-md group-hover:text-brand-orange transition-colors">
-                  {pNuevo?.nombre || 'Nueva Colección'}
-                </h3>
-                <p className="text-gray-400 text-sm font-medium mt-1">
-                  {getColorName(pNuevo)}
-                </p>
-              </div>
-
-              {pNuevo && (
-                <div className="absolute top-4 right-4 w-[50%] h-[90%] pointer-events-none">
-                  <img
-                    src={pNuevo.url_imagen}
-                    alt={pNuevo.nombre}
-                    className="w-full h-full object-contain drop-shadow-[0_10px_20px_rgba(255,87,34,0.3)] transform rotate-[-12deg] group-hover:rotate-0 group-hover:scale-110 transition-all duration-500"
-                  />
-                </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs font-bold">NUEVO</div>
+            )}
           </Link>
 
-          {/* 2. MÁS POPULAR (Dinámico) */}
-          <Link href={pPopular ? `/producto/${pPopular.id}` : '/catalogo'} className="h-64 group">
-            <div className="relative bg-zinc-100 dark:bg-slate-900 rounded-[2rem] p-6 overflow-hidden shadow-xl h-full flex flex-col justify-between transform hover:-translate-y-2 transition-all border border-transparent dark:border-slate-800 hover:border-brand-orange/20">
-
-              <div className="relative z-20 max-w-[50%]">
-                <div className="inline-block bg-black dark:bg-white px-3 py-1 rounded-full text-xs font-bold text-white dark:text-black mb-3">
-                  🔥 Trending
+          {/* 2. MÁS POPULAR */}
+          <Link href={pPopular ? `/producto/${pPopular.id}` : '/catalogo'} className="group relative aspect-[3/4] overflow-hidden">
+            {pPopular ? (
+              <>
+                <img
+                  src={pPopular.url_imagen}
+                  alt="Popular"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90 transition-opacity" />
+                <div className="absolute bottom-3 left-3 right-3 text-white">
+                  <span className="block text-[10px] uppercase tracking-widest font-bold text-green-400 mb-1">TRENDING</span>
+                  <h3 className="text-sm font-bold leading-tight line-clamp-2">{pPopular.nombre}</h3>
                 </div>
-                <h3 className="text-black dark:text-white text-2xl font-black leading-tight line-clamp-2 drop-shadow-sm group-hover:text-brand-orange transition-colors">
-                  {pPopular?.nombre || 'Tendencias'}
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mt-1">
-                  {getColorName(pPopular)}
-                </p>
-              </div>
-
-              {pPopular && (
-                <div className="absolute top-4 right-4 w-[50%] h-[90%] pointer-events-none">
-                  <img
-                    src={pPopular.url_imagen}
-                    alt={pPopular.nombre}
-                    className="w-full h-full object-contain drop-shadow-xl transform rotate-[-6deg] group-hover:rotate-0 group-hover:scale-110 transition-all duration-500"
-                  />
-                </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs font-bold">POPULAR</div>
+            )}
           </Link>
 
-          {/* 3. MEJOR OFERTA (Dinámico) */}
-          <Link href={pOferta ? `/producto/${pOferta.id}` : '/ofertas'} className="h-64 group">
-            <div className="relative bg-white dark:bg-slate-950 rounded-[2rem] p-6 overflow-hidden shadow-xl h-full flex flex-col justify-between transform hover:-translate-y-2 transition-all border-2 border-dashed border-gray-200 dark:border-slate-800 hover:border-brand-orange dark:hover:border-brand-orange">
-
-              <div className="relative z-20 max-w-[50%]">
-                <div className="inline-block bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold mb-3">
-                  % Oferta
+          {/* 3. MEJOR OFERTA */}
+          <Link href={pOferta ? `/producto/${pOferta.id}` : '/ofertas'} className="group relative aspect-[3/4] overflow-hidden col-span-2 md:col-span-1">
+            {pOferta ? (
+              <>
+                <img
+                  src={pOferta.url_imagen}
+                  alt="Oferta"
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                />
+                <div className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1">
+                  OFERTA
                 </div>
-                <h3 className="text-black dark:text-white text-2xl font-black leading-tight line-clamp-2 drop-shadow-sm">
-                  {pOferta?.nombre || 'Descuentos'}
-                </h3>
-                <p className="text-brand-orange text-xl font-black mt-1">
-                  Descuento Especial
-                </p>
-              </div>
-
-              {pOferta && (
-                <div className="absolute top-4 right-4 w-[50%] h-[90%] pointer-events-none">
-                  <img
-                    src={pOferta.url_imagen}
-                    alt={pOferta.nombre}
-                    className="w-full h-full object-contain drop-shadow-xl transform rotate-[-6deg] group-hover:rotate-0 group-hover:scale-110 transition-all duration-500"
-                  />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90 transition-opacity" />
+                <div className="absolute bottom-3 left-3 right-3 text-white">
+                  <span className="block text-[10px] uppercase tracking-widest font-bold text-red-500 mb-1">SALE</span>
+                  <h3 className="text-sm font-bold leading-tight line-clamp-2">{pOferta.nombre}</h3>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs font-bold">OFERTAS</div>
+            )}
           </Link>
         </div>
-      </section >
+      </section>
 
       {/* Catálogo de Zapatos */}
-      < div id="catalogo" className="relative z-10 max-w-7xl mx-auto py-16 px-4" >
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+      <div id="catalogo" className="relative z-10 max-w-7xl mx-auto py-8 px-2">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-2">
           <div>
-            <h2 className="text-4xl md:text-5xl font-black text-black dark:text-white mb-2 tracking-tight">Catálogo</h2>
-            <p className="text-gray-500 dark:text-gray-400 font-medium">Explora todos nuestros modelos disponibles</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-black dark:text-white uppercase tracking-tight">Catálogo</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/catalogo">
-              <button className="px-6 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-bold hover:bg-brand-orange dark:hover:bg-brand-orange hover:text-white dark:hover:text-white transition-all shadow-lg hover:shadow-brand-orange/30">
-                Ver Todo
+              <button className="px-4 py-2 rounded-none border-b-2 border-brand-orange text-brand-orange font-bold text-sm">
+                Todo
               </button>
             </Link>
             <Link href="/catalogo/adulto">
-              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-slate-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
+              <button className="px-4 py-2 rounded-none border-b-2 border-transparent hover:border-black text-gray-500 hover:text-black transition-all text-sm font-medium">
                 Adulto
               </button>
             </Link>
             <Link href="/catalogo/niño">
-              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-slate-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
+              <button className="px-4 py-2 rounded-none border-b-2 border-transparent hover:border-black text-gray-500 hover:text-black transition-all text-sm font-medium">
                 Niño
-              </button>
-            </Link>
-            <Link href="/catalogo/deportivo">
-              <button className="px-6 py-2.5 rounded-full bg-gray-100 dark:bg-slate-900 border border-transparent text-gray-600 dark:text-gray-300 hover:border-brand-orange hover:text-brand-orange dark:hover:text-brand-orange transition-all text-sm font-bold">
-                Deportivo
               </button>
             </Link>
           </div>
         </div>
 
-        {/* Grid de Productos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Grid de Productos (2 Columnas en Móvil asegurado) */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 pb-10">
           {zapatos?.map((zapato) => (
             <ProductCard key={zapato.id} zapato={zapato} />
           ))}
         </div>
-      </div >
+      </div>
 
       {/* Footer */}
       {/* Footer - Global en Layout */}

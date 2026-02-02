@@ -1,77 +1,127 @@
 'use client'
 
+import { supabase } from '@/lib/supabase'
+
 import { useCart } from '@/context/CartContext'
 import Link from 'next/link'
 import { Trash2, MessageCircle, ArrowLeft, Package, ShoppingBag, ArrowRight } from 'lucide-react'
 
 // Número de WhatsApp para recibir pedidos
-const WHATSAPP_NUMBER = '59163448209'
+const WHATSAPP_NUMBER = '59173643433'
 
 export default function CarritoPage() {
     const { items, removeFromCart, cartTotal, clearCart, cartCount } = useCart()
 
-    const handleWhatsAppOrder = () => {
+    const handleWhatsAppOrder = async () => {
         if (items.length === 0) return
 
-        // 1. Guardar en Historial Local (LocalStorage)
         try {
-            const nuevoPedido = {
-                id: Date.now().toString(), // ID simple basado en timestamp
-                fecha: new Date().toISOString(),
-                items: items.map(i => ({
-                    nombre: i.nombre,
-                    tipo_curva: i.tipo_curva,
-                    cantidad_pares: i.cantidad_pares,
-                    total_item: i.total_item,
-                    color: i.color // Guardar color seleccionado también
-                })),
-                total: cartTotal,
-                estado: 'enviado'
+            // 1. Obtener Usuario (si existe)
+            const { data: { user } } = await supabase.auth.getUser()
+
+            // 2. Insertar Cabecera del Pedido en Supabase
+            const { data: pedidoData, error: pedidoError } = await supabase
+                .from('pedidos')
+                .insert({
+                    total: cartTotal,
+                    cliente_id: user?.id || null, // Relacionar si está logueado
+                    cliente_nombre: user?.user_metadata?.nombre || 'Cliente Web',
+                    cliente_telefono: null, // Podríamos pedirlo en un input antes, pero por ahora opcional
+                    estado: 'pendiente',
+                    metodo_pago: 'whatsapp'
+                })
+                .select()
+                .single()
+
+            if (pedidoError) throw pedidoError
+
+            const pedidoId = pedidoData.id
+
+            // 3. Preparar y Insertar Detalles
+            const detalles = items.map(item => ({
+                pedido_id: pedidoId,
+                producto_id: Number(item.id_producto), // Asegurar que sea número (bigint)
+                nombre_producto: item.nombre,
+                cantidad_pares: item.cantidad_pares,
+                tipo_curva: item.tipo_curva,
+                color: item.color || 'No especificado',
+                precio_unitario: item.total_item ? (item.total_item / item.cantidad_pares) : 0,
+                subtotal: item.total_item
+            }))
+
+            const { error: detallesError } = await supabase
+                .from('detalle_pedidos')
+                .insert(detalles)
+
+            if (detallesError) throw detallesError
+
+            // 4. Guardar copia local por si acaso (Historial Local)
+            try {
+                const nuevoPedidoLocal = {
+                    id: pedidoId, // Usamos el ID real de la BD
+                    fecha: new Date().toISOString(),
+                    items: items.map(i => ({
+                        nombre: i.nombre,
+                        tipo_curva: i.tipo_curva,
+                        cantidad_pares: i.cantidad_pares,
+                        total_item: i.total_item,
+                        color: i.color
+                    })),
+                    total: cartTotal,
+                    estado: 'enviado'
+                }
+                const historialPrevio = localStorage.getItem('historial_pedidos')
+                const pedidos = historialPrevio ? JSON.parse(historialPrevio) : []
+                pedidos.push(nuevoPedidoLocal)
+                localStorage.setItem('historial_pedidos', JSON.stringify(pedidos))
+            } catch (localError) {
+                console.error("Error al guardar historial local", localError)
             }
 
-            const historialPrevio = localStorage.getItem('historial_pedidos')
-            const pedidos = historialPrevio ? JSON.parse(historialPrevio) : []
-            pedidos.push(nuevoPedido)
-            localStorage.setItem('historial_pedidos', JSON.stringify(pedidos))
+            // 5. Generar Mensaje WhatsApp PRO con ID de Pedido
+            const fecha = new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long' })
+            let mensaje = `📋 *NUEVO PEDIDO MAYORISTA* \n`
+            mensaje += `🆔 Pedido ID: #${pedidoId.slice(0, 8)}\n` // ID corto para referencia rápida
+            mensaje += `📅 Fecha: ${fecha}\n`
+            mensaje += `👤 Cliente: ${user?.user_metadata?.nombre || 'Invitado'}\n`
+            mensaje += `--------------------------------\n\n`
+
+            items.forEach((item, index) => {
+                const tipoPaquete = item.cantidad_pares === 6 ? 'Media Docena' : 'Docena'
+                mensaje += `👟 *MODELO ${index + 1}: ${item.nombre.toUpperCase()}*\n`
+                if (item.marca) mensaje += `🏷️ Marca: ${item.marca}\n`
+                mensaje += `📏 Curva: ${item.tipo_curva}\n`
+                if (item.color) mensaje += `🎨 Color: ${item.color}\n`
+                mensaje += `📦 Cantidad: ${item.cantidad_pares} pares (${tipoPaquete})\n`
+                const productUrl = `${window.location.origin}/producto/${item.id_producto}`
+                mensaje += `🔗 Ver Modelo: ${productUrl}\n`
+                mensaje += `\n`
+            })
+
+            mensaje += `--------------------------------\n`
+            mensaje += `📊 *RESUMEN*\n`
+            mensaje += `📦 Bultos: ${items.length}\n`
+            mensaje += `👟 Total Pares: ${items.reduce((acc, i) => acc + i.cantidad_pares, 0)}\n`
+            mensaje += `💰 *TOTAL ESTIMADO: $${cartTotal}*\n\n`
+            mensaje += `✅ *Ya se registró mi pedido en su sistema. Quedo a la espera de coordinar envío y pago.*`
+
+            // 6. Enviar y Limpiar
+            const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`
+            window.open(url, '_blank')
+
+            clearCart() // Limpiamos el carrito SOLO si todo salió bien
+
         } catch (error) {
-            console.error("Error al guardar historial local", error)
+            console.error('Error procesando pedido:', error)
+            alert('Hubo un pequeño error guardando el pedido en el sistema, pero redirigiremos a WhatsApp para no perder la venta.')
+
+            // Fallback: Enviar a WhatsApp aunque falle la BD
+            const mensajeFallback = `Hola, quiero hacer un pedido manual (Error Sistema): \n\n` +
+                items.map(i => `- ${i.nombre} (${i.cantidad_pares} pares)`).join('\n')
+
+            const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensajeFallback)}`
+            window.open(url, '_blank')
         }
-
-        // 2. Generar Mensaje WhatsApp
-        // 2. Generar Mensaje WhatsApp Profesional
-        const fecha = new Date().toLocaleDateString('es-BO', { day: 'numeric', month: 'long' })
-
-        let mensaje = `📋 *NUEVO PEDIDO MAYORISTA* \n`
-        mensaje += `📅 Fecha: ${fecha}\n`
-        mensaje += `--------------------------------\n\n` // Separador visual
-
-        items.forEach((item, index) => {
-            const tipoPaquete = item.cantidad_pares === 6 ? 'Media Docena' : 'Docena'
-
-            mensaje += `👟 *MODELO ${index + 1}: ${item.nombre.toUpperCase()}*\n`
-            if (item.marca) mensaje += `🏷️ Marca: ${item.marca}\n`
-            mensaje += `📏 Curva: ${item.tipo_curva}\n`
-            if (item.color) mensaje += `🎨 Color: ${item.color}\n`
-            mensaje += `📦 Cantidad: ${item.cantidad_pares} pares (${tipoPaquete})\n`
-
-            // Usamos el link al producto para que WhatsApp genere la vista previa con foto
-            const productUrl = `${window.location.origin}/producto/${item.id_producto}`
-            mensaje += `🔗 Ver Modelo: ${productUrl}\n`
-            mensaje += `\n` // Espacio entre items
-        })
-
-        mensaje += `--------------------------------\n`
-        mensaje += `📊 *RESUMEN DEL PEDIDO*\n`
-        mensaje += `📦 Total Bultos: ${items.length}\n`
-        mensaje += `👟 Total Pares: ${items.reduce((acc, i) => acc + i.cantidad_pares, 0)}\n\n`
-
-        mensaje += `✅ *Solicito confirmación de stock y datos para el depósito.*`
-
-        const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`
-        window.open(url, '_blank')
-
-        // Opcional: Limpiar carrito después de enviar o dejarlo
-        // clearCart() 
     }
 
     if (items.length === 0) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Search, User as UserIcon, LogOut, Package, Heart, Sun, Moon, Users, Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -8,11 +8,32 @@ import { User } from '@supabase/supabase-js'
 import { useDebouncedCallback } from 'use-debounce'
 import { useTheme } from '@/context/ThemeContext'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation' // Importar usePathname
 
 export default function TopHeader() {
     const [userMenuOpen, setUserMenuOpen] = useState(false)
     const [user, setUser] = useState<User | null>(null)
     const { theme, toggleTheme } = useTheme()
+    const pathname = usePathname() // Obtener ruta actual
+
+    // Scroll Hide Logic
+    const [isVisible, setIsVisible] = useState(true)
+    const lastScrollY = useRef(0)
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY
+            // Hide if scrolling down > 50px
+            if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+                setIsVisible(false)
+            } else {
+                setIsVisible(true)
+            }
+            lastScrollY.current = currentScrollY
+        }
+        window.addEventListener('scroll', handleScroll, { passive: true })
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
 
     // Estados para búsqueda
     const [searchTerm, setSearchTerm] = useState('')
@@ -63,35 +84,13 @@ export default function TopHeader() {
     }
 
     return (
-        <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm shadow-sm dark:shadow-slate-900/10 transition-colors duration-300">
-            {/* Top Bar - Premium Design */}
-            <div className="bg-slate-950 text-gray-400 border-b border-white/5 font-sans">
-                <div className="max-w-7xl mx-auto px-4 h-9 flex justify-between items-center text-[10px] sm:text-xs font-medium tracking-wide">
-                    {/* Left Links */}
-                    <div className="flex items-center gap-6">
-                        <Link href="/nosotros" className="flex items-center gap-1.5 hover:text-white transition-colors duration-300 group">
-                            <span className="text-brand-orange group-hover:scale-110 transition-transform">
-                                <Users size={13} />
-                            </span>
-                            QUIÉNES SOMOS
-                        </Link>
-                        <div className="w-px h-3 bg-white/10 hidden sm:block"></div>
-                        <Link href="/admin/login" className="flex items-center gap-1.5 hover:text-white transition-colors duration-300 group">
-                            <span className="text-brand-orange group-hover:scale-110 transition-transform">
-                                <Lock size={13} />
-                            </span>
-                            ADMIN
-                        </Link>
-                    </div>
+        <header
+            className={`sticky top-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm shadow-sm dark:shadow-slate-900/10 
+            transition-all duration-300 ease-in-out
+            ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}
+            suppressHydrationWarning
+        >
 
-                    {/* Right Message - Scrolling on mobile if needed, static on desktop */}
-                    <div className="flex items-center gap-2 text-brand-orange/90 bg-brand-orange/5 px-3 py-0.5 rounded-full border border-brand-orange/10">
-                        <Package size={12} className="animate-pulse" />
-                        <span className="hidden sm:inline">VENTA MAYORISTA - PEDIDO MÍNIMO: 6 PARES</span>
-                        <span className="sm:hidden">MAYORISTA: 6 PARES</span>
-                    </div>
-                </div>
-            </div>
 
             {/* Main Header */}
             <div className="max-w-7xl mx-auto px-4 py-3">
@@ -108,11 +107,12 @@ export default function TopHeader() {
                         />
                     </Link>
 
-                    {/* Search Bar - Full Width on Mobile */}
-                    <div className="flex-1 max-w-xl relative">
+                    {/* Search Bar - Hidden on Mobile, Visible on Desktop (except on Catalog page where we have dedicated search) */}
+                    <div className={`flex-1 max-w-xl relative ${pathname === '/catalogo' ? 'hidden' : 'hidden md:block'}`}>
                         <div className="flex items-center bg-gray-100 dark:bg-slate-900 rounded-full px-4 py-2 gap-2 border-2 border-transparent focus-within:border-brand-orange focus-within:bg-white dark:focus-within:bg-slate-950 transition-all w-full">
                             <Search size={18} className="text-gray-500 dark:text-gray-400" />
                             <input
+                                suppressHydrationWarning
                                 type="text"
                                 placeholder="Buscar zapatos..."
                                 className="bg-transparent outline-none text-sm w-full text-gray-700 dark:text-gray-200 placeholder-gray-500"
@@ -154,53 +154,110 @@ export default function TopHeader() {
                         )}
                     </div>
 
-                    {/* Theme Toggle - Always Visible */}
-                    <button
-                        onClick={toggleTheme}
-                        className="w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-yellow-400 transition-colors shrink-0"
-                        aria-label="Cambiar tema"
-                    >
-                        {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-                    </button>
+                    {/* Botón CATÁLOGO Móvil (En lugar de barra de búsqueda) */}
+                    {pathname !== '/catalogo' && (
+                        <Link
+                            href="/catalogo"
+                            className="md:hidden flex items-center gap-1.5 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 active:scale-95 transition-all"
+                        >
+                            <Search size={14} className="text-brand-orange" />
+                            CATÁLOGO
+                        </Link>
+                    )}
 
-                    {/* User Profile - Desktop Only */}
-                    <div className="relative hidden md:block">
+                    {/* Theme Toggle - Always Visible */}
+                    {/* Unified User & Theme Menu */}
+                    <div className="relative">
                         <button
                             onClick={() => setUserMenuOpen(!userMenuOpen)}
-                            className="flex items-center gap-2 text-black dark:text-white hover:text-brand-orange transition"
+                            className="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors shrink-0 border border-transparent focus:border-brand-orange"
                         >
                             {user ? (
-                                <div className="w-9 h-9 rounded-full bg-black dark:bg-slate-800 border border-brand-orange flex items-center justify-center">
-                                    <UserIcon size={18} className="text-brand-orange" />
+                                <div className="w-full h-full rounded-full bg-slate-900 border border-brand-orange/50 flex items-center justify-center text-white">
+                                    <span className="font-bold text-xs">
+                                        {user.email?.substring(0, 2).toUpperCase()}
+                                    </span>
                                 </div>
                             ) : (
-                                <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center hover:bg-gray-200">
-                                    <UserIcon size={20} className="text-gray-600 dark:text-gray-300" />
-                                </div>
+                                <UserIcon size={20} className="text-gray-600 dark:text-gray-300" />
                             )}
                         </button>
 
-                        {/* Dropdown */}
+                        {/* Dropdown Menu */}
                         {userMenuOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden z-[60]">
-                                {user ? (
-                                    <div className="p-2">
-                                        <div className="px-3 py-2 border-b border-gray-100 dark:border-slate-800 mb-2">
-                                            <p className="font-bold text-sm truncate text-black dark:text-white">{user.user_metadata?.nombre || 'Usuario'}</p>
-                                            <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                            <div className="absolute right-0 top-full mt-3 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-800 overflow-hidden z-[70] animate-fade-in origin-top-right">
+                                {/* 1. User Info Section */}
+                                <div className="p-4 bg-gray-50 dark:bg-slate-950/50 border-b border-gray-100 dark:border-slate-800">
+                                    {user ? (
+                                        <div>
+                                            <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                                                {user.user_metadata?.nombre || 'Usuario Registrado'}
+                                            </p>
+                                            <p className="text-xs text-slate-500 truncate">{user.email}</p>
                                         </div>
-                                        <Link href="/mis-pedidos"><button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg"><Package size={16} /> Mis Pedidos</button></Link>
-                                        <Link href="/favoritos"><button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg"><Heart size={16} /> Favoritos</button></Link>
-                                        <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg mt-1"><LogOut size={16} /> Cerrar Sesión</button>
-                                    </div>
-                                ) : (
-                                    <div className="p-4 text-center">
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Inicia sesión para ver tus pedidos</p>
-                                        <Link href="/admin/login" className="block w-full bg-brand-orange text-white py-2 rounded-lg font-bold text-sm hover:opacity-90">
-                                            Iniciar Sesión
+                                    ) : (
+                                        <div>
+                                            <p className="font-bold text-sm text-slate-900 dark:text-white">Invitado</p>
+                                            <p className="text-xs text-slate-500">Inicia sesión para ver tus pedidos</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-2 space-y-1">
+                                    {/* 2. Theme Toggle (Inside Menu) */}
+                                    <button
+                                        onClick={toggleTheme}
+                                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
+                                    >
+                                        <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                                            {theme === 'light' ? <Sun size={18} className="text-orange-500" /> : <Moon size={18} className="text-blue-400" />}
+                                            <span className="font-medium">Tema: {theme === 'light' ? 'Claro' : 'Oscuro'}</span>
+                                        </div>
+                                        <div className="w-8 h-4 bg-slate-200 dark:bg-slate-700 rounded-full relative">
+                                            <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${theme === 'dark' ? 'left-4.5' : 'left-0.5'}`}></div>
+                                        </div>
+                                    </button>
+
+                                    {/* 3. Navigation Links */}
+                                    <Link href="/admin/dashboard" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                                        <Lock size={18} className="text-slate-400" />
+                                        <span className="font-medium">Panel Admin</span>
+                                    </Link>
+
+                                    {user && (
+                                        <>
+                                            <div className="h-px bg-gray-100 dark:bg-slate-800 my-1 mx-2"></div>
+                                            <Link href="/mis-pedidos" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                                                <Package size={18} className="text-slate-400" />
+                                                <span className="font-medium">Mis Pedidos</span>
+                                            </Link>
+                                            <Link href="/favoritos" className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+                                                <Heart size={18} className="text-slate-400" />
+                                                <span className="font-medium">Favoritos</span>
+                                            </Link>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* 4. Footer Actions */}
+                                <div className="p-2 border-t border-gray-100 dark:border-slate-800 mt-1">
+                                    {user ? (
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-bold text-red-600 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                                        >
+                                            <LogOut size={16} />
+                                            Cerrar Sesión
+                                        </button>
+                                    ) : (
+                                        <Link href="/admin/login" className="block">
+                                            <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-bold text-white bg-slate-900 dark:bg-brand-orange hover:opacity-90 rounded-xl transition-colors shadow-lg shadow-brand-orange/20">
+                                                <UserIcon size={16} />
+                                                Iniciar Sesión
+                                            </button>
                                         </Link>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
