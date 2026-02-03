@@ -605,6 +605,24 @@ export default function ProductView({ producto, productosRelacionados }: Product
                         </div>
                     </div>
                 )}
+
+                {/* HIDDEN PRELOADER FOR GALLERY PERFORMANCE */}
+                {/* Cargamos todas las imágenes de la galería en segundo plano para que al cambiar de color sean instantáneas */}
+                <div style={{ display: 'none' }} aria-hidden="true">
+                    {coloresDisponibles.map((color: any, i: number) => {
+                        const mainImg = getColorImage(color)
+                        const gallery = color.imagenes || []
+                        return (
+                            <div key={i}>
+                                <img src={mainImg} alt="preload" />
+                                {gallery.map((g: string, j: number) => (
+                                    <img key={j} src={g} alt="preload" />
+                                ))}
+                            </div>
+                        )
+                    })}
+                </div>
+
             </div>
 
             {/* LIGHTBOX ZOOM (Pantalla Completa) */}

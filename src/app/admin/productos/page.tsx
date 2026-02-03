@@ -162,12 +162,15 @@ export default function ProductosAdmin() {
             .toLowerCase();
     }
 
+    const [isSubmitting, setIsSubmitting] = useState(false) // Nuevo estado para prevenir doble click
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (isSubmitting) return
 
+        setIsSubmitting(true)
         try {
             // NUEVO: Subir imágenes de variantes de color PRIMERO
-            console.log('🎨 Variantes antes de subir:', colorVariants)
             const variantsWithUrls = await Promise.all(
                 colorVariants.map(async (variant) => {
                     let imageUrl = variant.imagen
@@ -222,7 +225,6 @@ export default function ProductosAdmin() {
                     }
                 })
             )
-            console.log('✅ Variantes con URLs:', variantsWithUrls)
 
             // Usar la primera variante como imagen principal
             const url_imagen = variantsWithUrls.length > 0 && variantsWithUrls[0].imagen
@@ -279,6 +281,8 @@ export default function ProductosAdmin() {
         } catch (err: any) {
             console.error('Error inesperado:', err)
             showNotification('Error: ' + err.message, 'error')
+        } finally {
+            setIsSubmitting(false)
         }
     }
 
@@ -1031,9 +1035,10 @@ export default function ProductosAdmin() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl text-sm"
+                                    disabled={isSubmitting}
+                                    className={`flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl text-sm ${isSubmitting ? 'opacity-70 cursor-wait' : ''}`}
                                 >
-                                    {editingProduct ? 'Actualizar Producto' : 'Crear Producto'}
+                                    {isSubmitting ? 'Guardando...' : (editingProduct ? 'Actualizar Producto' : 'Crear Producto')}
                                 </button>
                             </div>
                         </form>

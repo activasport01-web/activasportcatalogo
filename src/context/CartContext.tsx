@@ -26,7 +26,6 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-    console.log('[CartContext] CartProvider rendering') // DEBUG
     const [items, setItems] = useState<CartItem[]>([])
     const [isLoaded, setIsLoaded] = useState(false)
 
