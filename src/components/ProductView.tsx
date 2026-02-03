@@ -169,7 +169,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
 📸 *Foto:* ${selectedImage}
 
 👟 *Modelo:* ${producto.nombre}
-🏷️ *Marca:* ${producto.marca || 'Genérica'}
+🏷️ *Marca:* ${producto.marca || producto.origen || 'Genérica'}
 🔖 *Código:* ${producto.codigo || 'N/A'}
 📦 *Caja:* ${producto.caja || 'N/A'}
 📏 *Curva:* ${tipoCurva}
@@ -194,7 +194,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
             tipo_curva: tipoCurva as any,
             cantidad_pares: cantidadCajon,
             color: 'Colores Variados',
-            marca: producto.marca,
+            marca: producto.marca || producto.origen || 'Genérica',
             total_item: 0 // Set to 0 or internal value since we don't show price
         })
 
