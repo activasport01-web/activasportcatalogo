@@ -21,11 +21,6 @@ export default function ProductView({ producto, productosRelacionados }: Product
     const { addToCart } = useCart()
     const { toggleFavorite, isFavorite } = useFavorites()
 
-    // Imagen
-    const [selectedImage, setSelectedImage] = useState(producto.url_imagen)
-
-    // Lógica Mayorista
-    // Lógica Mayorista
     // Lógica Mayorista
     // Si el administrador definió una curva de tallas específica, usarla. Si no, estimar por categoría.
     const [tipoCurva] = useState<string>(() => {
@@ -107,40 +102,57 @@ export default function ProductView({ producto, productosRelacionados }: Product
         return colorData // Ya es un string hex
     }
 
-    // Carrusel automático de imágenes
-    const [currentImageIndex, setCurrentImageIndex] = useState(0)
-    const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+    // Estado para saber qué color estamos viendo (null = vista general / overview)
+    const [selectedColorIndex, setSelectedColorIndex] = useState<number | null>(null)
 
-    // Obtener todas las imágenes disponibles
-    const allImages = coloresDisponibles.length > 0
-        ? coloresDisponibles.map((colorData: any) => getColorImage(colorData))
+    // Estado principal de la imagen mostrada
+    const [currentImageIndex, setCurrentImageIndex] = useState(0)
+    // Estado para mostrar la imagen seleccionada (derivada del índice y la galería actual)
+    // PERO: Queremos que 'selectedImage' sea la fuente de verdad para el src de la imagen
+    const [selectedImage, setSelectedImage] = useState(producto.url_imagen)
+
+    // Calculamos qué imágenes deben estar en el carrusel en este momento
+    const carouselImages = coloresDisponibles.length > 0
+        ? (selectedColorIndex !== null
+            ? [getColorImage(coloresDisponibles[selectedColorIndex]), ...(coloresDisponibles[selectedColorIndex].imagenes || [])]
+            : coloresDisponibles.map((c: any) => getColorImage(c)))
         : [producto.url_imagen]
 
-    // Auto-play cada 3 segundos
+    // Efecto: Cuando cambia la colección de imágenes (ej: cambio de color), resetear índice
     useEffect(() => {
-        if (!isAutoPlaying || allImages.length <= 1) return
+        setCurrentImageIndex(0)
+    }, [selectedColorIndex])
+
+    // Efecto: Actualizar la imagen visual cuando cambia el índice o la colección
+    useEffect(() => {
+        if (carouselImages[currentImageIndex]) {
+            setSelectedImage(carouselImages[currentImageIndex])
+        }
+    }, [currentImageIndex, carouselImages])
+
+    const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+
+    // Auto-play cada 3 segundos (solo si hay más de 1 imagen)
+    useEffect(() => {
+        if (!isAutoPlaying || carouselImages.length <= 1) return
 
         const interval = setInterval(() => {
-            setCurrentImageIndex((prev) => (prev + 1) % allImages.length)
+            setCurrentImageIndex((prev) => (prev + 1) % carouselImages.length)
         }, 3000)
 
         return () => clearInterval(interval)
-    }, [isAutoPlaying, allImages.length])
+    }, [isAutoPlaying, carouselImages.length])
 
-    // Actualizar imagen seleccionada cuando cambia el índice
-    useEffect(() => {
-        setSelectedImage(allImages[currentImageIndex])
-    }, [currentImageIndex])
 
     // Funciones de navegación
     const nextImage = () => {
         setIsAutoPlaying(false)
-        setCurrentImageIndex((prev) => (prev + 1) % allImages.length)
+        setCurrentImageIndex((prev) => (prev + 1) % carouselImages.length)
     }
 
     const prevImage = () => {
         setIsAutoPlaying(false)
-        setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length)
+        setCurrentImageIndex((prev) => (prev - 1 + carouselImages.length) % carouselImages.length)
     }
 
     const handleWhatsAppClick = async () => {
@@ -248,7 +260,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                 </button>
 
                                 {/* Flechas de navegación (solo si hay múltiples imágenes) */}
-                                {allImages.length > 1 && (
+                                {carouselImages.length > 1 && (
                                     <>
                                         {/* Flecha Izquierda */}
                                         <button
@@ -270,7 +282,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
 
                                         {/* Indicadores de posición */}
                                         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                                            {allImages.map((_: any, index: number) => (
+                                            {carouselImages.map((_: any, index: number) => (
                                                 <button
                                                     key={index}
                                                     onClick={() => {
@@ -288,7 +300,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
 
                                         {/* Contador de imágenes */}
                                         <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
-                                            {currentImageIndex + 1} / {allImages.length}
+                                            {currentImageIndex + 1} / {carouselImages.length}
                                         </div>
                                     </>
                                 )}
@@ -362,12 +374,19 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                             const nombre = getColorName(colorData)
                                             const hex = getColorHex(colorData)
                                             const hex2 = typeof colorData === 'object' ? colorData.color2 : null
-                                            const isSelected = selectedImage === imagen
+                                            const isSelected = selectedColorIndex === idx
 
                                             return (
                                                 <button
                                                     key={idx}
-                                                    onClick={() => setSelectedImage(imagen)}
+                                                    onClick={() => {
+                                                        if (selectedColorIndex === idx) {
+                                                            setSelectedColorIndex(null) // Deseleccionar
+                                                        } else {
+                                                            setSelectedColorIndex(idx) // Seleccionar
+                                                        }
+                                                        setCurrentImageIndex(0)
+                                                    }}
                                                     className={`snap-start shrink-0 relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all hover:scale-105 ${isSelected
                                                         ? 'border-orange-500 ring-2 ring-orange-200 dark:ring-orange-900 shadow-md scale-105'
                                                         : 'border-slate-200 dark:border-slate-700 hover:border-orange-300 opacity-80 hover:opacity-100'
@@ -379,6 +398,14 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                                         alt={nombre}
                                                         className="w-full h-full object-cover bg-white"
                                                     />
+                                                    {/* Badge de "Más fotos" si tiene galería */}
+                                                    {isNewFormat && colorData.imagenes && colorData.imagenes.length > 0 && (
+                                                        <div className="absolute top-1 left-1 bg-black/50 text-white text-[8px] px-1 rounded flex items-center gap-0.5 backdrop-blur-sm">
+                                                            <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                                                            +{colorData.imagenes.length}
+                                                        </div>
+                                                    )}
+
                                                     <div
                                                         className="absolute bottom-1 right-1 w-3 h-3 rounded-full border border-white shadow-sm"
                                                         style={{

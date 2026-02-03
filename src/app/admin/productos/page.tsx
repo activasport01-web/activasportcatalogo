@@ -63,7 +63,9 @@ export default function ProductosAdmin() {
         color2?: string    // Nuevo: Segundo color opcional
         nombre: string     // Nombre del color
         imagen: string     // URL de la imagen (después de subir)
-        imageFile?: File   // Archivo temporal antes de subir
+        imagenes?: string[] // NUEVO: Galería de imágenes (URLs)
+        imageFile?: File   // Archivo temporal principal
+        extraFiles?: File[] // NUEVO: Archivos temporales para galería
     }
     const [colorVariants, setColorVariants] = useState<ColorVariant[]>([])
 
@@ -169,8 +171,9 @@ export default function ProductosAdmin() {
             const variantsWithUrls = await Promise.all(
                 colorVariants.map(async (variant) => {
                     let imageUrl = variant.imagen
+                    let galleryUrls: string[] = variant.imagenes || []
 
-                    // Si hay un archivo nuevo, subirlo
+                    // 1. Subir imagen principal si hay archivo nuevo
                     if (variant.imageFile) {
                         const cleanName = sanitizeFileName(variant.imageFile.name)
                         const fileName = `variant_${Date.now()}_${cleanName}`
@@ -191,11 +194,31 @@ export default function ProductosAdmin() {
                         imageUrl = data.publicUrl
                     }
 
+                    // 2. Subir imágenes de galería extra
+                    if (variant.extraFiles && variant.extraFiles.length > 0) {
+                        const newGalleryUrls = await Promise.all(variant.extraFiles.map(async (file) => {
+                            const cleanName = sanitizeFileName(file.name)
+                            const fileName = `gallery_${Date.now()}_${cleanName}`
+
+                            const { error } = await supabase.storage.from('imagenes-zapatos').upload(fileName, file)
+                            if (error) {
+                                console.error('Error subiendo gallery:', error)
+                                return null
+                            }
+                            const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
+                            return data.publicUrl
+                        }))
+
+                        // Filtrar nulos y agregar a lista existente
+                        galleryUrls = [...galleryUrls, ...newGalleryUrls.filter((u): u is string => !!u)]
+                    }
+
                     return {
                         color: variant.color,
                         color2: variant.color2 || undefined,
                         nombre: variant.nombre,
-                        imagen: imageUrl
+                        imagen: imageUrl,
+                        imagenes: galleryUrls
                     }
                 })
             )
@@ -298,7 +321,8 @@ export default function ProductosAdmin() {
                         color: c.color || '#000000',
                         color2: c.color2 || undefined,
                         nombre: c.nombre || 'Color',
-                        imagen: c.imagen || ''
+                        imagen: c.imagen || '',
+                        imagenes: c.imagenes || []
                     }))
                     console.log('✅ Variantes cargadas:', loadedVariants)
                     setColorVariants(loadedVariants)
@@ -934,8 +958,8 @@ export default function ProductosAdmin() {
                                                     etiquetas: prev.etiquetas.filter(t => t !== 'ultimos_pares' && t !== 'proximamente')
                                                 }))}
                                                 className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${formData.disponible && !formData.etiquetas.includes('ultimos_pares') && !formData.etiquetas.includes('proximamente')
-                                                        ? 'bg-green-100 border-green-500 text-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-500 ring-1 ring-green-500'
-                                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-green-300'
+                                                    ? 'bg-green-100 border-green-500 text-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-500 ring-1 ring-green-500'
+                                                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-green-300'
                                                     }`}
                                             >
                                                 <div className="w-3 h-3 rounded-full bg-green-500 shadow-sm"></div>
@@ -951,8 +975,8 @@ export default function ProductosAdmin() {
                                                     etiquetas: [...prev.etiquetas.filter(t => t !== 'ultimos_pares' && t !== 'proximamente'), 'ultimos_pares']
                                                 }))}
                                                 className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${formData.disponible && formData.etiquetas.includes('ultimos_pares')
-                                                        ? 'bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-500 ring-1 ring-yellow-500'
-                                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-yellow-300'
+                                                    ? 'bg-yellow-100 border-yellow-500 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-500 ring-1 ring-yellow-500'
+                                                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-yellow-300'
                                                     }`}
                                             >
                                                 <div className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm animate-pulse"></div>
@@ -968,8 +992,8 @@ export default function ProductosAdmin() {
                                                     etiquetas: [...prev.etiquetas.filter(t => t !== 'ultimos_pares' && t !== 'proximamente'), 'proximamente']
                                                 }))}
                                                 className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${formData.disponible && formData.etiquetas.includes('proximamente')
-                                                        ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-500 ring-1 ring-blue-500'
-                                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-blue-300'
+                                                    ? 'bg-blue-100 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-500 ring-1 ring-blue-500'
+                                                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-blue-300'
                                                     }`}
                                             >
                                                 <div className="w-3 h-3 rounded-full bg-blue-500 shadow-sm"></div>
@@ -984,8 +1008,8 @@ export default function ProductosAdmin() {
                                                     disponible: false
                                                 }))}
                                                 className={`p-3 rounded-xl border text-sm font-bold transition-all flex items-center justify-center gap-2 ${!formData.disponible
-                                                        ? 'bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-500 ring-1 ring-red-500'
-                                                        : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-red-300'
+                                                    ? 'bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-500 ring-1 ring-red-500'
+                                                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 hover:border-red-300'
                                                     }`}
                                             >
                                                 <div className="w-3 h-3 rounded-full bg-red-500 shadow-sm"></div>
@@ -1239,6 +1263,74 @@ export default function ProductosAdmin() {
                                                 />
                                             </label>
                                         )}
+                                    </div>
+                                </div>
+
+                                {/* Galería de Ángulos (NUEVO) */}
+                                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                                        Galería de Ángulos (Opcional)
+                                    </label>
+                                    <p className="text-xs text-slate-500 mb-3">Agrega fotos adicionales de este color (lado, suela, talón...) para el carrusel.</p>
+
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {/* Fotos existentes guardadas */}
+                                        {colorVariants[editingVariantIndex].imagenes?.map((url, idx) => (
+                                            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 group">
+                                                <img src={url} alt="Gallery" className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={() => {
+                                                        const updated = [...colorVariants]
+                                                        updated[editingVariantIndex].imagenes = updated[editingVariantIndex].imagenes?.filter((_, i) => i !== idx)
+                                                        setColorVariants(updated)
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+
+                                        {/* Archivos nuevos por subir */}
+                                        {colorVariants[editingVariantIndex].extraFiles?.map((file, idx) => (
+                                            <div key={`new-${idx}`} className="relative aspect-square rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 group">
+                                                <img src={URL.createObjectURL(file)} alt="New" className="w-full h-full object-cover opacity-80" />
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                    <span className="text-[10px] font-bold text-white bg-black/50 px-1 rounded">PENDIENTE</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        const updated = [...colorVariants]
+                                                        updated[editingVariantIndex].extraFiles = updated[editingVariantIndex].extraFiles?.filter((_, i) => i !== idx)
+                                                        setColorVariants(updated)
+                                                    }}
+                                                    className="absolute top-1 right-1 bg-red-500/90 text-white rounded-full p-1 transition-opacity"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+
+                                        {/* Botón Upload */}
+                                        <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors text-slate-400 hover:text-orange-500 hover:border-orange-400">
+                                            <Plus size={20} />
+                                            <span className="text-[10px] mt-1">Agregar</span>
+                                            <input
+                                                type="file"
+                                                multiple
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    if (e.target.files && e.target.files.length > 0) {
+                                                        const newFiles = Array.from(e.target.files)
+                                                        const updated = [...colorVariants]
+                                                        const currentExtras = updated[editingVariantIndex].extraFiles || []
+                                                        updated[editingVariantIndex].extraFiles = [...currentExtras, ...newFiles]
+                                                        setColorVariants(updated)
+                                                    }
+                                                }}
+                                            />
+                                        </label>
                                     </div>
                                 </div>
                             </div>

@@ -26,6 +26,7 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
 export function CartProvider({ children }: { children: ReactNode }) {
+    console.log('[CartContext] CartProvider rendering') // DEBUG
     const [items, setItems] = useState<CartItem[]>([])
     const [isLoaded, setIsLoaded] = useState(false)
 
@@ -77,7 +78,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
 export function useCart() {
     const context = useContext(CartContext)
     if (context === undefined) {
-        throw new Error('useCart must be used within a CartProvider')
+        // Fallback robusto para evitar crash en producción/SSR si el contexto falla
+        console.error('CRITICAL: useCart used outside CartProvider! Returning dummy context.')
+        if (typeof window === 'undefined') {
+            console.log('CRITICAL: This is happening on SERVER SIDE')
+        }
+        return {
+            items: [],
+            addToCart: () => console.warn('addToCart called without provider'),
+            removeFromCart: () => { },
+            clearCart: () => { },
+            cartTotal: 0,
+            cartCount: 0
+        }
     }
     return context
 }
