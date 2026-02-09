@@ -87,7 +87,7 @@ export default async function Home() {
   // Ideal para: Mostrar productos de alta demanda.
   if (zapatos && zapatos.length > 1) {
     const popular = zapatos.find((z: any) =>
-      (z.nombre.toLowerCase().includes('nike') || z.nombre.toLowerCase().includes('tn')) && z.id !== zapatos[0].id
+      (z.nombre.toLowerCase().includes('activa') || (z.marca && z.marca.toLowerCase().includes('activa'))) && z.id !== zapatos[0].id
     ) || zapatos[1];
 
     if (popular) {
@@ -117,9 +117,8 @@ export default async function Home() {
   // 3. Filtrar productos para las tarjetas destacadas inferiores
   const pNuevo = zapatos && zapatos.length > 0 ? zapatos[0] : null
 
-  // Buscar el producto popular para la tarjeta (reutilizando lógica)
   const pPopular = zapatos && zapatos.length > 0 ? (
-    zapatos.find((z: any) => z.nombre.toLowerCase().includes('nike') || z.nombre.toLowerCase().includes('tn'))
+    zapatos.find((z: any) => z.nombre.toLowerCase().includes('activa') || (z.marca && z.marca.toLowerCase().includes('activa')))
     || zapatos[1]
     || zapatos[0]
   ) : null
