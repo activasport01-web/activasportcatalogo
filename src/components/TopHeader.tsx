@@ -98,7 +98,7 @@ export default function TopHeader() {
                     {/* Logo - Adaptive */}
                     <Link href="/" className="flex items-center gap-2 group shrink-0 relative w-48 h-12">
                         <Image
-                            src="/logo.png"
+                            src="/activa_logo_exacto.svg"
                             alt="ActivaSport"
                             fill
                             sizes="192px"

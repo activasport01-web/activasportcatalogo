@@ -6,21 +6,21 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "Zapatería Moderna | Venta al por Mayor",
-    template: "%s | Zapatería Moderna"
+    default: "Activa Sport",
+    template: "%s | Activa Sport"
   },
   description: "El mejor catálogo de calzados al por mayor en Bolivia. Envíos nacionales. Calidad Brasilera, Peruana y Nacional.",
   openGraph: {
-    title: "Zapatería Moderna | Catálogo Mayorista",
+    title: "Activa Sport | Catálogo Mayorista",
     description: "Descubre nuestra colección de zapatos. Precios especiales para mayoristas.",
-    url: 'https://zapateriamoderna.com', // Reemplazar con tu dominio real cuando lo tengas
-    siteName: 'Zapatería Moderna',
+    url: 'https://activasport.com', // Reemplazar con tu dominio real cuando lo tengas
+    siteName: 'Activa Sport',
     images: [
       {
         url: 'https://images.unsplash.com/photo-1556048219-18ae6fd33138?q=80&w=1200&h=630&fit=crop', // Imagen default atractiva
         width: 1200,
         height: 630,
-        alt: 'Catálogo Zapatería Moderna',
+        alt: 'Catálogo Activa Sport',
       },
     ],
     locale: 'es_BO',
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Zapatería Moderna | Venta al por Mayor",
+    title: "Activa Sport | Venta al por Mayor",
     description: "Calzados de calidad al mejor precio. Envíos a toda Bolivia.",
     images: ['https://images.unsplash.com/photo-1556048219-18ae6fd33138?q=80&w=1200&h=630&fit=crop'],
   },
