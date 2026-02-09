@@ -19,6 +19,7 @@ export default function TopHeader() {
     // Scroll Hide Logic
     const [isVisible, setIsVisible] = useState(true)
     const lastScrollY = useRef(0)
+    const menuRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const handleScroll = () => {
@@ -26,6 +27,7 @@ export default function TopHeader() {
             // Hide if scrolling down > 50px
             if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
                 setIsVisible(false)
+                setUserMenuOpen(false) // Close menu when scrolling down
             } else {
                 setIsVisible(true)
             }
@@ -33,6 +35,19 @@ export default function TopHeader() {
         }
         window.addEventListener('scroll', handleScroll, { passive: true })
         return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
+
+    // Click outside to close menu
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setUserMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
     }, [])
 
     // Estados para búsqueda
@@ -167,7 +182,7 @@ export default function TopHeader() {
 
                     {/* Theme Toggle - Always Visible */}
                     {/* Unified User & Theme Menu */}
-                    <div className="relative">
+                    <div className="relative" ref={menuRef}>
                         <button
                             onClick={() => setUserMenuOpen(!userMenuOpen)}
                             className="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors shrink-0 border border-transparent focus:border-brand-orange"
