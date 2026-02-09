@@ -100,7 +100,7 @@ export default function Footer() {
                     <div>
                         <div className="relative w-40 h-10 mb-6">
                             <Image
-                                src="/activa_logo_exacto.svg"
+                                src="/logo.png"
                                 alt="ActivaSport"
                                 fill
                                 sizes="160px"
