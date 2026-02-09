@@ -56,7 +56,7 @@ export default async function CatalogoPage() {
                 initialProducts={sortedZapatos}
                 availCategorias={categorias || []}
                 availSubcategorias={subcategorias || []}
-                availMarcas={marcas?.filter(m => m.nombre !== 'Pito') || []}
+                availMarcas={marcas || []}
             />
 
 

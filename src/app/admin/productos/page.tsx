@@ -632,7 +632,7 @@ export default function ProductosAdmin() {
                                                     value={formData.nombre}
                                                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                                                     className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
-                                                    placeholder="Ej: Zapato Deportivo Nike Air"
+                                                    placeholder="Ej: Zapato Deportivo Activa Run"
                                                     required
                                                 />
                                             </div>

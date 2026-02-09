@@ -35,7 +35,7 @@ interface Marca {
 
     -- Insertar marcas iniciales si se desea
     insert into marcas (nombre) values 
-    ('Nike'), ('Adidas'), ('Puma'), ('Reebok'), ('Jordan'), ('Vans'), ('Under Armour'), ('New Balance'), ('Converse'), ('Fila'), ('Skechers'), ('Generico');
+    ('Activa'), ('Graser'), ('Bolka'), ('Golero'), ('Buss'), ('Fast Run'), ('Gasper');
 */
 
 export default function MarcasAdmin() {
@@ -285,7 +285,7 @@ export default function MarcasAdmin() {
                                     value={formData.nombre}
                                     onChange={e => setFormData({ ...formData, nombre: e.target.value })}
                                     className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-orange-500 outline-none transition-all font-bold text-slate-800 dark:text-slate-100 placeholder-slate-400"
-                                    placeholder="Ej: GRACEP"
+                                    placeholder="Ej: ACTIVA"
                                     autoFocus
                                 />
                             </div>
