@@ -28,9 +28,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Activa Sport | Venta al por Mayor",
+    title: "Activa Sport",
     description: "Calzados de calidad al mejor precio. Envíos a toda Bolivia.",
     images: ['https://images.unsplash.com/photo-1556048219-18ae6fd33138?q=80&w=1200&h=630&fit=crop'],
+  },
+  icons: {
+    icon: '/activa_logo_exacto.svg',
+    shortcut: '/activa_logo_exacto.svg',
+    apple: '/activa_logo_exacto.svg',
   },
 };
 
