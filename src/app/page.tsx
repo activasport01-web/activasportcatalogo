@@ -18,12 +18,39 @@ export default async function Home() {
     .single()
 
   // 2. Obtener Zapatos Disponibles (Para Slides de Novedades/Tendencias)
-  const { data: zapatos } = await supabase
+  // 2. Obtener Zapatos Disponibles (Con Prioridad a Marca "Activa")
+  // Estrategia Doble Consulta: Traer 4 de Activa + 8 Generales, luego combinar.
+  const activaQuery = supabase
+    .from('zapatos')
+    .select('*')
+    .eq('disponible', true)
+    .ilike('marca', '%activa%')
+    .order('fecha_creacion', { ascending: false })
+    .limit(4)
+
+  const generalQuery = supabase
     .from('zapatos')
     .select('*')
     .eq('disponible', true)
     .order('fecha_creacion', { ascending: false })
-    .limit(10)
+    .limit(12)
+
+  const [{ data: activaProducts }, { data: generalProducts }] = await Promise.all([
+    activaQuery,
+    generalQuery
+  ])
+
+  // Combinar: Primero Activa, luego el resto (sin duplicados)
+  const combinedZapatos = [
+    ...(activaProducts || []),
+    ...(generalProducts || [])
+  ]
+
+  // Deduplicar por ID
+  const uniqueZapatosRaw = combinedZapatos.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+
+  // Limitar total a 12 para la grilla
+  const zapatos = uniqueZapatosRaw.slice(0, 12)
 
   // Preparar datos para el Carrusel Principal (HeroSection)
   // SUGERENCIA DEL USUARIO: Mostrar solo Novedades, Tendencias y Branding aquí.

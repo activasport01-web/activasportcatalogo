@@ -30,6 +30,20 @@ export default async function CatalogoPage() {
         activeBrandsPromise
     ])
 
+    // LÓGICA DE PRIORIDAD DE MARCA (Requested by User)
+    // "Que se muestre de primera o que este predeterminado la marca activa"
+    // Ordenamos: Primero los que tengan "Activa" en su marca, luego el resto.
+    const sortedZapatos = zapatos ? [...zapatos].sort((a, b) => {
+        const marcaA = (a.marca || '').toLowerCase()
+        const marcaB = (b.marca || '').toLowerCase()
+        const isActivaA = marcaA.includes('activa')
+        const isActivaB = marcaB.includes('activa')
+
+        if (isActivaA && !isActivaB) return -1 // A primero
+        if (!isActivaA && isActivaB) return 1  // B primero
+        return 0 // Mantener orden original (fecha)
+    }) : []
+
     return (
         <main className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
 
@@ -39,7 +53,7 @@ export default async function CatalogoPage() {
 
             {/* Vista Interactiva (Filtros + Grid) */}
             <CatalogView
-                initialProducts={zapatos || []}
+                initialProducts={sortedZapatos}
                 availCategorias={categorias || []}
                 availSubcategorias={subcategorias || []}
                 availMarcas={marcas?.filter(m => m.nombre !== 'Pito') || []}
