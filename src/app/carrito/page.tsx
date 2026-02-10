@@ -40,7 +40,7 @@ export default function CarritoPage() {
             // 3. Preparar y Insertar Detalles
             const detalles = items.map(item => ({
                 pedido_id: pedidoId,
-                producto_id: Number(item.id_producto), // Asegurar que sea número (bigint)
+                producto_id: item.id_producto, // UUID
                 nombre_producto: item.nombre,
                 cantidad_pares: item.cantidad_pares,
                 tipo_curva: item.tipo_curva,
