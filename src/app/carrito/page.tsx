@@ -20,27 +20,28 @@ export default function CarritoPage() {
             const { data: { user } } = await supabase.auth.getUser()
 
             // 2. Insertar Cabecera del Pedido en Supabase
-            const { data: pedidoData, error: pedidoError } = await supabase
+            // 2. Generar ID del pedido en el cliente para evitar bloqueos de RLS al hacer .select()
+            const pedidoId = crypto.randomUUID()
+
+            // 3. Insertar Cabecera del Pedido
+            const { error: pedidoError } = await supabase
                 .from('pedidos')
                 .insert({
+                    id: pedidoId, // ID autogenerado
                     total: cartTotal,
-                    cliente_id: user?.id || null, // Relacionar si está logueado
+                    cliente_id: user?.id || null,
                     cliente_nombre: user?.user_metadata?.nombre || 'Cliente Web',
-                    cliente_telefono: null, // Podríamos pedirlo en un input antes, pero por ahora opcional
+                    cliente_telefono: null,
                     estado: 'pendiente',
                     metodo_pago: 'whatsapp'
                 })
-                .select()
-                .single()
 
             if (pedidoError) throw pedidoError
 
-            const pedidoId = pedidoData.id
-
-            // 3. Preparar y Insertar Detalles
+            // 4. Preparar y Insertar Detalles
             const detalles = items.map(item => ({
                 pedido_id: pedidoId,
-                producto_id: item.id_producto, // UUID
+                producto_id: item.id_producto,
                 nombre_producto: item.nombre,
                 cantidad_pares: item.cantidad_pares,
                 tipo_curva: item.tipo_curva,
