@@ -58,8 +58,6 @@ export default async function CatalogoPage() {
                 availSubcategorias={subcategorias || []}
                 availMarcas={marcas || []}
             />
-
-
         </main>
     )
 }
