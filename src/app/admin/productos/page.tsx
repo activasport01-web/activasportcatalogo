@@ -16,7 +16,10 @@ import {
     AlertCircle,
     X,
     ImageIcon,
-    Info
+    Info,
+    Package,
+    ShoppingCart,
+    PackagePlus
 } from 'lucide-react'
 
 interface Producto {
@@ -37,6 +40,7 @@ interface Producto {
     caja?: string
     disponible: boolean
     fecha_creacion: string
+    precio_costo?: number // NUEVO: Precio de compra por bulto/unidad
 }
 
 export default function ProductosAdmin() {
@@ -73,6 +77,14 @@ export default function ProductosAdmin() {
     const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null)
     const [showVariantModal, setShowVariantModal] = useState(false)
 
+    // NUEVO: Estado para Modal de Ventas
+    const [showSalesModal, setShowSalesModal] = useState(false)
+    const [saleData, setSaleData] = useState({
+        cantidad: 1,
+        precio_total: 0,
+        detalle: ''
+    })
+
     const [formData, setFormData] = useState({
         nombre: '',
         codigo: '',
@@ -87,7 +99,9 @@ export default function ProductosAdmin() {
         colores: '',
         etiquetas: [] as string[],
         origen: '', // Marca
-        disponible: true
+        disponible: true,
+        precio_costo: 0, // NUEVO: Costo de compra
+        stock_bultos: 0 // NUEVO: Stock de cajas cerradas
     })
 
     useEffect(() => {
@@ -127,13 +141,18 @@ export default function ProductosAdmin() {
 
     const loadProductos = async () => {
         setLoading(true)
-        const { data, error } = await supabase
+        const { data: productosData, error } = await supabase
             .from('zapatos')
             .select('*')
             .order('fecha_creacion', { ascending: false })
 
-        if (!error && data) {
-            setProductos(data)
+        if (!error && productosData) {
+            // Cargar stock bultos directamente del producto
+            const productosConStock = productosData.map((p: any) => ({
+                ...p,
+                stockTotal: p.stock_bultos || 0
+            }))
+            setProductos(productosConStock)
         }
         setLoading(false)
     }
@@ -160,6 +179,13 @@ export default function ProductosAdmin() {
             .replace(/\s+/g, '_') // Reemplaza espacios con guiones bajos
             .replace(/[^a-zA-Z0-9_.-]/g, '') // Elimina cualquier otro caracter especial excepto . - _
             .toLowerCase();
+    }
+
+    const closeModal = () => {
+        setShowModal(false)
+        setEditingProduct(null)
+        setImageFile(null)
+        setImageHoverFile(null)
     }
 
     const [isSubmitting, setIsSubmitting] = useState(false) // Nuevo estado para prevenir doble click
@@ -253,8 +279,12 @@ export default function ProductosAdmin() {
                 url_imagen,
                 imagen_hover,
                 origen: formData.origen, // Nuevo: Enviar origen
-                disponible: formData.disponible
+                disponible: formData.disponible,
+                stock_bultos: formData.stock_bultos, // NUEVO: Guardar stock de bultos
+                precio_costo: formData.precio_costo // NUEVO: Guardar costo
             }
+
+            let productId = editingProduct?.id
 
             if (editingProduct) {
                 // Actualizar
@@ -267,12 +297,48 @@ export default function ProductosAdmin() {
                 showNotification('Producto actualizado correctamente', 'success')
             } else {
                 // Crear
-                const { error } = await supabase
+                const { data: newProduct, error } = await supabase
                     .from('zapatos')
                     .insert([productData])
+                    .select()
+                    .single()
 
                 if (error) throw error
+                productId = newProduct.id
                 showNotification('Producto creado correctamente', 'success')
+            }
+
+            // ACTUALIZAR INVENTARIO (Registro Inicial en Kardex si es nuevo)
+            // 3. ACTUALIZAR INVENTARIO (KARDEX)
+
+            // A) PRODUCTO NUEVO: Registrar entrada inicial
+            if (productId && !editingProduct && formData.stock_bultos > 0) {
+                await supabase.from('movimientos_kardex').insert({
+                    producto_id: productId,
+                    tipo: 'ENTRADA',
+                    cantidad: formData.stock_bultos,
+                    detalle: 'Inventario Inicial (Creación)',
+                    precio_total: (formData.precio_costo || 0) * formData.stock_bultos,
+                    usuario_id: (await supabase.auth.getUser()).data.user?.id
+                })
+            }
+
+            // B) PRODUCTO EDITADO: Registrar diferencia de stock si hubo cambio manual
+            if (editingProduct) {
+                const oldStock = (editingProduct as any).stockTotal || (editingProduct as any).stock_bultos || 0
+                const newStock = formData.stock_bultos
+                const diff = newStock - oldStock
+
+                if (diff !== 0) {
+                    await supabase.from('movimientos_kardex').insert({
+                        producto_id: productId,
+                        tipo: diff > 0 ? 'ENTRADA' : 'AJUSTE', // Si sube es entrada, si baja es ajuste manual
+                        cantidad: Math.abs(diff),
+                        detalle: diff > 0 ? 'Agregado desde Edición' : 'Ajuste manual de inventario',
+                        precio_total: diff > 0 ? (formData.precio_costo || 0) * Math.abs(diff) : 0,
+                        usuario_id: (await supabase.auth.getUser()).data.user?.id
+                    })
+                }
             }
 
             closeModal()
@@ -307,7 +373,7 @@ export default function ProductosAdmin() {
         if (!error) loadProductos()
     }
 
-    const openModal = (producto?: Producto) => {
+    const openModal = async (producto?: Producto) => {
         if (producto) {
             setEditingProduct(producto)
 
@@ -317,7 +383,6 @@ export default function ProductosAdmin() {
                 // Detectar si es formato nuevo (objetos con nombre/imagen) o viejo (strings hex)
                 const firstItem: any = producto.colores[0]
                 const isNewFormat = typeof firstItem === 'object' && (firstItem.nombre || firstItem.imagen)
-                console.log('🔍 Es formato nuevo?', isNewFormat, 'Primer item:', firstItem)
 
                 if (isNewFormat) {
                     // Formato nuevo: array de objetos con color, nombre, imagen
@@ -328,15 +393,12 @@ export default function ProductosAdmin() {
                         imagen: c.imagen || '',
                         imagenes: c.imagenes || []
                     }))
-                    console.log('✅ Variantes cargadas:', loadedVariants)
                     setColorVariants(loadedVariants)
                 } else {
-                    // Formato viejo: array de hex strings - no cargar variantes
-                    console.log('⚠️ Formato viejo detectado, no se cargan variantes')
+                    // Formato viejo
                     setColorVariants([])
                 }
             } else {
-                console.log('❌ No hay colores en el producto')
                 setColorVariants([])
             }
 
@@ -351,20 +413,23 @@ export default function ProductosAdmin() {
                 genero: (producto as any).genero || 'Unisex',
                 grupo_talla: (producto as any).grupo_talla || 'Adulto',
                 tallas: producto.tallas?.join(', ') || '',
-                colores: '', // Ya no usamos esto
+                colores: '',
                 etiquetas: producto.etiquetas || [],
-                origen: producto.origen || 'Nacional', // Cargar origen existente
-                disponible: producto.disponible
+                origen: producto.origen || 'Nacional',
+                disponible: producto.disponible,
+                precio_costo: (producto as any).precio_costo || 0,
+                stock_bultos: (producto as any).stock_bultos || 0
             })
         } else {
+            // NUEVO PRODCUTO
             setEditingProduct(null)
-            setColorVariants([]) // Limpiar variantes
+            setColorVariants([])
             setFormData({
                 nombre: '',
                 codigo: '',
                 caja: '',
                 descripcion: '',
-                precio: '', // Se limpia
+                precio: '',
                 categoria: 'Deportivo',
                 subcategoria: '',
                 genero: 'Unisex',
@@ -373,19 +438,64 @@ export default function ProductosAdmin() {
                 colores: '',
                 etiquetas: [],
                 origen: '',
-                disponible: true
+                disponible: true,
+                precio_costo: 0,
+                stock_bultos: 0
             })
         }
+
         setImageFile(null)
         setImageHoverFile(null)
         setShowModal(true)
     }
 
-    const closeModal = () => {
-        setShowModal(false)
-        setEditingProduct(null)
-        setImageFile(null)
-        setImageHoverFile(null)
+
+
+    const handleSaleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!editingProduct) return
+
+        setIsSubmitting(true)
+        try {
+            if (saleData.cantidad > (editingProduct as any).stockTotal) {
+                showNotification('No hay suficiente stock para esta venta', 'error')
+                setIsSubmitting(false)
+                return
+            }
+
+            // 1. Registrar Venta en Kardex
+            const { error: kardexError } = await supabase.from('movimientos_kardex').insert({
+                producto_id: editingProduct.id,
+                tipo: 'VENTA',
+                cantidad: saleData.cantidad,
+                precio_total: saleData.precio_total,
+                detalle: saleData.detalle || 'Venta desde Panel Admin',
+                usuario_id: (await supabase.auth.getUser()).data.user?.id
+            })
+
+            if (kardexError) throw kardexError
+
+            // 2. Actualizar Stock en Producto
+            const newStock = (editingProduct as any).stockTotal - saleData.cantidad
+
+            const { error: productError } = await supabase
+                .from('zapatos')
+                .update({ stock_bultos: newStock })
+                .eq('id', editingProduct.id)
+
+            if (productError) throw productError
+
+            showNotification('Venta registrada correctamente', 'success')
+            setShowSalesModal(false)
+            loadProductos()
+            setSaleData({ cantidad: 1, precio_total: 0, detalle: '' })
+
+        } catch (err: any) {
+            console.error('Error al registrar venta:', err)
+            showNotification('Error al registrar venta: ' + err.message, 'error')
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const toggleEtiqueta = (etiqueta: string) => {
@@ -518,8 +628,14 @@ export default function ProductosAdmin() {
                                         {producto.categoria}
                                     </span>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                                        {producto.nombre}
                                     </h3>
+                                    {/* Stock Indicator */}
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <div className={`text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${(producto as any).stockTotal > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${(producto as any).stockTotal > 0 ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                            {(producto as any).stockTotal > 0 ? `${(producto as any).stockTotal} Cajas` : 'Sin Stock'}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="flex items-end justify-between mb-4">
@@ -558,6 +674,17 @@ export default function ProductosAdmin() {
                                         title={producto.disponible ? 'Ocultar' : 'Mostrar'}
                                     >
                                         {producto.disponible ? <Eye size={18} /> : <EyeOff size={18} />}
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setEditingProduct(producto)
+                                            setSaleData({ ...saleData, precio_total: 0, cantidad: 1 })
+                                            setShowSalesModal(true)
+                                        }}
+                                        className="flex-1 flex items-center justify-center h-10 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
+                                        title="Registrar Venta"
+                                    >
+                                        <ShoppingCart size={18} />
                                     </button>
                                     <button
                                         onClick={() => openModal(producto)}
@@ -726,6 +853,29 @@ export default function ProductosAdmin() {
                                                     </select>
                                                 </div>
 
+                                                {/* NUEVO: STOCK DE BULTOS */}
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+                                                        Stock Total (Cajas/Bultos)
+                                                        <span className="text-orange-500">*</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                                            <Package size={16} />
+                                                        </div>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.1"
+                                                            value={formData.stock_bultos}
+                                                            onChange={(e) => setFormData({ ...formData, stock_bultos: parseFloat(e.target.value) || 0 })}
+                                                            className="w-full pl-9 pr-3 py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
+                                                            placeholder="0.0"
+                                                        />
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-500 mt-1">Cantidad de bultos cerrados disponibles en almacén.</p>
+                                                </div>
+
                                                 <div>
                                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Categoría *</label>
                                                     <select
@@ -742,7 +892,27 @@ export default function ProductosAdmin() {
                                                 </div>
                                             </div>
 
-                                            {/* Subcategoría (Nuevo) */}
+                                            {/* PRECIO DE COSTO (COMPRA) */}
+                                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
+                                                    Precio de Compra (Costo por Bulto)
+                                                    <span className="text-orange-500">*</span>
+                                                </label>
+                                                <div className="relative">
+                                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</div>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={formData.precio_costo}
+                                                        onChange={(e) => setFormData({ ...formData, precio_costo: parseFloat(e.target.value) || 0 })}
+                                                        className="w-full pl-7 pr-3 py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-slate-500 mt-1">Solo visible para administradores. Costo total de la caja/bulto.</p>
+                                            </div>
+
                                             <div className="mt-4">
                                                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
                                                     Subcategoría / Tipo <span className="text-slate-400 font-normal">(Opcional)</span>
@@ -867,6 +1037,7 @@ export default function ProductosAdmin() {
                                                             <span className="font-bold text-sm text-slate-700 dark:text-slate-200">{variant.nombre}</span>
                                                         </div>
                                                         <p className="text-xs text-slate-400 mt-0.5">{variant.color}</p>
+
                                                     </div>
 
                                                     {/* Botón editar (visible al hover) */}
@@ -1088,11 +1259,8 @@ export default function ProductosAdmin() {
                                                 type="button"
                                                 onClick={() => {
                                                     const updated = [...colorVariants]
-                                                    updated[editingVariantIndex] = {
-                                                        ...updated[editingVariantIndex],
-                                                        color: c.hex,
-                                                        nombre: c.name
-                                                    }
+                                                    updated[editingVariantIndex].color = c.hex
+                                                    updated[editingVariantIndex].nombre = c.name
                                                     setColorVariants(updated)
                                                 }}
                                                 className={`w-10 h-10 rounded-full border-2 transition-all ${colorVariants[editingVariantIndex].color === c.hex
@@ -1215,6 +1383,8 @@ export default function ProductosAdmin() {
                                         className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
                                     />
                                 </div>
+
+                                {/* Stock del Color (ELIMINADO - NO SE USA MÁS) */}
 
                                 {/* Subir Imagen */}
                                 <div>
@@ -1359,6 +1529,129 @@ export default function ProductosAdmin() {
                     </div>
                 )
             }
-        </div >
+
+            {/* Modal de Venta Rápida */}
+            {showSalesModal && editingProduct && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-fade-in">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
+                        <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex justify-between items-center text-white">
+                            <h3 className="font-bold text-lg flex items-center gap-2">
+                                <ShoppingCart size={20} />
+                                Registrar Venta
+                            </h3>
+                            <button onClick={() => setShowSalesModal(false)} className="hover:bg-white/20 p-1 rounded-lg transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSaleSubmit} className="p-6 space-y-4">
+                            <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <img
+                                    src={editingProduct.url_imagen}
+                                    alt={editingProduct.nombre}
+                                    className="w-16 h-16 object-contain bg-white rounded-lg p-1"
+                                />
+                                <div>
+                                    <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 line-clamp-1">{editingProduct.nombre}</h4>
+                                    <p className="text-xs text-slate-500">{editingProduct.categoria}</p>
+                                    <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-bold">
+                                        <Package size={12} />
+                                        Stock: {(editingProduct as any).stockTotal} Bultos
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Cantidad a Vender (Bultos)</label>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSaleData({ ...saleData, cantidad: Math.max(0.5, saleData.cantidad - 0.5) })}
+                                        className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors"
+                                    >
+                                        -
+                                    </button>
+                                    <input
+                                        type="number"
+                                        min="0.1"
+                                        step="0.1"
+                                        max={(editingProduct as any).stockTotal}
+                                        value={saleData.cantidad}
+                                        onChange={(e) => setSaleData({ ...saleData, cantidad: parseFloat(e.target.value) || 0 })}
+                                        className="flex-1 h-10 text-center font-bold text-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setSaleData({ ...saleData, cantidad: Math.min((editingProduct as any).stockTotal, saleData.cantidad + 0.5) })}
+                                        className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <div className="flex gap-2 mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSaleData({ ...saleData, cantidad: 0.5 })}
+                                        className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                    >
+                                        Media (0.5)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSaleData({ ...saleData, cantidad: 1 })}
+                                        className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                                    >
+                                        Entera (1.0)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Precio de Venta Total (Bs)</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={saleData.precio_total === 0 ? '' : saleData.precio_total}
+                                        onChange={(e) => setSaleData({ ...saleData, precio_total: parseFloat(e.target.value) || 0 })}
+                                        className="w-full pl-8 pr-4 h-12 text-xl font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                {(editingProduct as any).precio_costo > 0 && (
+                                    <div className="mt-2 flex justify-between text-xs px-1">
+                                        <span className="text-slate-500">Costo Ref. Total:</span>
+                                        <span className="font-mono text-slate-700 dark:text-slate-300">
+                                            {((editingProduct as any).precio_costo * saleData.cantidad).toFixed(2)} Bs
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Detalle / Notas</label>
+                                <textarea
+                                    value={saleData.detalle}
+                                    onChange={(e) => setSaleData({ ...saleData, detalle: e.target.value })}
+                                    className="w-full p-3 text-sm bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-green-500 outline-none resize-none"
+                                    rows={2}
+                                    placeholder="Ej: Venta a cliente X..."
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={isSubmitting || saleData.cantidad > (editingProduct as any).stockTotal || saleData.cantidad <= 0}
+                                className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg hover:shadow-green-500/25 transition-all text-base flex items-center justify-center gap-2 mt-2"
+                            >
+                                {isSubmitting ? 'Registrando...' : 'Confirmar Venta'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
     )
 }

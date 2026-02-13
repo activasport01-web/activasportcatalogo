@@ -40,6 +40,7 @@ export const metadata: Metadata = {
 };
 
 import SocialSpeedDial from '@/components/SocialSpeedDial';
+import PublicOnly from '@/components/PublicOnly';
 import CookieBanner from '@/components/CookieBanner';
 import NetworkStatus from '@/components/NetworkStatus';
 import TopHeader from '@/components/TopHeader';
@@ -61,13 +62,17 @@ export default function RootLayout({
         <ThemeProvider>
           <CartProvider>
             <FavoritesProvider>
-              <TopHeader />
+              <PublicOnly>
+                <TopHeader />
+              </PublicOnly>
               {children}
-              <Footer />
-              <DockNavbar />
-              <CookieBanner />
-              <NetworkStatus />
-              <Analytics />
+              <PublicOnly>
+                <Footer />
+                <DockNavbar />
+                <CookieBanner />
+                <NetworkStatus />
+              </PublicOnly>
+              <Analytics debug={false} />
 
             </FavoritesProvider>
           </CartProvider>

@@ -255,7 +255,7 @@ export default function AdminDashboard() {
                                 Inventario por Categoría
                             </h3>
                         </div>
-                        <div className="w-full" style={{ height: 300 }}>
+                        <div className="w-full min-w-0 h-[300px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -287,6 +287,19 @@ export default function AdminDashboard() {
                             </h3>
 
                             <div className="space-y-3">
+                                {/* NUEVO: Reportes y Estadísticas - Prioridad Alta */}
+                                <Link href="/admin/reportes" className="flex items-center gap-4 p-4 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 transition-all group relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-orange-500/5 group-hover:bg-orange-500/10 transition-colors"></div>
+                                    <div className="w-10 h-10 rounded-lg bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 z-10">
+                                        <BarChart3 size={20} />
+                                    </div>
+                                    <div className="z-10">
+                                        <h4 className="font-bold text-sm text-brand-orange group-hover:text-orange-600 dark:group-hover:text-orange-300">REPORTES Y ESTADÍSTICAS</h4>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors">Ver ventas y exportar PDF</p>
+                                    </div>
+                                    <ArrowUpRight className="ml-auto text-brand-orange group-hover:text-orange-600 dark:group-hover:text-orange-300 transition-colors z-10" size={16} />
+                                </Link>
+
                                 {/* NUEVO: Gestión de Pedidos - Prioridad Alta */}
                                 <Link href="/admin/pedidos" className="flex items-center gap-4 p-4 rounded-xl bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 transition-all group relative overflow-hidden">
                                     <div className="absolute inset-0 bg-green-500/5 group-hover:bg-green-500/10 transition-colors"></div>
