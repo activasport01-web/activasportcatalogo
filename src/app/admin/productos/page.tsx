@@ -194,6 +194,26 @@ export default function ProductosAdmin() {
         e.preventDefault()
         if (isSubmitting) return
 
+        // ⚠️ Advertencia: campos importantes para reportes
+        const advertencias: string[] = []
+        if (!formData.precio_costo || formData.precio_costo <= 0) {
+            advertencias.push('• Precio de Costo (necesario para calcular tu capital en inventario y ganancias)')
+        }
+        if (!formData.stock_bultos || formData.stock_bultos <= 0) {
+            advertencias.push('• Stock en Bultos (necesario para controlar tu inventario)')
+        }
+
+        if (advertencias.length > 0) {
+            const confirmar = window.confirm(
+                `⚠️ ADVERTENCIA — Campos importantes sin llenar:\n\n${advertencias.join('\n')}\n\n` +
+                `Sin estos datos, los reportes de Capital en Inventario y Ganancias no serán precisos.\n\n` +
+                `¿Deseas guardar el producto de todas formas?`
+            )
+            if (!confirmar) {
+                return // El usuario prefiere volver a llenar los datos
+            }
+        }
+
         setIsSubmitting(true)
         try {
             // NUEVO: Subir imágenes de variantes de color PRIMERO
@@ -465,12 +485,13 @@ export default function ProductosAdmin() {
 
             // 1. Registrar Venta en Kardex
             const { error: kardexError } = await supabase.from('movimientos_kardex').insert({
-                producto_id: editingProduct.id,
+                zapato_id: editingProduct.id,
                 tipo: 'VENTA',
                 cantidad: saleData.cantidad,
                 precio_total: saleData.precio_total,
-                detalle: saleData.detalle || 'Venta desde Panel Admin',
-                usuario_id: (await supabase.auth.getUser()).data.user?.id
+                detalle: saleData.detalle
+                    || `Venta — ${editingProduct.nombre}${(editingProduct as any).codigo ? ' [' + (editingProduct as any).codigo + ']' : (editingProduct as any).caja ? ' [' + (editingProduct as any).caja + ']' : ''}`,
+                fecha: new Date().toISOString(),
             })
 
             if (kardexError) throw kardexError
@@ -509,7 +530,9 @@ export default function ProductosAdmin() {
 
     const filteredProductos = productos.filter(p =>
         p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.categoria.toLowerCase().includes(searchTerm.toLowerCase())
+        p.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.codigo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ((p as any).caja || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     if (loading) {
@@ -1551,18 +1574,31 @@ export default function ProductosAdmin() {
                                     alt={editingProduct.nombre}
                                     className="w-16 h-16 object-contain bg-white rounded-lg p-1"
                                 />
-                                <div>
+                                <div className="flex-1 min-w-0">
                                     <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 line-clamp-1">{editingProduct.nombre}</h4>
                                     <p className="text-xs text-slate-500">{editingProduct.categoria}</p>
-                                    <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-bold">
+                                    {/* Código del producto — visible discretamente */}
+                                    {((editingProduct as any).codigo || (editingProduct as any).caja) && (
+                                        <p className="text-xs font-mono text-slate-400 mt-0.5">
+                                            Cód: <span className="font-bold text-slate-600 dark:text-slate-300">
+                                                {(editingProduct as any).codigo || (editingProduct as any).caja}
+                                            </span>
+                                        </p>
+                                    )}
+                                    <div className={`mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-bold ${(editingProduct as any).stockTotal === 0
+                                        ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                                        : (editingProduct as any).stockTotal <= 3
+                                            ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                                            : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
+                                        }`}>
                                         <Package size={12} />
-                                        Stock: {(editingProduct as any).stockTotal} Bultos
+                                        Stock: {(editingProduct as any).stockTotal} Docenas
                                     </div>
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Cantidad a Vender (Bultos)</label>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Cantidad a Vender (Docenas)</label>
                                 <div className="flex items-center gap-3">
                                     <button
                                         type="button"
@@ -1573,11 +1609,11 @@ export default function ProductosAdmin() {
                                     </button>
                                     <input
                                         type="number"
-                                        min="0.1"
-                                        step="0.1"
+                                        min="0.5"
+                                        step="0.5"
                                         max={(editingProduct as any).stockTotal}
                                         value={saleData.cantidad}
-                                        onChange={(e) => setSaleData({ ...saleData, cantidad: parseFloat(e.target.value) || 0 })}
+                                        onChange={(e) => setSaleData({ ...saleData, cantidad: parseFloat(e.target.value) || 0.5 })}
                                         className="flex-1 h-10 text-center font-bold text-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                                     />
                                     <button
@@ -1588,21 +1624,28 @@ export default function ProductosAdmin() {
                                         +
                                     </button>
                                 </div>
-                                <div className="flex gap-2 mt-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => setSaleData({ ...saleData, cantidad: 0.5 })}
-                                        className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                                    >
-                                        Media (0.5)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSaleData({ ...saleData, cantidad: 1 })}
-                                        className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                                    >
-                                        Entera (1.0)
-                                    </button>
+                                {/* Accesos rápidos */}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {[
+                                        { label: '½ Docena', sub: '6 pares', val: 0.5 },
+                                        { label: '1 Docena', sub: '12 pares', val: 1 },
+                                        { label: '2 Docenas', sub: '24 pares', val: 2 },
+                                        { label: '3 Docenas', sub: '36 pares', val: 3 },
+                                    ].map(({ label, sub, val }) => (
+                                        <button
+                                            key={val}
+                                            type="button"
+                                            onClick={() => setSaleData({ ...saleData, cantidad: val })}
+                                            disabled={val > (editingProduct as any).stockTotal}
+                                            className={`flex-1 text-center py-1.5 rounded-lg border transition-colors text-xs disabled:opacity-30 disabled:cursor-not-allowed ${saleData.cantidad === val
+                                                    ? 'bg-green-600 border-green-600 text-white font-bold'
+                                                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                }`}
+                                        >
+                                            <span className="font-bold block">{label}</span>
+                                            <span className="opacity-70">{sub}</span>
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
