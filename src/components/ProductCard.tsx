@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Link as LinkIcon, Eye, Heart, ShoppingBag } from 'lucide-react'
 import { useFavorites } from '@/context/FavoritesContext'
+import { proxyImageUrl } from '@/lib/supabase'
 
 export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQuickView?: (product: any) => void }) {
     const [isHovered, setIsHovered] = useState(false)
@@ -78,7 +79,7 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
 
                     {/* Imagen Principal */}
                     <img
-                        src={zapato.url_imagen}
+                        src={proxyImageUrl(zapato.url_imagen)}
                         alt={zapato.nombre}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
                     />
@@ -86,7 +87,7 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                     {/* Imagen Secundaria (Hover en Desktop) */}
                     {zapato.imagen_hover && (
                         <img
-                            src={zapato.imagen_hover}
+                            src={proxyImageUrl(zapato.imagen_hover)}
                             alt={`${zapato.nombre} vista 2`}
                             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out opacity-0 group-hover:opacity-100"
                         />

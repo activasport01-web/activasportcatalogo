@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, MessageCircle, ShieldCheck, Truck, Package, Info, ShoppingBag, Check, ChevronLeft, ChevronRight, Heart, X, Maximize2 } from 'lucide-react'
@@ -247,7 +247,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                         <div className="bg-slate-50 dark:bg-slate-950/50 p-6 lg:p-12 flex flex-col items-center justify-center relative group">
                             <div className="relative w-full aspect-square max-w-lg mx-auto">
                                 <img
-                                    src={selectedImage}
+                                    src={proxyImageUrl(selectedImage)}
                                     alt={producto.nombre}
                                     className="w-full h-full object-contain transition-all duration-500 hover:scale-105 drop-shadow-xl cursor-zoom-in"
                                     onClick={() => setIsLightboxOpen(true)}
@@ -394,7 +394,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                                     title={nombre}
                                                 >
                                                     <img
-                                                        src={imagen}
+                                                        src={proxyImageUrl(imagen)}
                                                         alt={nombre}
                                                         className="w-full h-full object-cover bg-white"
                                                     />
@@ -614,9 +614,9 @@ export default function ProductView({ producto, productosRelacionados }: Product
                         const gallery = color.imagenes || []
                         return (
                             <div key={i}>
-                                <img src={mainImg} alt="preload" />
+                                <img src={proxyImageUrl(mainImg)} alt="preload" />
                                 {gallery.map((g: string, j: number) => (
-                                    <img key={j} src={g} alt="preload" />
+                                    <img key={j} src={proxyImageUrl(g)} alt="preload" />
                                 ))}
                             </div>
                         )
@@ -639,7 +639,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
                     </button>
 
                     <img
-                        src={selectedImage}
+                        src={proxyImageUrl(selectedImage)}
                         alt={producto.nombre}
                         className="max-w-[95vw] max-h-[95vh] object-contain select-none shadow-2xl"
                     />
