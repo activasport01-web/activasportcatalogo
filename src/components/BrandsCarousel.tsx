@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabase'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -108,7 +108,7 @@ export default function BrandsCarousel() {
                             <div className="absolute inset-0 flex items-center justify-center bg-white">
                                 {currentMarca.logo_url ? (
                                     <img
-                                        src={currentMarca.logo_url}
+                                        src={proxyImageUrl(currentMarca.logo_url)}
                                         alt={currentMarca.nombre}
                                         className="w-full h-full object-cover"
                                     />

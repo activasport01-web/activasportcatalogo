@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabase'
 import HeroSection from '@/components/HeroSection'
 import PromoCarousel from '@/components/PromoCarousel'
 import ProductCard from '@/components/ProductCard'
@@ -155,7 +155,7 @@ export default async function Home() {
             {pNuevo ? (
               <>
                 <img
-                  src={pNuevo.url_imagen}
+                  src={proxyImageUrl(pNuevo.url_imagen)}
                   alt="Nuevo"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
@@ -175,7 +175,7 @@ export default async function Home() {
             {pPopular ? (
               <>
                 <img
-                  src={pPopular.url_imagen}
+                  src={proxyImageUrl(pPopular.url_imagen)}
                   alt="Popular"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
@@ -195,7 +195,7 @@ export default async function Home() {
             {pOferta ? (
               <>
                 <img
-                  src={pOferta.url_imagen}
+                  src={proxyImageUrl(pOferta.url_imagen)}
                   alt="Oferta"
                   className="absolute inset-0 w-full h-full object-cover object-center"
                 />

@@ -1,6 +1,6 @@
 'use client'
 
-import { supabase } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabase'
 
 import { useCart } from '@/context/CartContext'
 import Link from 'next/link'
@@ -163,7 +163,7 @@ export default function CarritoPage() {
                         {items.map((item, index) => (
                             <div key={index} className="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 flex gap-4 transition-all hover:shadow-md">
                                 <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100 dark:border-slate-800">
-                                    <img src={item.imagen} alt={item.nombre} className="w-full h-full object-contain mix-blend-multiply" />
+                                    <img src={proxyImageUrl(item.imagen)} alt={item.nombre} className="w-full h-full object-contain mix-blend-multiply" />
                                 </div>
                                 <div className="flex-1 flex flex-col justify-between">
                                     <div>

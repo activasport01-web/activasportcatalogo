@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { supabase } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabase'
 
 import { notFound } from 'next/navigation'
 import ProductView from '@/components/ProductView'
@@ -106,7 +106,7 @@ export default async function ProductoPage({ params }: Props) {
                                     <a href={`/producto/${item.id}`} className="block bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all border border-slate-100 dark:border-slate-800">
                                         <div className="relative aspect-square mb-4 bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden">
                                             <img
-                                                src={item.url_imagen}
+                                                src={proxyImageUrl(item.url_imagen)}
                                                 alt={item.nombre}
                                                 className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
                                             />

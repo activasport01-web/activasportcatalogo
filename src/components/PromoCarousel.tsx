@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabase'
 import { ArrowRight, Gift, ChevronRight, ChevronLeft, X, MessageCircle } from 'lucide-react'
 
 type Promocion = {
@@ -115,7 +115,7 @@ ${promo.imagen_url ? `*Imagen:* ${promo.imagen_url}\n` : ''}
                 {/* 1. IMAGEN DE FONDO (FULL BLEED) */}
                 {currentPromo.imagen_url ? (
                     <img
-                        src={currentPromo.imagen_url}
+                        src={proxyImageUrl(currentPromo.imagen_url)}
                         alt="Promo"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
@@ -195,7 +195,7 @@ ${promo.imagen_url ? `*Imagen:* ${promo.imagen_url}\n` : ''}
                         <div className="relative h-48 overflow-hidden">
                             {selectedPromo.imagen_url && (
                                 <div className="absolute inset-0">
-                                    <img src={selectedPromo.imagen_url} className="w-full h-full object-cover blur-xl opacity-50" />
+                                    <img src={proxyImageUrl(selectedPromo.imagen_url)} className="w-full h-full object-cover blur-xl opacity-50" />
                                     <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white dark:to-slate-900"></div>
                                 </div>
                             )}
@@ -205,7 +205,7 @@ ${promo.imagen_url ? `*Imagen:* ${promo.imagen_url}\n` : ''}
                             <div className="absolute -bottom-10 left-0 right-0 flex justify-center z-10">
                                 {selectedPromo.imagen_url ? (
                                     <img
-                                        src={selectedPromo.imagen_url}
+                                        src={proxyImageUrl(selectedPromo.imagen_url)}
                                         className="w-40 h-40 object-contain drop-shadow-xl hover:scale-110 transition-transform duration-500"
                                     />
                                 ) : (

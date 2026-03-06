@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react'
+import { proxyImageUrl } from '@/lib/supabase'
 
 interface Slide {
     id: string;
@@ -57,7 +58,7 @@ export default function HeroSection({ slides }: HeroProps) {
                     <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900" />
 
                     <img
-                        src={slide.image_url}
+                        src={proxyImageUrl(slide.image_url)}
                         alt={slide.title}
                         className="absolute inset-0 w-full h-full object-cover md:object-contain md:scale-90"
                         style={{ objectPosition: 'center' }}

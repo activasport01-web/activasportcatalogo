@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Search, User as UserIcon, LogOut, Package, Heart, Sun, Moon, Users, Lock } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 import { useDebouncedCallback } from 'use-debounce'
 import { useTheme } from '@/context/ThemeContext'
@@ -156,7 +156,7 @@ export default function TopHeader() {
                                             href={`/producto/${result.id}`}
                                             className="flex items-center gap-3 p-2 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors group"
                                         >
-                                            <img src={result.url_imagen} alt={result.nombre} className="w-10 h-10 object-contain bg-white rounded-md border border-gray-100" />
+                                            <img src={proxyImageUrl(result.url_imagen)} alt={result.nombre} className="w-10 h-10 object-contain bg-white rounded-md border border-gray-100" />
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-bold text-black dark:text-white truncate group-hover:text-brand-orange">{result.nombre}</p>
                                                 <p className="text-xs text-gray-500">{result.categoria}</p>
