@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     default: "Activa Sport",
     template: "%s | Activa Sport"
   },
-  description: "El mejor catálogo de calzados al por mayor en Bolivia. Envíos nacionales. Calidad Brasilera, Peruana y Nacional.",
+  description: "El mejor catálogo de calzados al por mayor en Bolivia. Envíos nacionales. Variedad de modelos, calidad garantizada y la mejor rentabilidad para tu negocio.",
   openGraph: {
     title: "Activa Sport | Catálogo Mayorista",
     description: "Descubre nuestra colección de zapatos. Precios especiales para mayoristas.",
