@@ -603,7 +603,7 @@ export default function ProductosAdmin() {
             // Si hay variantes, descontamos de la variante específica y recalculamos total por seguridad
             if (saleData.variante_index >= 0) {
                 variantes_actualizadas[saleData.variante_index].stock_bultos -= Number(saleData.cantidad)
-                updates.variante_tallas = variantes_actualizadas // Guardamos JSON actualizado
+                updates.variantes_tallas = variantes_actualizadas // Guardamos JSON actualizado
 
                 // Recalcular global sumando
                 const sumGlobal = variantes_actualizadas.reduce((acc, curr) => acc + (Number(curr.stock_bultos) || 0), 0)

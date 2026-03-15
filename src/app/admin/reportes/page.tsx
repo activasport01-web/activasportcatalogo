@@ -46,6 +46,10 @@ export default function ReportesPage() {
     const [loadingRent, setLoadingRent] = useState(false)
     const [rentStats, setRentStats] = useState({ totalUSD: 0, totalBs: 0, registros: 0 })
 
+    // Mapa de costo promedio por producto (producto_id -> costo_bs_por_bulto promedio ponderado)
+    const [costosMap, setCostosMap] = useState<{ [id: string]: number }>({})
+    const [gananciaNetaPeriodo, setGananciaNetaPeriodo] = useState<number | null>(null)
+
     useEffect(() => {
         loadMovimientos()
         loadMonthlyData()
@@ -63,68 +67,82 @@ export default function ReportesPage() {
     const loadMovimientos = async () => {
         setLoading(true)
 
-        // Crear fechas locales y ajustar a inicio/fin del día
         const start = new Date(startDate + 'T00:00:00')
         const end = new Date(endDate + 'T23:59:59.999')
 
-        console.log('Consultando rango:', start.toISOString(), end.toISOString())
+        // Cargar movimientos y costos de compras en paralelo
+        const [{ data, error }, { data: comprasData }] = await Promise.all([
+            supabase
+                .from('movimientos_kardex')
+                .select('*, zapatos (nombre, codigo, categoria)')
+                .gte('fecha', start.toISOString())
+                .lte('fecha', end.toISOString())
+                .order('fecha', { ascending: false }),
+            supabase
+                .from('compras_producto')
+                .select('producto_id, bultos_qty, costo_bs_total')
+        ])
 
-        const { data, error } = await supabase
-            .from('movimientos_kardex')
-            .select(`
-                *,
-                zapatos (nombre, codigo, categoria)
-            `)
-            .gte('fecha', start.toISOString())
-            .lte('fecha', end.toISOString())
-            .order('fecha', { ascending: false })
+        // Construir mapa de costo promedio ponderado: { producto_id -> costo_prom_bs }
+        const mapa: { [id: string]: number } = {}
+        if (comprasData) {
+            const agrupar: { [id: string]: { totalBs: number; totalBultos: number } } = {}
+            comprasData.forEach((c: any) => {
+                const pid = c.producto_id
+                if (!agrupar[pid]) agrupar[pid] = { totalBs: 0, totalBultos: 0 }
+                agrupar[pid].totalBs += Number(c.costo_bs_total)
+                agrupar[pid].totalBultos += Number(c.bultos_qty)
+            })
+            Object.entries(agrupar).forEach(([pid, val]) => {
+                mapa[pid] = val.totalBultos > 0 ? val.totalBs / val.totalBultos : 0
+            })
+        }
+        setCostosMap(mapa)
 
         if (error) {
             console.error('Error cargando movimientos:', error)
             alert('Error al cargar reportes: ' + error.message)
         } else {
-            console.log('Movimientos encontrados:', data?.length)
             setMovimientos(data || [])
-            calculateStats(data || [])
+            calculateStats(data || [], mapa)
         }
         setLoading(false)
     }
 
-    const calculateStats = (data: any[]) => {
-        const today = new Date().toISOString().split('T')[0]
-
+    const calculateStats = (data: any[], mapa: { [id: string]: number } = {}) => {
         let ventasHoy = 0
         let ingresosHoy = 0
         let ventasPeriodo = 0
         let ingresosPeriodo = 0
         let comprasPeriodo = 0
         let costoComprasPeriodo = 0
+        let costoRealVendido = 0
+        let tieneAlgunCosto = false
 
         data.forEach(m => {
-            const fechaMov = new Date(m.fecha).toISOString().split('T')[0]
             const isVenta = m.tipo === 'VENTA'
             const isEntrada = m.tipo === 'ENTRADA'
             const precioTotal = m.precio_total || 0
-
-            // Comparar fechas usando locale string para evitar problemas de zona horaria en contador "Hoy"
             const fechaMovStr = new Date(m.fecha).toLocaleDateString()
             const todayStr = new Date().toLocaleDateString()
 
-            // Stats Periodo (Todo lo cargado)
             if (isVenta) {
                 ventasPeriodo += m.cantidad
                 ingresosPeriodo += precioTotal
+                // Calcular costo real usando el mapa de costos por producto
+                const pid = m.zapato_id || m.producto_id
+                if (pid && mapa[pid]) {
+                    costoRealVendido += Number(m.cantidad) * mapa[pid]
+                    tieneAlgunCosto = true
+                }
             } else if (isEntrada) {
                 comprasPeriodo += m.cantidad
                 costoComprasPeriodo += precioTotal
             }
 
-            // Stats Hoy
-            if (fechaMovStr === todayStr) {
-                if (isVenta) {
-                    ventasHoy += m.cantidad
-                    ingresosHoy += precioTotal
-                }
+            if (fechaMovStr === todayStr && isVenta) {
+                ventasHoy += m.cantidad
+                ingresosHoy += precioTotal
             }
         })
 
@@ -136,6 +154,7 @@ export default function ReportesPage() {
             comprasPeriodo,
             costoComprasPeriodo
         })
+        setGananciaNetaPeriodo(tieneAlgunCosto ? ingresosPeriodo - costoRealVendido : null)
     }
 
     const applyFilters = () => {
@@ -455,15 +474,34 @@ export default function ReportesPage() {
                             <h3 className="text-3xl font-black text-slate-800 dark:text-white mb-1">{stats.costoComprasPeriodo.toFixed(2)} <span className="text-sm font-normal text-slate-500">Bs</span></h3>
                             <p className="text-sm text-slate-500 flex items-center gap-1"><span className="font-bold text-slate-800 dark:text-slate-300">{stats.comprasPeriodo}</span> Bultos ingresados</p>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-800/50">
+                        <div className={`p-6 rounded-2xl shadow-lg border ${
+                            gananciaNetaPeriodo === null
+                                ? 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/50'
+                                : gananciaNetaPeriodo >= 0
+                                    ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/40'
+                                    : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/40'
+                        }`}>
                             <div className="flex justify-between items-start mb-2">
-                                <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl text-orange-600 dark:text-orange-400"><Zap size={24} /></div>
-                                <span className="text-xs font-bold text-slate-400 uppercase">Ganancia</span>
+                                <div className={`p-3 rounded-xl ${
+                                    gananciaNetaPeriodo === null ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                                    : gananciaNetaPeriodo >= 0 ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
+                                    : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                                }`}><Zap size={24} /></div>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Ganancia Neta</span>
                             </div>
-                            <h3 className={`text-3xl font-black mb-1 ${stats.ingresosPeriodo - stats.costoComprasPeriodo >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                                {(stats.ingresosPeriodo - stats.costoComprasPeriodo).toFixed(2)} <span className="text-sm font-normal text-slate-400">Bs</span>
-                            </h3>
-                            <p className="text-sm text-slate-500">Ventas − Costo compras</p>
+                            {gananciaNetaPeriodo !== null ? (
+                                <>
+                                    <h3 className={`text-3xl font-black mb-1 ${gananciaNetaPeriodo >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                        {gananciaNetaPeriodo.toFixed(2)} <span className="text-sm font-normal text-slate-400">Bs</span>
+                                    </h3>
+                                    <p className="text-sm text-slate-500">Ventas − costo real por bulto (USD)</p>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="text-3xl font-black mb-1 text-slate-400">—</h3>
+                                    <p className="text-xs text-slate-400">Registra compras en USD para ver la ganancia real</p>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -520,31 +558,49 @@ export default function ReportesPage() {
                                         <th className="px-6 py-4">Producto</th>
                                         <th className="px-6 py-4 text-center">Cantidad</th>
                                         <th className="px-6 py-4 text-right">Precio Total</th>
+                                        <th className="px-6 py-4 text-right">Ganancia</th>
                                         <th className="px-6 py-4">Detalle / Cliente</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {loading ? (
-                                        <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                                        <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>Cargando...
                                         </td></tr>
                                     ) : filteredMovimientos.length === 0 ? (
-                                        <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No se encontraron movimientos en este periodo.</td></tr>
-                                    ) : filteredMovimientos.map((mov) => (
-                                        <tr key={mov.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <td className="px-6 py-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{new Date(mov.fecha).toLocaleString()}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${mov.tipo === 'VENTA' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : mov.tipo === 'ENTRADA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>{mov.tipo}</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-bold text-slate-800 dark:text-slate-200">{mov.zapatos?.nombre || 'Producto Desconocido'}</div>
-                                                <div className="text-xs text-slate-400">{mov.zapatos?.categoria}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300">{mov.cantidad}</td>
-                                            <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{mov.precio_total ? `${mov.precio_total} Bs` : '-'}</td>
-                                            <td className="px-6 py-4 text-slate-500 text-xs max-w-xs truncate" title={mov.detalle}>{mov.detalle || '-'}</td>
-                                        </tr>
-                                    ))}
+                                        <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400">No se encontraron movimientos en este periodo.</td></tr>
+                                    ) : filteredMovimientos.map((mov) => {
+                                        const pid = mov.zapato_id || mov.producto_id
+                                        const costoProm = pid ? (costosMap[pid] || 0) : 0
+                                        const isVenta = mov.tipo === 'VENTA'
+                                        const ganancia = isVenta && costoProm > 0
+                                            ? (mov.precio_total || 0) - (Number(mov.cantidad) * costoProm)
+                                            : null
+                                        return (
+                                            <tr key={mov.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                <td className="px-6 py-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{new Date(mov.fecha).toLocaleString()}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${mov.tipo === 'VENTA' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : mov.tipo === 'ENTRADA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>{mov.tipo}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-slate-800 dark:text-slate-200">{mov.zapatos?.nombre || 'Producto Desconocido'}</div>
+                                                    <div className="text-xs text-slate-400">{mov.zapatos?.categoria}</div>
+                                                </td>
+                                                <td className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300">{mov.cantidad}</td>
+                                                <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{mov.precio_total ? `${mov.precio_total} Bs` : '-'}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {ganancia !== null ? (
+                                                        <span className={`font-black text-sm ${ganancia >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                            {ganancia >= 0 ? '+' : ''}{ganancia.toFixed(2)} Bs
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-300 dark:text-slate-600 text-xs">Sin costo reg.</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-500 text-xs max-w-xs truncate" title={mov.detalle}>{mov.detalle || '-'}</td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>
