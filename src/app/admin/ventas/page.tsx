@@ -15,6 +15,8 @@ interface LineaVenta {
     codigo: string
     cantidad: number
     precio_unitario: number
+    variante_idx?: number // Índice de la variante (si aplica)
+    talla_rango?: string  // Nombre de la talla seleccionada
 }
 
 interface Producto {
@@ -24,6 +26,7 @@ interface Producto {
     caja: string | null
     categoria: string
     stock_bultos: number
+    variantes_tallas?: any[] // Para manejar múltiples tallas
 }
 
 export default function VentasPage() {
@@ -40,7 +43,7 @@ export default function VentasPage() {
     const loadProductos = async () => {
         const { data } = await supabase
             .from('zapatos')
-            .select('id, nombre, codigo, caja, categoria, stock_bultos')
+            .select('id, nombre, codigo, caja, categoria, stock_bultos, variantes_tallas')
             .eq('disponible', true)
             .gt('stock_bultos', 0)
             .order('nombre')
@@ -57,11 +60,16 @@ export default function VentasPage() {
         )
     })
 
-    const agregarProducto = (p: Producto) => {
-        const existe = lineas.find(l => l.producto_id === p.id)
-        if (existe) {
-            setLineas(lineas.map(l =>
-                l.producto_id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l
+    const agregarProducto = (p: Producto, varianteIdx?: number, variant?: any) => {
+        // Generar un ID temporal para la línea (Si tiene variante la usamos como key extra)
+        const lineKey = varianteIdx !== undefined ? `${p.id}-${varianteIdx}` : p.id
+        const existeIdx = lineas.findIndex(l => 
+            l.producto_id === p.id && l.variante_idx === varianteIdx
+        )
+
+        if (existeIdx >= 0) {
+            setLineas(lineas.map((l, i) =>
+                i === existeIdx ? { ...l, cantidad: l.cantidad + 1 } : l
             ))
         } else {
             setLineas([...lineas, {
@@ -70,6 +78,8 @@ export default function VentasPage() {
                 codigo: p.codigo || p.caja || '—',
                 cantidad: 1,
                 precio_unitario: 0,
+                variante_idx: varianteIdx,
+                talla_rango: variant?.rango
             }])
         }
         setSearchTerm('')
@@ -104,21 +114,35 @@ export default function VentasPage() {
             for (const linea of lineas) {
                 const precioTotal = linea.cantidad * linea.precio_unitario
 
+                // Texto del detalle (incluye talla si es que hay)
+                const tallaInfo = linea.talla_rango ? ` (Talla: ${linea.talla_rango})` : ''
+                
                 // Registrar movimiento
                 await supabase.from('movimientos_kardex').insert({
                     zapato_id: linea.producto_id,
                     tipo: 'VENTA',
                     cantidad: linea.cantidad,
                     precio_total: precioTotal,
-                    detalle: `Nota de venta — Cliente: ${cliente}`,
+                    detalle: `Nota de venta — Cliente: ${cliente}${tallaInfo}`,
                     fecha: new Date().toISOString(),
                 })
 
                 // Actualizar stock
                 const prod = productos.find(p => p.id === linea.producto_id)
                 if (prod) {
+                    let nuevoStockTotal = Math.max(0, prod.stock_bultos - linea.cantidad)
+                    let actualizaciones: any = { stock_bultos: nuevoStockTotal }
+
+                    // Si la línea tiene un índice de variante, descontar de ahí también
+                    if (prod.variantes_tallas && linea.variante_idx !== undefined && prod.variantes_tallas[linea.variante_idx]) {
+                        const nuevasVariantes = [...prod.variantes_tallas]
+                        const variantStockNum = Number(nuevasVariantes[linea.variante_idx].stock_bultos) || 0
+                        nuevasVariantes[linea.variante_idx].stock_bultos = Math.max(0, variantStockNum - linea.cantidad)
+                        actualizaciones.variantes_tallas = nuevasVariantes
+                    }
+
                     await supabase.from('zapatos')
-                        .update({ stock_bultos: Math.max(0, prod.stock_bultos - linea.cantidad) })
+                        .update(actualizaciones)
                         .eq('id', linea.producto_id)
                 }
             }
@@ -203,16 +227,16 @@ export default function VentasPage() {
         // ── TABLA DE PRODUCTOS ──────────────────────────────────────────
         const tableRows = lineas.map((l, i) => [
             i + 1,
-            l.nombre,
+            l.talla_rango ? `${l.nombre} (Talla: ${l.talla_rango})` : l.nombre,
             l.codigo,
-            l.cantidad === 0.5 ? '½ doc.' : `${l.cantidad} doc.`,
+            l.cantidad,
             `${l.precio_unitario.toFixed(2)} Bs`,
             `${(l.cantidad * l.precio_unitario).toFixed(2)} Bs`,
         ])
 
         autoTable(doc, {
             startY: 66,
-            head: [['#', 'Producto', 'Cód./Caja', 'Doc.', 'Precio/Docena', 'Subtotal']],
+            head: [['#', 'Producto', 'Cód./Caja', 'Bultos', 'Precio', 'Subtotal']],
             body: tableRows,
             styles: { fontSize: 9, cellPadding: 4 },
             headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold' },
@@ -344,21 +368,49 @@ export default function VentasPage() {
                                 <div className="mt-2 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-xl max-h-60 overflow-y-auto">
                                     {filteredProductos.length === 0 ? (
                                         <p className="text-center py-4 text-slate-400 text-sm">Sin resultados</p>
-                                    ) : filteredProductos.map(p => (
-                                        <button
-                                            key={p.id}
-                                            onClick={() => agregarProducto(p)}
-                                            className="w-full text-left px-4 py-3 bg-white dark:bg-slate-900 hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 flex items-center justify-between"
-                                        >
-                                            <div>
-                                                <p className="font-bold text-sm text-slate-800 dark:text-white">{p.nombre}</p>
-                                                <p className="text-xs text-slate-400">{p.codigo || p.caja} · {p.categoria}</p>
-                                            </div>
-                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${p.stock_bultos > 3 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                {p.stock_bultos} doc.
-                                            </span>
-                                        </button>
-                                    ))}
+                                    ) : filteredProductos.map(p => {
+                                        const hasVariants = p.variantes_tallas && p.variantes_tallas.length > 0;
+                                        
+                                        if (!hasVariants) {
+                                            return (
+                                                <button
+                                                    key={p.id}
+                                                    onClick={() => agregarProducto(p)}
+                                                    className="w-full text-left px-4 py-3 bg-white dark:bg-slate-900 hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 flex items-center justify-between"
+                                                >
+                                                    <div>
+                                                        <p className="font-bold text-sm text-slate-800 dark:text-white">{p.nombre}</p>
+                                                        <p className="text-xs text-slate-400">{p.codigo || p.caja} · {p.categoria}</p>
+                                                    </div>
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${p.stock_bultos > 3 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                        {p.stock_bultos} bultos
+                                                    </span>
+                                                </button>
+                                            )
+                                        }
+
+                                        // Si tiene variantes, listar cada variante con stock como una opción individual
+                                        return p.variantes_tallas!.map((v: any, vIdx: number) => {
+                                            const stockVar = Number(v.stock_bultos) || 0
+                                            if (stockVar <= 0) return null // No mostrar tallas sin stock
+
+                                            return (
+                                                <button
+                                                    key={`${p.id}-${vIdx}`}
+                                                    onClick={() => agregarProducto(p, vIdx, v)}
+                                                    className="w-full text-left px-4 py-3 bg-white dark:bg-slate-900 hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 flex items-center justify-between"
+                                                >
+                                                    <div>
+                                                        <p className="font-bold text-sm text-slate-800 dark:text-white">{p.nombre} <span className="text-orange-500 font-black">[{v.rango}]</span></p>
+                                                        <p className="text-xs text-slate-400">{p.codigo || p.caja} · {p.categoria} · {v.pares_por_bulto} pares/bulto</p>
+                                                    </div>
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${stockVar > 3 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                        {stockVar} bultos
+                                                    </span>
+                                                </button>
+                                            )
+                                        })
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -375,15 +427,17 @@ export default function VentasPage() {
                             {/* Encabezado */}
                             <div className="hidden md:grid grid-cols-12 gap-3 text-xs font-black text-slate-400 uppercase px-2">
                                 <div className="col-span-5">Producto</div>
-                                <div className="col-span-2 text-center">Docenas</div>
-                                <div className="col-span-3 text-right">Precio/Docena (Bs)</div>
+                                <div className="col-span-2 text-center">Bultos</div>
+                                <div className="col-span-3 text-right">Precio/Bulto (Bs)</div>
                                 <div className="col-span-2 text-right">Subtotal</div>
                             </div>
 
                             {lineas.map((linea, idx) => (
                                 <div key={idx} className="grid grid-cols-12 gap-3 items-center bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                                     <div className="col-span-11 md:col-span-5">
-                                        <p className="font-bold text-sm text-slate-800 dark:text-white leading-tight">{linea.nombre}</p>
+                                        <p className="font-bold text-sm text-slate-800 dark:text-white leading-tight">
+                                            {linea.nombre} {linea.talla_rango && <span className="text-orange-500">[{linea.talla_rango}]</span>}
+                                        </p>
                                         <p className="text-xs text-slate-400">{linea.codigo}</p>
                                     </div>
                                     <input

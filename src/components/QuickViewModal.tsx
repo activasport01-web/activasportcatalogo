@@ -14,7 +14,7 @@ interface QuickViewProps {
 
 export default function QuickViewModal({ producto, isOpen, onClose }: QuickViewProps) {
     const [selectedImage, setSelectedImage] = useState('')
-    const [cantidadPares, setCantidadPares] = useState<6 | 12>(12)
+    const [cantidadPares, setCantidadPares] = useState<number>(12)
     const { addToCart } = useCart()
     const [isAdded, setIsAdded] = useState(false)
 
@@ -25,12 +25,34 @@ export default function QuickViewModal({ producto, isOpen, onClose }: QuickViewP
             ? 'Niño (27-32)'
             : 'Adulto (38-43)'
 
+    // NUEVO: Manejo de Variantes de Tallas
+    const variantesTallas = (producto as any)?.variantes_tallas || []
+    const hasVariantes = variantesTallas.length > 0
+    const [selectedVariantIndex, setSelectedVariantIndex] = useState<number>(() => {
+        if (!hasVariantes) return -1
+        const firstWithStock = variantesTallas.findIndex((v: any) => Number(v.stock_bultos) > 0)
+        return firstWithStock >= 0 ? firstWithStock : 0
+    })
+
+    // Efecto: Actualizar cantidad base de la variante seleccionada
+    useEffect(() => {
+        if (hasVariantes && selectedVariantIndex >= 0 && variantesTallas[selectedVariantIndex]) {
+            setCantidadPares(Number(variantesTallas[selectedVariantIndex]?.pares_por_bulto) || 12)
+        }
+    }, [selectedVariantIndex, hasVariantes, variantesTallas])
+
     // Resetear estados cuando abre
     useEffect(() => {
         if (isOpen && producto) {
             setSelectedImage(producto.url_imagen)
-            setCantidadPares(12)
+            if (!hasVariantes) setCantidadPares(12)
             setIsAdded(false)
+            
+            // Re-seleccionar primera talla válida si cambian las variantes
+            if (hasVariantes) {
+                const firstWithStock = variantesTallas.findIndex((v: any) => Number(v.stock_bultos) > 0)
+                setSelectedVariantIndex(firstWithStock >= 0 ? firstWithStock : 0)
+            }
         }
     }, [isOpen, producto])
 
@@ -45,16 +67,21 @@ export default function QuickViewModal({ producto, isOpen, onClose }: QuickViewP
     const getColorName = (colorData: any) => (typeof colorData === 'object' && colorData.nombre) ? colorData.nombre : 'Color'
 
     const handleAddToCart = () => {
+        let tallaParaCarrito = tipoCurva
+        if (hasVariantes && selectedVariantIndex >= 0) {
+            tallaParaCarrito = variantesTallas[selectedVariantIndex].rango
+        }
+
         addToCart({
             id_producto: producto.id,
             nombre: producto.nombre,
             precio_unitario: producto.precio,
             imagen: selectedImage || producto.url_imagen,
-            tipo_curva: tipoCurva,
+            tipo_curva: tallaParaCarrito as any,
             cantidad_pares: cantidadPares,
             color: 'Colores Variados',
             marca: producto.marca,
-            total_item: producto.precio * cantidadPares
+            total_item: 0
         })
 
         setIsAdded(true)
@@ -96,10 +123,12 @@ export default function QuickViewModal({ producto, isOpen, onClose }: QuickViewP
 
                     {/* Detalles compactos */}
                     <div className="flex flex-wrap gap-2 mb-6">
-                        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-3 py-1.5 rounded-lg">
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase block font-bold">Tallas</span>
-                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{tipoCurva}</span>
-                        </div>
+                        {!hasVariantes && (
+                            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-3 py-1.5 rounded-lg">
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase block font-bold">Tallas</span>
+                                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{tipoCurva}</span>
+                            </div>
+                        )}
                         {producto.subcategoria && (
                             <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-3 py-1.5 rounded-lg">
                                 <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase block font-bold">Tipo</span>
@@ -107,6 +136,48 @@ export default function QuickViewModal({ producto, isOpen, onClose }: QuickViewP
                             </div>
                         )}
                     </div>
+
+                    {/* SELECCIÓN DE TALLAS (MODO VARIANTES) */}
+                    {hasVariantes && (
+                        <div className="mb-6">
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide block mb-3">Tallas Disponibles</span>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {variantesTallas.map((v: any, idx: number) => {
+                                    const noStock = Number(v.stock_bultos) <= 0
+                                    const isSelected = selectedVariantIndex === idx
+
+                                    return (
+                                        <button
+                                            key={`qv-var-${idx}`}
+                                            disabled={noStock}
+                                            onClick={() => setSelectedVariantIndex(idx)}
+                                            className={`py-2 px-2 rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 transition-all ${
+                                                noStock
+                                                    ? 'border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900 opacity-50 cursor-not-allowed'
+                                                    : isSelected
+                                                        ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 shadow-sm'
+                                                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-orange-300 dark:hover:border-orange-700'
+                                            }`}
+                                        >
+                                            <span className={`font-black text-sm leading-none ${
+                                                noStock ? 'text-slate-400' 
+                                                : isSelected ? 'text-orange-600 dark:text-orange-400' 
+                                                : 'text-slate-700 dark:text-slate-200'
+                                            }`}>
+                                                {v.rango}
+                                            </span>
+                                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                                                noStock ? 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                            }`}>
+                                                {v.pares_por_bulto} pares
+                                            </span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Selector de Colores (Solo visualización/cambio de imagen) */}
                     {coloresDisponibles.length > 0 && (
@@ -133,20 +204,26 @@ export default function QuickViewModal({ producto, isOpen, onClose }: QuickViewP
                         </div>
                     )}
 
-                    {/* Selector Cantidad */}
-                    <div className="mb-6">
-                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide block mb-3">Cantidad del Paquete</span>
-                        <div className="flex gap-3">
-                            <button onClick={() => setCantidadPares(6)} className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${cantidadPares === 6 ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' : 'border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>Media (6)</button>
-                            <button onClick={() => setCantidadPares(12)} className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${cantidadPares === 12 ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' : 'border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>Docena (12)</button>
+                    {/* Selector Cantidad (Solo si no hay variantes predeterminadas) */}
+                    {!hasVariantes && (
+                        <div className="mb-6">
+                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide block mb-3">Cantidad del Paquete</span>
+                            <div className="flex gap-3">
+                                <button onClick={() => setCantidadPares(6)} className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${cantidadPares === 6 ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' : 'border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>Media (6)</button>
+                                <button onClick={() => setCantidadPares(12)} className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${cantidadPares === 12 ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400' : 'border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>Docena (12)</button>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="mt-auto space-y-3">
                         <button
                             onClick={handleAddToCart}
-                            disabled={isAdded}
-                            className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 ${isAdded ? 'bg-green-600 text-white' : 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700'}`}
+                            disabled={isAdded || (hasVariantes && selectedVariantIndex < 0)}
+                            className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 ${
+                                isAdded ? 'bg-green-600 text-white' 
+                                : (!hasVariantes || selectedVariantIndex >= 0) ? 'bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700'
+                                : 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed'
+                            }`}
                         >
                             {isAdded ? <><Check size={24} /> ¡Agregado!</> : <><ShoppingBag size={24} /> Agregar al Pedido</>}
                         </button>

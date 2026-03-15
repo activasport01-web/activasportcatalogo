@@ -70,13 +70,21 @@ async function handler(request: NextRequest) {
 
         const responseBody = await upstream.arrayBuffer()
 
-        return new Response(responseBody, {
+        // IMPORTANTE: Según el estándar HTTP, las respuestas 204, 205 y 304 no pueden tener cuerpo.
+        // Si le pasamos un ArrayBuffer vacío, NodeJS/Next.js lanza un TypeError que rompe el proxy.
+        const isBodyAllowed = ![204, 205, 304].includes(upstream.status);
+
+        return new Response(isBodyAllowed ? responseBody : null, {
             status: upstream.status,
             headers: responseHeaders,
         })
-    } catch (error) {
+    } catch (error: any) {
         console.error('[Proxy Supabase] Error:', error)
-        return new Response(JSON.stringify({ error: 'Error interno del proxy' }), {
+        return new Response(JSON.stringify({ 
+            error: 'Error interno del proxy', 
+            details: error?.message || String(error),
+            stack: error?.stack 
+        }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },
         })

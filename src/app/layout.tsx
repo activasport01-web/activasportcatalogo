@@ -87,6 +87,14 @@ export default function RootLayout({
                         if (typeof args[0] === 'string' && (args[0].includes('[Fast Refresh]') || args[0].includes('[HMR]'))) return;
                         originalLog.apply(console, args);
                     };
+
+                    const originalError = console.error;
+                    console.error = (...args) => {
+                        // Silenciar el error molesto de Supabase en desarrollo cuando expira la sesión
+                        if (typeof args[0] === 'string' && args[0].includes('Invalid Refresh Token')) return;
+                        if (args[0]?.name === 'AuthApiError' && args[0]?.message?.includes('Refresh Token')) return;
+                        originalError.apply(console, args);
+                    };
                 `
           }}
         />

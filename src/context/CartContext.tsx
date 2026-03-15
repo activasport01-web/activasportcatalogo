@@ -7,8 +7,8 @@ export type CartItem = {
     nombre: string
     precio_unitario: number
     imagen: string
-    tipo_curva: 'Niño (27-32)' | 'Juvenil (32-37)' | 'Adulto (38-43)'
-    cantidad_pares: 6 | 12 // Media docena o Docena
+    tipo_curva: string // Ahora es string genérico porque soporta variantes dinámicas
+    cantidad_pares: number // Ahora soporta cantidades genéricas
     color?: string // Nuevo: Color específico del bulto
     marca?: string // Marca del producto
     total_item: number

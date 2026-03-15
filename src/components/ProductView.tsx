@@ -30,9 +30,26 @@ export default function ProductView({ producto, productosRelacionados }: Product
         if (producto.categoria === 'nino' || producto.categoria === 'niño' || producto.categoria === 'infantil') return 'Niño (27-32)'
         return 'Adulto (38-43)'
     })
-    const [cantidadCajon, setCantidadCajon] = useState<6 | 12>(12)
+    const [cantidadCajon, setCantidadCajon] = useState<number>(12)
     const [isLightboxOpen, setIsLightboxOpen] = useState(false)
     const [recentlyViewed, setRecentlyViewed] = useState<any[]>([])
+
+    // NUEVO: Manejo de Variantes de Tallas
+    const variantesTallas = (producto as any).variantes_tallas || []
+    const hasVariantes = variantesTallas.length > 0
+    const [selectedVariantIndex, setSelectedVariantIndex] = useState<number>(() => {
+        // Seleccionar por defecto la primera con stock, o -1 si ninguna tiene
+        if (!hasVariantes) return -1
+        const firstWithStock = variantesTallas.findIndex((v: any) => Number(v.stock_bultos) > 0)
+        return firstWithStock >= 0 ? firstWithStock : 0
+    })
+
+    // Efecto: Actualizar cantidadCajon base de la variante seleccionada
+    useEffect(() => {
+        if (hasVariantes && selectedVariantIndex >= 0) {
+            setCantidadCajon(Number(variantesTallas[selectedVariantIndex]?.pares_por_bulto) || 12)
+        }
+    }, [selectedVariantIndex, hasVariantes, variantesTallas])
 
     // Historial de Vistos (LocalStorage)
     useEffect(() => {
@@ -165,6 +182,12 @@ export default function ProductView({ producto, productosRelacionados }: Product
             if (colorFound) colorNombre = getColorName(colorFound)
         }
 
+        // Determinar Talla a Enviar
+        let tallaSeleccionada = tipoCurva
+        if (hasVariantes && selectedVariantIndex >= 0) {
+            tallaSeleccionada = variantesTallas[selectedVariantIndex].rango
+        }
+
         const texto = `Hola Activa Sport, me interesa este modelo:
 📸 *Foto:* ${selectedImage}
 
@@ -172,8 +195,8 @@ export default function ProductView({ producto, productosRelacionados }: Product
 🏷️ *Marca:* ${producto.marca || producto.origen || 'Genérica'}
 🔖 *Código:* ${producto.codigo || 'N/A'}
 📦 *Caja:* ${producto.caja || 'N/A'}
-📏 *Curva:* ${tipoCurva}
-📦 *Cantidad:* ${cantidadCajon} pares
+📏 *Talla/Curva:* ${tallaSeleccionada}
+📦 *Cantidad paquete:* ${cantidadCajon} pares
 🎨 *Color Ref:* ${colorNombre}
 
 🔗 *Link:* ${window.location.href}`
@@ -186,12 +209,17 @@ export default function ProductView({ producto, productosRelacionados }: Product
     const handleAddToCart = () => {
         // const totalItem = producto.precio * cantidadCajon // Removed
 
+        let tallaParaCarrito = tipoCurva
+        if (hasVariantes && selectedVariantIndex >= 0) {
+            tallaParaCarrito = variantesTallas[selectedVariantIndex].rango
+        }
+
         addToCart({
             id_producto: producto.id,
             nombre: producto.nombre,
             precio_unitario: producto.precio, // Still passing to context for backend/whatsapp logic if needed
             imagen: selectedImage || producto.url_imagen,
-            tipo_curva: tipoCurva as any,
+            tipo_curva: tallaParaCarrito as any,
             cantidad_pares: cantidadCajon,
             color: 'Colores Variados',
             marca: producto.marca || producto.origen || 'Genérica',
@@ -486,43 +514,104 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                         </div>
                                     )}
 
-                                    {/* Tallas Disponibles */}
-                                    <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                                        <p className="text-xs text-slate-400 font-medium mb-1">Tallas</p>
-                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tipoCurva}</p>
-                                    </div>
+                                    {/* Tallas Disponibles - LÓGICA TALLAS NUEVA O VIEJA */}
+                                    {!hasVariantes && (
+                                        <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <p className="text-xs text-slate-400 font-medium mb-1">Tallas</p>
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{tipoCurva}</p>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Selección 1: Curva (Eliminada por solicitud - Mercadería China viene pre-definida) */}
-                                {/* Se asume curva estándar según categoría para el pedido interno */}
+                                {/* SELECCIÓN DE TALLAS (MODO NUEVO DE VARIANTES) */}
+                                {hasVariantes && (
+                                    <div className="mb-6">
+                                        <h3 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest flex justify-between items-center">
+                                            <span>2. Elige la Talla</span>
+                                        </h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                            {variantesTallas.map((v: any, idx: number) => {
+                                                const stock = Number(v.stock_bultos) || 0
+                                                const noStock = stock <= 0
+                                                const isSelected = selectedVariantIndex === idx
 
-                                {/* Selección 2: Cantidad */}
-                                <div className="mb-6">
-                                    <h3 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">2. Elige Cantidad del Paquete</h3>
-                                    <div className="flex gap-4">
-                                        <button
-                                            onClick={() => setCantidadCajon(6)}
-                                            className={`flex-1 py-3 px-4 rounded-xl border-2 flex items-center justify-between gap-2 transition-all ${cantidadCajon === 6
-                                                ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 shadow-sm'
-                                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'
-                                                }`}
-                                        >
-                                            <span className={`font-bold ${cantidadCajon === 6 ? 'text-orange-800 dark:text-orange-400' : 'text-slate-600 dark:text-slate-300'}`}>Media Docena</span>
-                                            <span className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded font-medium text-slate-500 dark:text-slate-400">6 pares</span>
-                                        </button>
-
-                                        <button
-                                            onClick={() => setCantidadCajon(12)}
-                                            className={`flex-1 py-3 px-4 rounded-xl border-2 flex items-center justify-between gap-2 transition-all ${cantidadCajon === 12
-                                                ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 shadow-sm'
-                                                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'
-                                                }`}
-                                        >
-                                            <span className={`font-bold ${cantidadCajon === 12 ? 'text-orange-800 dark:text-orange-400' : 'text-slate-600 dark:text-slate-300'}`}>Docena</span>
-                                            <span className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded font-medium text-slate-500 dark:text-slate-400">12 pares</span>
-                                        </button>
+                                                return (
+                                                    <button
+                                                        key={`var-${idx}`}
+                                                        disabled={noStock}
+                                                        onClick={() => setSelectedVariantIndex(idx)}
+                                                        className={`py-3 px-2 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all relative overflow-hidden ${
+                                                            noStock
+                                                                ? 'border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-900 opacity-60 cursor-not-allowed'
+                                                                : isSelected
+                                                                    ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 shadow-sm ring-1 ring-orange-200 dark:ring-orange-800'
+                                                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-orange-300 dark:hover:border-orange-700'
+                                                        }`}
+                                                    >
+                                                        {noStock && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/50 z-10">
+                                                                <div className="w-full h-0.5 bg-red-400/50 rotate-[-15deg] transform scale-150 absolute"></div>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <span className={`font-black text-center text-[15px] sm:text-base leading-tight relative z-20 ${
+                                                            noStock ? 'text-slate-400 line-through decoration-slate-300' 
+                                                            : isSelected ? 'text-orange-600 dark:text-orange-400' 
+                                                            : 'text-slate-700 dark:text-slate-200'
+                                                        }`}>
+                                                            {v.rango}
+                                                        </span>
+                                                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full relative z-20 ${
+                                                            noStock ? 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                                                            : isSelected ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+                                                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                                        }`}>
+                                                            {v.pares_por_bulto} pares x pack
+                                                        </span>
+                                                        
+                                                        {!noStock && (
+                                                             <span className={`text-[9px] font-medium absolute top-1 right-1 px-1.5 py-0.5 rounded z-20 ${
+                                                                stock < 3 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+                                                             }`}>
+                                                                {stock} disp.
+                                                             </span>
+                                                        )}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+
+                                {/* Selección 2: Cantidad (MODO ANTIGUO - Solo si NO hay variantes) */}
+                                {!hasVariantes && (
+                                    <div className="mb-6">
+                                        <h3 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">2. Elige Cantidad del Paquete</h3>
+                                        <div className="flex gap-4">
+                                            <button
+                                                onClick={() => setCantidadCajon(6)}
+                                                className={`flex-1 py-3 px-4 rounded-xl border-2 flex items-center justify-between gap-2 transition-all ${cantidadCajon === 6
+                                                    ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 shadow-sm'
+                                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'
+                                                    }`}
+                                            >
+                                                <span className={`font-bold ${cantidadCajon === 6 ? 'text-orange-800 dark:text-orange-400' : 'text-slate-600 dark:text-slate-300'}`}>Media Docena</span>
+                                                <span className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded font-medium text-slate-500 dark:text-slate-400">6 pares</span>
+                                            </button>
+
+                                            <button
+                                                onClick={() => setCantidadCajon(12)}
+                                                className={`flex-1 py-3 px-4 rounded-xl border-2 flex items-center justify-between gap-2 transition-all ${cantidadCajon === 12
+                                                    ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 shadow-sm'
+                                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'
+                                                    }`}
+                                            >
+                                                <span className={`font-bold ${cantidadCajon === 12 ? 'text-orange-800 dark:text-orange-400' : 'text-slate-600 dark:text-slate-300'}`}>Docena</span>
+                                                <span className="text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded font-medium text-slate-500 dark:text-slate-400">12 pares</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
 
 
@@ -541,14 +630,14 @@ export default function ProductView({ producto, productosRelacionados }: Product
 
                                 <button
                                     id="add-btn"
-                                    disabled={!producto.disponible}
+                                    disabled={!producto.disponible || (hasVariantes && selectedVariantIndex < 0)}
                                     onClick={handleAddToCart}
-                                    className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border-2 ${producto.disponible
+                                    className={`w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all border-2 ${(producto.disponible && (!hasVariantes || selectedVariantIndex >= 0))
                                         ? 'border-orange-200 text-orange-600 dark:border-orange-900/50 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
                                         : 'border-slate-200 text-slate-400 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 cursor-not-allowed'
                                         }`}
                                 >
-                                    {producto.disponible ? (
+                                    {(producto.disponible && (!hasVariantes || selectedVariantIndex >= 0)) ? (
                                         <>
                                             <ShoppingBag size={18} />
                                             Agregar al Pedido (Carrito)

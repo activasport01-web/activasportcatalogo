@@ -278,23 +278,21 @@ export default function AdminDashboard() {
                                 Sin movimientos esta semana. Registra ventas o compras para ver datos aquí.
                             </div>
                         ) : (
-                            <div className="h-[280px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={ventasVsCompras} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', backgroundColor: '#1e293b', color: '#fff' }}
-                                            itemStyle={{ color: '#fff' }}
-                                            formatter={(value: any, name: any) => [`${Number(value).toFixed(2)} Bs`, name === 'ingresos' ? 'Ventas (Bs)' : 'Compras (Bs)'] as [string, string]}
-                                        />
-                                        <Legend formatter={(val) => val === 'ingresos' ? 'Ventas (Bs)' : 'Compras (Bs)'} />
-                                        <Line type="monotone" dataKey="ingresos" stroke="#22c55e" strokeWidth={3} dot={{ r: 5, fill: '#22c55e' }} activeDot={{ r: 7 }} />
-                                        <Line type="monotone" dataKey="compras" stroke="#3b82f6" strokeWidth={3} dot={{ r: 5, fill: '#3b82f6' }} activeDot={{ r: 7 }} strokeDasharray="5 5" />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <LineChart data={ventasVsCompras} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 600 }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', backgroundColor: '#1e293b', color: '#fff' }}
+                                        itemStyle={{ color: '#fff' }}
+                                        formatter={(value: any, name: any) => [`${Number(value).toFixed(2)} Bs`, name === 'ingresos' ? 'Ventas (Bs)' : 'Compras (Bs)'] as [string, string]}
+                                    />
+                                    <Legend formatter={(val) => val === 'ingresos' ? 'Ventas (Bs)' : 'Compras (Bs)'} />
+                                    <Line type="monotone" dataKey="ingresos" stroke="#22c55e" strokeWidth={3} dot={{ r: 5, fill: '#22c55e' }} activeDot={{ r: 7 }} />
+                                    <Line type="monotone" dataKey="compras" stroke="#3b82f6" strokeWidth={3} dot={{ r: 5, fill: '#3b82f6' }} activeDot={{ r: 7 }} strokeDasharray="5 5" />
+                                </LineChart>
+                            </ResponsiveContainer>
                         )}
                     </div>
 
@@ -310,21 +308,19 @@ export default function AdminDashboard() {
                             </div>
                         ) : (
                             <>
-                                <div className="h-[200px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value">
-                                                {pieData.map((entry, index) => (
-                                                    <Cell key={index} fill={entry.color} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip
-                                                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', backgroundColor: '#1e293b', color: '#fff' }}
-                                                formatter={(value: any) => [`${value} Bultos`]}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <PieChart>
+                                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value">
+                                            {pieData.map((entry, index) => (
+                                                <Cell key={index} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', backgroundColor: '#1e293b', color: '#fff' }}
+                                            formatter={(value: any) => [`${value} Bultos`]}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
                                 <div className="space-y-2 mt-2">
                                     {pieData.map((d, i) => (
                                         <div key={i} className="flex items-center justify-between text-sm">
@@ -354,24 +350,22 @@ export default function AdminDashboard() {
                                 Sin productos con stock registrado.
                             </div>
                         ) : (
-                            <div className="h-[280px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart layout="vertical" data={topProductos} margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                                        <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                                        <YAxis type="category" dataKey="nombre" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} width={130} />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', backgroundColor: '#1e293b', color: '#fff' }}
-                                            formatter={(val: any) => [`${val} Bultos`, 'Stock']}
-                                        />
-                                        <Bar dataKey="stock" radius={[0, 6, 6, 0]} barSize={22}>
-                                            {topProductos.map((_, index) => (
-                                                <Cell key={index} fill={index === 0 ? '#f97316' : index === 1 ? '#fb923c' : '#fed7aa'} />
-                                            ))}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <BarChart layout="vertical" data={topProductos} margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                    <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                                    <YAxis type="category" dataKey="nombre" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} width={130} />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', backgroundColor: '#1e293b', color: '#fff' }}
+                                        formatter={(val: any) => [`${val} Bultos`, 'Stock']}
+                                    />
+                                    <Bar dataKey="stock" radius={[0, 6, 6, 0]} barSize={22}>
+                                        {topProductos.map((_, index) => (
+                                            <Cell key={index} fill={index === 0 ? '#f97316' : index === 1 ? '#fb923c' : '#fed7aa'} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
                         )}
                     </div>
 

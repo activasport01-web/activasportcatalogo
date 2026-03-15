@@ -37,9 +37,14 @@ export default function ReportesPage() {
         costoComprasPeriodo: 0
     })
     const [monthlyData, setMonthlyData] = useState<any[]>([])
-    const [activeTab, setActiveTab] = useState<'movimientos' | 'inventario'>('movimientos')
+    const [activeTab, setActiveTab] = useState<'movimientos' | 'inventario' | 'rentabilidad'>('movimientos')
     const [inventario, setInventario] = useState<any[]>([])
     const [loadingInv, setLoadingInv] = useState(false)
+
+    // --- RENTABILIDAD ---
+    const [comprasAgrupadas, setComprasAgrupadas] = useState<any[]>([])
+    const [loadingRent, setLoadingRent] = useState(false)
+    const [rentStats, setRentStats] = useState({ totalUSD: 0, totalBs: 0, registros: 0 })
 
     useEffect(() => {
         loadMovimientos()
@@ -48,6 +53,7 @@ export default function ReportesPage() {
 
     useEffect(() => {
         if (activeTab === 'inventario') loadInventario()
+        if (activeTab === 'rentabilidad') loadRentabilidad()
     }, [activeTab])
 
     useEffect(() => {
@@ -244,6 +250,56 @@ export default function ReportesPage() {
         setLoadingInv(false)
     }
 
+    const loadRentabilidad = async () => {
+        setLoadingRent(true)
+        const { data, error } = await supabase
+            .from('compras_producto')
+            .select(`
+                id, fecha, precio_usd, bultos_qty, tipo_cambio, costo_bs_total, costo_bs_por_bulto, precio_venta_ref, notas, producto_id,
+                zapatos (nombre, codigo, categoria, stock_bultos, precio)
+            `)
+            .order('fecha', { ascending: false })
+
+        if (!error && data) {
+            // Agrupar por producto
+            const mapa: { [id: string]: any } = {}
+            data.forEach((c: any) => {
+                const pid = c.producto_id
+                if (!mapa[pid]) {
+                    mapa[pid] = {
+                        producto_id: pid,
+                        nombre: c.zapatos?.nombre || 'Producto desconocido',
+                        codigo: c.zapatos?.codigo || '—',
+                        categoria: c.zapatos?.categoria || '—',
+                        stock_actual: c.zapatos?.stock_bultos || 0,
+                        precio_venta: c.zapatos?.precio || 0,
+                        compras: []
+                    }
+                }
+                mapa[pid].compras.push(c)
+            })
+
+            // Calcular métricas por producto
+            const lista = Object.values(mapa).map((item: any) => {
+                const totalUSD = item.compras.reduce((s: number, c: any) => s + Number(c.precio_usd), 0)
+                const totalBs = item.compras.reduce((s: number, c: any) => s + Number(c.costo_bs_total), 0)
+                const totalBultos = item.compras.reduce((s: number, c: any) => s + Number(c.bultos_qty), 0)
+                const costoProm = totalBultos > 0 ? totalBs / totalBultos : 0
+                const pvRef = item.compras.find((c: any) => c.precio_venta_ref)?.precio_venta_ref || item.precio_venta || 0
+                const margen = pvRef > 0 ? ((pvRef - costoProm) / pvRef * 100) : null
+                return { ...item, totalUSD, totalBs, totalBultos, costoProm, pvRef: Number(pvRef), margen }
+            })
+
+            setComprasAgrupadas(lista)
+            setRentStats({
+                totalUSD: data.reduce((s: number, c: any) => s + Number(c.precio_usd), 0),
+                totalBs: data.reduce((s: number, c: any) => s + Number(c.costo_bs_total), 0),
+                registros: data.length
+            })
+        }
+        setLoadingRent(false)
+    }
+
     const exportInventarioPDF = () => {
         const doc = new jsPDF()
         const fecha = new Date().toLocaleDateString('es-ES')
@@ -330,7 +386,17 @@ export default function ReportesPage() {
                 >
                     <Package size={16} /> Inventario Actual
                 </button>
+                <button
+                    onClick={() => setActiveTab('rentabilidad')}
+                    className={`flex items-center gap-2 px-5 py-3 font-bold text-sm transition-all border-b-2 -mb-px ${activeTab === 'rentabilidad'
+                        ? 'border-green-500 text-green-500'
+                        : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                        }`}
+                >
+                    <TrendingUp size={16} /> Rentabilidad (USD)
+                </button>
             </div>
+
 
             <div className="flex flex-wrap gap-3 mb-0">
                 <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
@@ -410,8 +476,7 @@ export default function ReportesPage() {
                         {monthlyData.every(d => d.ventas === 0 && d.compras === 0) ? (
                             <div className="h-[260px] flex items-center justify-center text-slate-400 text-sm">Sin movimientos registrados en los últimos 6 meses.</div>
                         ) : (
-                            <div className="h-[260px]">
-                                <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height={260}>
                                     <BarChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }} barGap={4}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8', fontWeight: 600 }} />
@@ -422,7 +487,6 @@ export default function ReportesPage() {
                                         <Bar dataKey="compras" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={28} />
                                     </BarChart>
                                 </ResponsiveContainer>
-                            </div>
                         )}
                     </div>
 
@@ -545,6 +609,107 @@ export default function ReportesPage() {
                             </table>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* ===== TAB: RENTABILIDAD ===== */}
+            {activeTab === 'rentabilidad' && (
+                <div className="mt-4">
+                    {/* Tarjetas resumen */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl shadow-xl border border-slate-700">
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="p-3 bg-green-900/40 rounded-xl text-green-400"><DollarSign size={22} /></div>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Total Invertido $</span>
+                            </div>
+                            <h3 className="text-3xl font-black text-white mb-1">${rentStats.totalUSD.toLocaleString()}</h3>
+                            <p className="text-sm text-slate-400">USD total en {rentStats.registros} compras registradas</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-orange-900/50 to-slate-900 p-6 rounded-2xl shadow-xl border border-orange-900/50">
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="p-3 bg-orange-900/40 rounded-xl text-orange-400"><Package size={22} /></div>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Total Invertido Bs</span>
+                            </div>
+                            <h3 className="text-3xl font-black text-orange-300 mb-1">{rentStats.totalBs.toLocaleString()} Bs</h3>
+                            <p className="text-sm text-slate-400">A tipo de cambio registrado por compra</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-green-900/30 to-slate-900 p-6 rounded-2xl shadow-xl border border-green-900/50">
+                            <div className="flex justify-between items-start mb-3">
+                                <div className="p-3 bg-green-900/40 rounded-xl text-green-400"><TrendingUp size={22} /></div>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Modelos con registro</span>
+                            </div>
+                            <h3 className="text-3xl font-black text-green-300 mb-1">{comprasAgrupadas.length}</h3>
+                            <p className="text-sm text-slate-400">Productos con historial de compra USD</p>
+                        </div>
+                    </div>
+
+                    {/* Tabla por producto */}
+                    {loadingRent ? (
+                        <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div></div>
+                    ) : comprasAgrupadas.length === 0 ? (
+                        <div className="bg-slate-900 rounded-2xl p-12 text-center border border-slate-800">
+                            <DollarSign size={40} className="text-slate-600 mx-auto mb-3" />
+                            <p className="text-slate-400 font-bold">Aún no hay compras registradas.</p>
+                            <p className="text-slate-600 text-sm mt-1">Ve a un producto y usa el panel <strong className="text-green-400">"Historial de Compras (USD → Bs)"</strong> para comenzar.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {comprasAgrupadas.map((item: any) => (
+                                <div key={item.producto_id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden">
+                                    {/* Header del producto */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                                        <div>
+                                            <h4 className="font-black text-slate-800 dark:text-white">{item.nombre}</h4>
+                                            <p className="text-xs text-slate-400">{item.categoria} · Cód: {item.codigo} · Stock actual: <span className="font-bold text-slate-600 dark:text-slate-300">{item.stock_actual} bultos</span></p>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <div className="text-center">
+                                                <p className="text-[10px] text-slate-400 uppercase font-bold">Costo Prom. Bulto</p>
+                                                <p className="text-lg font-black text-orange-500">{item.costoProm.toFixed(2)} Bs</p>
+                                            </div>
+                                            {item.margen !== null && (
+                                                <div className={`text-center px-3 py-1 rounded-xl ${item.margen > 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                                                    <p className="text-[10px] font-bold uppercase text-slate-500">Margen est.</p>
+                                                    <p className={`text-lg font-black ${item.margen > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600'}`}>{item.margen.toFixed(1)}%</p>
+                                                    <p className="text-[9px] text-slate-400">Ref: {item.pvRef} Bs</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Detalle de compras */}
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs">
+                                            <thead className="text-slate-400 uppercase font-bold border-b border-slate-100 dark:border-slate-800">
+                                                <tr>
+                                                    <th className="px-5 py-2 text-left">Fecha</th>
+                                                    <th className="px-5 py-2 text-right">Precio Caja</th>
+                                                    <th className="px-5 py-2 text-center">Bultos</th>
+                                                    <th className="px-5 py-2 text-center">TC (Bs/$)</th>
+                                                    <th className="px-5 py-2 text-right">Caja en Bs</th>
+                                                    <th className="px-5 py-2 text-right">Costo x Bulto</th>
+                                                    <th className="px-5 py-2 text-left">Notas</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                                {item.compras.map((c: any) => (
+                                                    <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                                                        <td className="px-5 py-2.5 text-slate-500">{new Date(c.fecha).toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                                        <td className="px-5 py-2.5 text-right font-bold text-slate-700 dark:text-slate-200">${Number(c.precio_usd).toLocaleString()}</td>
+                                                        <td className="px-5 py-2.5 text-center text-slate-600 dark:text-slate-300">{c.bultos_qty}</td>
+                                                        <td className="px-5 py-2.5 text-center text-slate-600 dark:text-slate-300">{c.tipo_cambio} Bs</td>
+                                                        <td className="px-5 py-2.5 text-right font-bold text-slate-700 dark:text-slate-200">{Number(c.costo_bs_total).toLocaleString()} Bs</td>
+                                                        <td className="px-5 py-2.5 text-right font-black text-orange-600 dark:text-orange-400">{Number(c.costo_bs_por_bulto).toFixed(2)} Bs</td>
+                                                        <td className="px-5 py-2.5 text-slate-400 italic">{c.notas || '—'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

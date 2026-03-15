@@ -19,7 +19,11 @@ import {
     Info,
     Package,
     ShoppingCart,
-    PackagePlus
+    PackagePlus,
+    DollarSign,
+    TrendingUp,
+    ChevronDown,
+    ChevronUp
 } from 'lucide-react'
 
 interface Producto {
@@ -41,6 +45,7 @@ interface Producto {
     disponible: boolean
     fecha_creacion: string
     precio_costo?: number // NUEVO: Precio de compra por bulto/unidad
+    variantes_tallas?: any[] // NUEVO: Array de curvas de tallas y su stock
 }
 
 export default function ProductosAdmin() {
@@ -77,13 +82,85 @@ export default function ProductosAdmin() {
     const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null)
     const [showVariantModal, setShowVariantModal] = useState(false)
 
-    // NUEVO: Estado para Modal de Ventas
     const [showSalesModal, setShowSalesModal] = useState(false)
     const [saleData, setSaleData] = useState({
-        cantidad: 1,
-        precio_total: 0,
-        detalle: ''
+        cantidad: 1 as number | string,
+        precio_total: 0 as number | string,
+        detalle: '',
+        variante_index: -1 // NUEVO: Índice de la variante seleccionada
     })
+
+    // =========================================================
+    // HISTORIAL DE COMPRAS / RENTABILIDAD
+    // =========================================================
+    const [comprasProducto, setComprasProducto] = useState<any[]>([])
+    const [loadingCompras, setLoadingCompras] = useState(false)
+    const [showComprasForm, setShowComprasForm] = useState(false)
+    const [nuevaCompra, setNuevaCompra] = useState({
+        precio_usd: '' as string | number,
+        bultos_qty: '' as string | number,
+        tipo_cambio: '' as string | number,
+        precio_venta_ref: '' as string | number,
+        notas: ''
+    })
+    const [savingCompra, setSavingCompra] = useState(false)
+
+    const loadCompras = async (productoId: string) => {
+        setLoadingCompras(true)
+        const { data, error } = await supabase
+            .from('compras_producto')
+            .select('*')
+            .eq('producto_id', productoId)
+            .order('fecha', { ascending: false })
+        if (!error && data) setComprasProducto(data)
+        setLoadingCompras(false)
+    }
+
+    const handleGuardarCompra = async () => {
+        if (!editingProduct) return
+        const usd = Number(nuevaCompra.precio_usd)
+        const qty = Number(nuevaCompra.bultos_qty)
+        const tc = Number(nuevaCompra.tipo_cambio)
+        if (!usd || !qty || !tc) {
+            showNotification('Completa los campos obligatorios: Precio USD, Bultos y Tipo de Cambio', 'error')
+            return
+        }
+        setSavingCompra(true)
+        const { error } = await supabase.from('compras_producto').insert({
+            producto_id: editingProduct.id,
+            precio_usd: usd,
+            bultos_qty: qty,
+            tipo_cambio: tc,
+            precio_venta_ref: Number(nuevaCompra.precio_venta_ref) || null,
+            notas: nuevaCompra.notas || null,
+        })
+        if (!error) {
+            showNotification('Compra registrada correctamente ✅', 'success')
+            setNuevaCompra({ precio_usd: '', bultos_qty: '', tipo_cambio: '', precio_venta_ref: '', notas: '' })
+            setShowComprasForm(false)
+            await loadCompras(editingProduct.id)
+        } else {
+            showNotification('Error al guardar: ' + error.message, 'error')
+        }
+        setSavingCompra(false)
+    }
+
+    const handleEliminarCompra = async (compraId: string) => {
+        if (!confirm('¿Eliminar este registro de compra?')) return
+        const { error } = await supabase.from('compras_producto').delete().eq('id', compraId)
+        if (!error && editingProduct) {
+            showNotification('Registro eliminado', 'success')
+            await loadCompras(editingProduct.id)
+        }
+    }
+
+    // NUEVO: Estado para variantes de tallas y stock
+    type VarianteTalla = {
+        rango: string
+        pares_por_bulto: number
+        stock_bultos: number | string
+    }
+    const [variantesTallas, setVariantesTallas] = useState<VarianteTalla[]>([])
 
     const [formData, setFormData] = useState({
         nombre: '',
@@ -194,26 +271,6 @@ export default function ProductosAdmin() {
         e.preventDefault()
         if (isSubmitting) return
 
-        // ⚠️ Advertencia: campos importantes para reportes
-        const advertencias: string[] = []
-        if (!formData.precio_costo || formData.precio_costo <= 0) {
-            advertencias.push('• Precio de Costo (necesario para calcular tu capital en inventario y ganancias)')
-        }
-        if (!formData.stock_bultos || formData.stock_bultos <= 0) {
-            advertencias.push('• Stock en Bultos (necesario para controlar tu inventario)')
-        }
-
-        if (advertencias.length > 0) {
-            const confirmar = window.confirm(
-                `⚠️ ADVERTENCIA — Campos importantes sin llenar:\n\n${advertencias.join('\n')}\n\n` +
-                `Sin estos datos, los reportes de Capital en Inventario y Ganancias no serán precisos.\n\n` +
-                `¿Deseas guardar el producto de todas formas?`
-            )
-            if (!confirmar) {
-                return // El usuario prefiere volver a llenar los datos
-            }
-        }
-
         setIsSubmitting(true)
         try {
             // NUEVO: Subir imágenes de variantes de color PRIMERO
@@ -300,8 +357,9 @@ export default function ProductosAdmin() {
                 imagen_hover,
                 origen: formData.origen, // Nuevo: Enviar origen
                 disponible: formData.disponible,
-                stock_bultos: formData.stock_bultos, // NUEVO: Guardar stock de bultos
-                precio_costo: formData.precio_costo // NUEVO: Guardar costo
+                stock_bultos: formData.stock_bultos, // NUEVO: Guardar stock de bultos general (suma opcional)
+                precio_costo: formData.precio_costo, // NUEVO: Guardar costo
+                variantes_tallas: variantesTallas // NUEVO: Guardar array JSON
             }
 
             let productId = editingProduct?.id
@@ -440,6 +498,32 @@ export default function ProductosAdmin() {
                 precio_costo: (producto as any).precio_costo || 0,
                 stock_bultos: (producto as any).stock_bultos || 0
             })
+
+            // NUEVO: Cargar variantes de tallas si existen
+            if (producto.variantes_tallas && Array.isArray(producto.variantes_tallas)) {
+                setVariantesTallas(producto.variantes_tallas)
+            } else {
+                // Si es un producto viejo sin variantes, migramos sus datos básicos a la primera variante temporal
+                const oldTallas = producto.tallas?.join(', ') || ''
+                const oldStock = (producto as any).stock_bultos || 0
+                // Para pares por bulto, intentamos adivinarlo de la descripción, sino por defecto 12
+                let pares = 12
+                if (producto.descripcion?.includes('[Bulto de 6 pares]')) pares = 6
+                else if (producto.descripcion?.includes('[Bulto de 18 pares]')) pares = 18
+                else if (producto.descripcion?.includes('[Bulto de 24 pares]')) pares = 24
+
+                if (oldTallas || oldStock > 0) {
+                    setVariantesTallas([{
+                        rango: oldTallas || 'Adulto (Por defecto)',
+                        pares_por_bulto: pares,
+                        stock_bultos: oldStock
+                    }])
+                } else {
+                    setVariantesTallas([])
+                }
+            }
+            // Cargar historial de compras
+            loadCompras(producto.id)
         } else {
             // NUEVO PRODCUTO
             setEditingProduct(null)
@@ -462,6 +546,7 @@ export default function ProductosAdmin() {
                 precio_costo: 0,
                 stock_bultos: 0
             })
+            setVariantesTallas([]) // Resetear variantes para nuevo
         }
 
         setImageFile(null)
@@ -477,31 +562,57 @@ export default function ProductosAdmin() {
 
         setIsSubmitting(true)
         try {
-            if (saleData.cantidad > (editingProduct as any).stockTotal) {
-                showNotification('No hay suficiente stock para esta venta', 'error')
+            // Validaciones
+            let stock_a_verificar = (editingProduct as any).stockTotal || 0
+            let nombre_variante = ''
+            let variantes_actualizadas = (editingProduct as any).variantes_tallas ? [...(editingProduct as any).variantes_tallas] : []
+
+            if (saleData.variante_index >= 0) {
+                const varObj = variantes_actualizadas[saleData.variante_index]
+                stock_a_verificar = Number(varObj.stock_bultos) || 0
+                nombre_variante = ` (Talla: ${varObj.rango})`
+            }
+
+            if (Number(saleData.cantidad) > stock_a_verificar) {
+                showNotification(`No hay suficiente stock en ${saleData.variante_index >= 0 ? 'esta talla' : 'este producto'}`, 'error')
                 setIsSubmitting(false)
                 return
             }
 
             // 1. Registrar Venta en Kardex
             const { error: kardexError } = await supabase.from('movimientos_kardex').insert({
-                zapato_id: editingProduct.id,
+                producto_id: editingProduct.id,
                 tipo: 'VENTA',
-                cantidad: saleData.cantidad,
-                precio_total: saleData.precio_total,
+                cantidad: Number(saleData.cantidad),
+                precio_total: Number(saleData.precio_total),
                 detalle: saleData.detalle
-                    || `Venta — ${editingProduct.nombre}${(editingProduct as any).codigo ? ' [' + (editingProduct as any).codigo + ']' : (editingProduct as any).caja ? ' [' + (editingProduct as any).caja + ']' : ''}`,
+                    || `Venta — ${editingProduct.nombre}${(editingProduct as any).codigo ? ' [' + (editingProduct as any).codigo + ']' : (editingProduct as any).caja ? ' [' + (editingProduct as any).caja + ']' : ''}${nombre_variante}`,
                 fecha: new Date().toISOString(),
+                usuario_id: (await supabase.auth.getUser()).data.user?.id
             })
 
             if (kardexError) throw kardexError
 
             // 2. Actualizar Stock en Producto
-            const newStock = (editingProduct as any).stockTotal - saleData.cantidad
+            let newStockGlobal = (editingProduct as any).stockTotal - Number(saleData.cantidad)
+
+            const updates: any = {
+                stock_bultos: newStockGlobal
+            }
+
+            // Si hay variantes, descontamos de la variante específica y recalculamos total por seguridad
+            if (saleData.variante_index >= 0) {
+                variantes_actualizadas[saleData.variante_index].stock_bultos -= Number(saleData.cantidad)
+                updates.variante_tallas = variantes_actualizadas // Guardamos JSON actualizado
+
+                // Recalcular global sumando
+                const sumGlobal = variantes_actualizadas.reduce((acc, curr) => acc + (Number(curr.stock_bultos) || 0), 0)
+                updates.stock_bultos = sumGlobal
+            }
 
             const { error: productError } = await supabase
                 .from('zapatos')
-                .update({ stock_bultos: newStock })
+                .update(updates)
                 .eq('id', editingProduct.id)
 
             if (productError) throw productError
@@ -509,7 +620,7 @@ export default function ProductosAdmin() {
             showNotification('Venta registrada correctamente', 'success')
             setShowSalesModal(false)
             loadProductos()
-            setSaleData({ cantidad: 1, precio_total: 0, detalle: '' })
+            setSaleData({ cantidad: 1, precio_total: 0, detalle: '', variante_index: -1 })
 
         } catch (err: any) {
             console.error('Error al registrar venta:', err)
@@ -701,7 +812,9 @@ export default function ProductosAdmin() {
                                     <button
                                         onClick={() => {
                                             setEditingProduct(producto)
-                                            setSaleData({ ...saleData, precio_total: 0, cantidad: 1 })
+                                            // Pre-seleccionar la primera variante si hay
+                                            const firstVarIndex = (producto as any).variantes_tallas?.length > 0 ? 0 : -1
+                                            setSaleData({ ...saleData, precio_total: 0, cantidad: 1, variante_index: firstVarIndex })
                                             setShowSalesModal(true)
                                         }}
                                         className="flex-1 flex items-center justify-center h-10 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
@@ -824,83 +937,141 @@ export default function ProductosAdmin() {
                                     </div>
 
                                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/50">
-                                        <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
-                                            <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
-                                            Configuración de Venta por Mayor
-                                        </h3>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                                                <div className="w-1 h-4 bg-orange-500 rounded-full"></div>
+                                                Configuración de Stocks y Tallas (Por Variante)
+                                                <span className="text-orange-500">*</span>
+                                            </h3>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setVariantesTallas([...variantesTallas, { rango: '', pares_por_bulto: 12, stock_bultos: 0 }])
+                                                }}
+                                                className="text-xs bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 font-bold px-3 py-1.5 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-500/30 transition-colors flex items-center gap-1"
+                                            >
+                                                <Plus size={14} /> Agregar Variante
+                                            </button>
+                                        </div>
 
                                         <div className="space-y-4">
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">
-                                                    Serie de Tallas <span className="text-slate-400 font-normal">(Opcional)</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.tallas}
-                                                    onChange={(e) => setFormData({ ...formData, tallas: e.target.value })}
-                                                    placeholder="Ej: 30, 31, 32, 33, 34"
-                                                    className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
-                                                />
-
-                                                {/* Hint Dinámico */}
-                                                {formData.grupo_talla && gruposList.find(g => g.nombre === formData.grupo_talla)?.rango_tallas ? (
-                                                    <p className="text-[10px] text-blue-500 mt-1 font-medium">
-                                                        ℹ️ Rango sugerido para {formData.grupo_talla}: {gruposList.find(g => g.nombre === formData.grupo_talla)?.rango_tallas}
-                                                    </p>
-                                                ) : (
-                                                    <p className="text-[10px] text-slate-500 mt-1">Escribe las tallas específicas separadas por coma.</p>
-                                                )}
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Pares por Bulto</label>
-                                                    <select
-                                                        className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
-                                                        onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            if (!val) return;
-                                                            // Añadir al inicio de la descripción de forma inteligente
-                                                            const prefix = `[Bulto de ${val} pares]`;
-                                                            if (!formData.descripcion.includes('[Bulto de')) {
-                                                                setFormData(prev => ({ ...prev, descripcion: `${prefix} ${prev.descripcion}` }));
-                                                            }
+                                            {variantesTallas.length === 0 && (
+                                                <div className="p-6 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-center">
+                                                    <Package size={32} className="mx-auto text-slate-400 mb-2" />
+                                                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">Sin variantes configuradas</p>
+                                                    <p className="text-xs text-slate-500 mt-1 mb-4">Agrega al menos una variante de talla para definir el stock de este producto.</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setVariantesTallas([{ rango: '', pares_por_bulto: 12, stock_bultos: 0 }])
                                                         }}
+                                                        className="px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white text-xs font-bold rounded-lg hover:bg-black dark:hover:bg-slate-600 transition-colors"
                                                     >
-                                                        <option value="">Seleccionar...</option>
-                                                        <option value="12">12 Pares (Docena)</option>
-                                                        <option value="6">6 Pares (Media Docena)</option>
-                                                        <option value="18">18 Pares</option>
-                                                        <option value="24">24 Pares (Cajón)</option>
-                                                        <option value="30">30 Pares</option>
-                                                    </select>
+                                                        Agregar Primera Variante
+                                                    </button>
                                                 </div>
+                                            )}
 
-                                                {/* NUEVO: STOCK DE BULTOS */}
-                                                <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
-                                                        Stock Total (Cajas/Bultos)
-                                                        <span className="text-orange-500">*</span>
-                                                    </label>
-                                                    <div className="relative">
-                                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                                            <Package size={16} />
+                                            {variantesTallas.map((variante, index) => (
+                                                <div key={index} className="relative p-4 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 group">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newVariantes = [...variantesTallas]
+                                                            newVariantes.splice(index, 1)
+                                                            setVariantesTallas(newVariantes)
+                                                            // Setear stock global a la suma restante
+                                                            const totalStock = newVariantes.reduce((sum, v) => sum + (Number(v.stock_bultos) || 0), 0)
+                                                            setFormData(prev => ({ ...prev, stock_bultos: totalStock }))
+                                                        }}
+                                                        className="absolute -top-3 -right-3 w-7 h-7 bg-red-100 hover:bg-red-500 text-red-600 hover:text-white rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition-all z-10"
+                                                        title="Eliminar Variante"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                        {/* Serie de Tallas de esta variante */}
+                                                        <div className="lg:col-span-3">
+                                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                                                Rango de Tallas
+                                                            </label>
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="text"
+                                                                    value={variante.rango}
+                                                                    onChange={(e) => {
+                                                                        const newVariantes = [...variantesTallas]
+                                                                        newVariantes[index].rango = e.target.value
+                                                                        setVariantesTallas(newVariantes)
+                                                                    }}
+                                                                    placeholder="Ej: 38-43"
+                                                                    className="w-full px-3 py-2 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 bg-slate-50 dark:bg-slate-800"
+                                                                    required
+                                                                />
+                                                            </div>
                                                         </div>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            step="0.1"
-                                                            value={formData.stock_bultos}
-                                                            onChange={(e) => setFormData({ ...formData, stock_bultos: parseFloat(e.target.value) || 0 })}
-                                                            className="w-full pl-9 pr-3 py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
-                                                            placeholder="0.0"
-                                                        />
-                                                    </div>
-                                                    <p className="text-[10px] text-slate-500 mt-1">Cantidad de bultos cerrados disponibles en almacén.</p>
-                                                </div>
 
+                                                        {/* Pares por Bulto */}
+                                                        <div className="lg:col-span-2">
+                                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                                                Formato Empaque
+                                                            </label>
+                                                            <select
+                                                                value={variante.pares_por_bulto}
+                                                                onChange={(e) => {
+                                                                    const newVariantes = [...variantesTallas]
+                                                                    newVariantes[index].pares_por_bulto = parseInt(e.target.value) || 12
+                                                                    setVariantesTallas(newVariantes)
+                                                                }}
+                                                                className="w-full px-3 py-2 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 bg-slate-50 dark:bg-slate-800"
+                                                            >
+                                                                <option value="6">6 Pares (Media Docena)</option>
+                                                                <option value="12">12 Pares (Docena)</option>
+                                                                <option value="18">18 Pares</option>
+                                                                <option value="24">24 Pares (Cajón)</option>
+                                                                <option value="30">30 Pares</option>
+                                                            </select>
+                                                        </div>
+
+                                                        {/* Stock */}
+                                                        <div className="lg:col-span-1">
+                                                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1 text-orange-600 dark:text-orange-400">
+                                                                Stock Bultos
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.5"
+                                                                value={variante.stock_bultos}
+                                                                onChange={(e) => {
+                                                                    const newVariantes = [...variantesTallas]
+                                                                    newVariantes[index].stock_bultos = e.target.value
+                                                                    setVariantesTallas(newVariantes)
+
+                                                                    // Actualizar automáticamente el stock global
+                                                                    const totalStock = newVariantes.reduce((sum, v) => sum + (Number(v.stock_bultos) || 0), 0)
+                                                                    setFormData(prev => ({ ...prev, stock_bultos: totalStock }))
+                                                                }}
+                                                                className="w-full px-3 py-2 text-sm font-bold text-slate-900 dark:text-slate-100 border-2 border-orange-200 dark:border-orange-500/50 rounded-lg focus:ring-2 focus:ring-orange-500 bg-orange-50/30 dark:bg-orange-500/10 text-center"
+                                                                required
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {/* Resumen Global de Stock (Autocalculado) */}
+                                            {variantesTallas.length > 0 && (
+                                                <div className="mt-3 p-3 bg-slate-900 dark:bg-slate-800 text-white rounded-lg flex justify-between items-center shadow-inner">
+                                                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Bultos en Bodega:</span>
+                                                    <span className="text-lg font-black text-orange-400">{formData.stock_bultos} Cajas</span>
+                                                </div>
+                                            )}
+
+                                            <div className="grid grid-cols-1 mt-4">
                                                 <div>
-                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Categoría *</label>
+                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Categoría Global *</label>
                                                     <select
                                                         value={formData.categoria}
                                                         onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
@@ -913,27 +1084,6 @@ export default function ProductosAdmin() {
                                                         ))}
                                                     </select>
                                                 </div>
-                                            </div>
-
-                                            {/* PRECIO DE COSTO (COMPRA) */}
-                                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1">
-                                                    Precio de Compra (Costo por Bulto)
-                                                    <span className="text-orange-500">*</span>
-                                                </label>
-                                                <div className="relative">
-                                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</div>
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={formData.precio_costo}
-                                                        onChange={(e) => setFormData({ ...formData, precio_costo: parseFloat(e.target.value) || 0 })}
-                                                        className="w-full pl-7 pr-3 py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all placeholder-slate-400"
-                                                        placeholder="0.00"
-                                                    />
-                                                </div>
-                                                <p className="text-[10px] text-slate-500 mt-1">Solo visible para administradores. Costo total de la caja/bulto.</p>
                                             </div>
 
                                             <div className="mt-4">
@@ -1217,6 +1367,184 @@ export default function ProductosAdmin() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* ====== HISTORIAL DE COMPRAS ====== */}
+                            {editingProduct && (
+                                <div className="mt-6 bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-5 border border-slate-700">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                            <DollarSign size={16} className="text-green-400" />
+                                            Historial de Compras (USD → Bs)
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowComprasForm(!showComprasForm)}
+                                            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                                        >
+                                            {showComprasForm ? <ChevronUp size={14} /> : <Plus size={14} />}
+                                            {showComprasForm ? 'Cancelar' : 'Registrar Compra'}
+                                        </button>
+                                    </div>
+
+                                    {/* Formulario de nueva compra */}
+                                    {showComprasForm && (
+                                        <div className="bg-slate-800/80 rounded-xl p-4 mb-4 border border-slate-600 space-y-3">
+                                            <p className="text-xs text-slate-400 mb-2">Completa los datos de la compra que realizaste. Los campos con <span className="text-green-400">*</span> son obligatorios.</p>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-green-400 mb-1">Precio Caja ($USD) *</label>
+                                                    <input
+                                                        type="number" min="0" step="0.01"
+                                                        value={nuevaCompra.precio_usd}
+                                                        onChange={e => setNuevaCompra({ ...nuevaCompra, precio_usd: e.target.value })}
+                                                        placeholder="Ej: 200"
+                                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-1 focus:ring-green-500 outline-none placeholder-slate-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-green-400 mb-1">Bultos/Docenas en la caja *</label>
+                                                    <input
+                                                        type="number" min="0" step="0.5"
+                                                        value={nuevaCompra.bultos_qty}
+                                                        onChange={e => setNuevaCompra({ ...nuevaCompra, bultos_qty: e.target.value })}
+                                                        placeholder="Ej: 5"
+                                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-1 focus:ring-green-500 outline-none placeholder-slate-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-green-400 mb-1">Tipo de Cambio (Bs/$) *</label>
+                                                    <input
+                                                        type="number" min="0" step="0.01"
+                                                        value={nuevaCompra.tipo_cambio}
+                                                        onChange={e => setNuevaCompra({ ...nuevaCompra, tipo_cambio: e.target.value })}
+                                                        placeholder="Ej: 8.50"
+                                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-1 focus:ring-green-500 outline-none placeholder-slate-500"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-400 mb-1">Precio Venta Ref. (Bs)</label>
+                                                    <input
+                                                        type="number" min="0" step="1"
+                                                        value={nuevaCompra.precio_venta_ref}
+                                                        onChange={e => setNuevaCompra({ ...nuevaCompra, precio_venta_ref: e.target.value })}
+                                                        placeholder="Ej: 500"
+                                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-1 focus:ring-green-500 outline-none placeholder-slate-500"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-400 mb-1">Notas (opcional)</label>
+                                                <input
+                                                    type="text"
+                                                    value={nuevaCompra.notas}
+                                                    onChange={e => setNuevaCompra({ ...nuevaCompra, notas: e.target.value })}
+                                                    placeholder="Ej: Compra China, lote marzo 2026"
+                                                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-1 focus:ring-green-500 outline-none placeholder-slate-500"
+                                                />
+                                            </div>
+
+                                            {/* Preview de cálculo automático */}
+                                            {Number(nuevaCompra.precio_usd) > 0 && Number(nuevaCompra.bultos_qty) > 0 && Number(nuevaCompra.tipo_cambio) > 0 && (
+                                                <div className="bg-slate-900 rounded-lg p-3 border border-green-900/50">
+                                                    <p className="text-[11px] font-bold text-green-400 mb-2 flex items-center gap-1"><TrendingUp size={12} /> Vista previa del cálculo:</p>
+                                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                                        <div className="bg-slate-800 rounded-lg p-2">
+                                                            <p className="text-[10px] text-slate-400">Costo Caja (Bs)</p>
+                                                            <p className="text-sm font-black text-white">{(Number(nuevaCompra.precio_usd) * Number(nuevaCompra.tipo_cambio)).toFixed(2)} Bs</p>
+                                                        </div>
+                                                        <div className="bg-slate-800 rounded-lg p-2">
+                                                            <p className="text-[10px] text-slate-400">Costo x Bulto</p>
+                                                            <p className="text-sm font-black text-orange-400">{((Number(nuevaCompra.precio_usd) * Number(nuevaCompra.tipo_cambio)) / Number(nuevaCompra.bultos_qty)).toFixed(2)} Bs</p>
+                                                        </div>
+                                                        {Number(nuevaCompra.precio_venta_ref) > 0 && (
+                                                            <div className={`rounded-lg p-2 ${((Number(nuevaCompra.precio_venta_ref) - ((Number(nuevaCompra.precio_usd) * Number(nuevaCompra.tipo_cambio)) / Number(nuevaCompra.bultos_qty))) / Number(nuevaCompra.precio_venta_ref) * 100) > 0
+                                                                ? 'bg-green-900/40' : 'bg-red-900/40'
+                                                                }`}>
+                                                                <p className="text-[10px] text-slate-400">Ganancia %</p>
+                                                                <p className={`text-sm font-black ${((Number(nuevaCompra.precio_venta_ref) - ((Number(nuevaCompra.precio_usd) * Number(nuevaCompra.tipo_cambio)) / Number(nuevaCompra.bultos_qty))) / Number(nuevaCompra.precio_venta_ref) * 100) > 0
+                                                                    ? 'text-green-400' : 'text-red-400'
+                                                                    }`}>
+                                                                    {((Number(nuevaCompra.precio_venta_ref) - ((Number(nuevaCompra.precio_usd) * Number(nuevaCompra.tipo_cambio)) / Number(nuevaCompra.bultos_qty))) / Number(nuevaCompra.precio_venta_ref) * 100).toFixed(1)}%
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                disabled={savingCompra}
+                                                onClick={handleGuardarCompra}
+                                                className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-2 transition-colors disabled:opacity-60"
+                                            >
+                                                {savingCompra ? 'Guardando...' : 'Guardar Compra'}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Tabla de historial */}
+                                    {loadingCompras ? (
+                                        <p className="text-slate-400 text-xs text-center py-4">Cargando historial...</p>
+                                    ) : comprasProducto.length === 0 ? (
+                                        <div className="text-center py-6">
+                                            <DollarSign size={28} className="text-slate-600 mx-auto mb-2" />
+                                            <p className="text-slate-500 text-xs">Aún no hay compras registradas para este producto.</p>
+                                            <p className="text-slate-600 text-[11px] mt-1">Haz clic en <strong className="text-green-400">"Registrar Compra"</strong> para agregar la primera.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {comprasProducto.map((c: any) => {
+                                                const costoBulto = Number(c.costo_bs_por_bulto)
+                                                const precioVenta = Number(c.precio_venta_ref)
+                                                const ganancia = precioVenta > 0 ? ((precioVenta - costoBulto) / precioVenta * 100) : null
+                                                return (
+                                                    <div key={c.id} className="bg-slate-800 rounded-xl p-3 border border-slate-700 hover:border-slate-600 transition-colors">
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-500">{new Date(c.fecha).toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                                                {c.notas && <p className="text-xs text-slate-400 italic">{c.notas}</p>}
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleEliminarCompra(c.id)}
+                                                                className="text-slate-600 hover:text-red-400 transition-colors p-1"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                                            <div className="bg-slate-900 rounded-lg p-2 text-center">
+                                                                <p className="text-[10px] text-slate-500">Precio Caja</p>
+                                                                <p className="text-xs font-bold text-white">${Number(c.precio_usd).toLocaleString()} USD</p>
+                                                                <p className="text-[9px] text-slate-500">TC: {c.tipo_cambio} Bs</p>
+                                                            </div>
+                                                            <div className="bg-slate-900 rounded-lg p-2 text-center">
+                                                                <p className="text-[10px] text-slate-500">Caja en Bs</p>
+                                                                <p className="text-xs font-bold text-white">{Number(c.costo_bs_total).toLocaleString()} Bs</p>
+                                                                <p className="text-[9px] text-slate-500">{c.bultos_qty} bultos</p>
+                                                            </div>
+                                                            <div className="bg-orange-900/30 rounded-lg p-2 text-center border border-orange-900/50">
+                                                                <p className="text-[10px] text-orange-400">Costo x Bulto</p>
+                                                                <p className="text-xs font-black text-orange-300">{costoBulto.toLocaleString()} Bs</p>
+                                                            </div>
+                                                            {precioVenta > 0 && ganancia !== null && (
+                                                                <div className={`rounded-lg p-2 text-center border ${ganancia > 0 ? 'bg-green-900/30 border-green-900/50' : 'bg-red-900/30 border-red-900/50'
+                                                                    }`}>
+                                                                    <p className={`text-[10px] ${ganancia > 0 ? 'text-green-400' : 'text-red-400'}`}>Ganancia Est.</p>
+                                                                    <p className={`text-xs font-black ${ganancia > 0 ? 'text-green-300' : 'text-red-300'}`}>{ganancia.toFixed(1)}%</p>
+                                                                    <p className={`text-[9px] ${ganancia > 0 ? 'text-green-500' : 'text-red-500'}`}>Ref: {precioVenta} Bs</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {/* ====== FIN HISTORIAL DE COMPRAS ====== */}
 
                             {/* Footer con botones */}
                             <div className="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-3 md:px-6 md:py-4 flex gap-3 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
@@ -1592,33 +1920,69 @@ export default function ProductosAdmin() {
                                             : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400'
                                         }`}>
                                         <Package size={12} />
-                                        Stock: {(editingProduct as any).stockTotal} Docenas
+                                        Stock Global: {(editingProduct as any).stockTotal} Bultos
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Selector de Talla (Solo si tiene variantes) */}
+                            {((editingProduct as any).variantes_tallas && (editingProduct as any).variantes_tallas.length > 0) && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex justify-between">
+                                        Seleccionar Talla a Vender
+                                    </label>
+                                    <select
+                                        value={saleData.variante_index}
+                                        onChange={(e) => {
+                                            setSaleData({ ...saleData, variante_index: parseInt(e.target.value) })
+                                        }}
+                                        className="w-full text-left px-3 py-3 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 rounded-lg focus:ring-2 focus:ring-green-500 font-bold"
+                                        required
+                                    >
+                                        <option value="-1" disabled>Selecciona la talla vendida...</option>
+                                        {(editingProduct as any).variantes_tallas.map((vt: any, idx: number) => (
+                                            <option
+                                                key={idx}
+                                                value={idx}
+                                                disabled={Number(vt.stock_bultos) <= 0}
+                                            >
+                                                Talla: {vt.rango} ({vt.pares_por_bulto} pares/bulto) — Quedan: {vt.stock_bultos} bultos
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div>
-                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Cantidad a Vender (Docenas)</label>
+                                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Cantidad a Vender (Bultos)</label>
                                 <div className="flex items-center gap-3">
                                     <button
                                         type="button"
-                                        onClick={() => setSaleData({ ...saleData, cantidad: Math.max(0.5, saleData.cantidad - 0.5) })}
+                                        onClick={() => setSaleData({ ...saleData, cantidad: Math.max(0.5, Number(saleData.cantidad) - 0.5) })}
                                         className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors"
                                     >
                                         -
                                     </button>
                                     <input
                                         type="number"
-                                        min="0.5"
+                                        min="0"
                                         step="0.5"
-                                        max={(editingProduct as any).stockTotal}
+                                        max={saleData.variante_index >= 0
+                                            ? Number((editingProduct as any).variantes_tallas[saleData.variante_index]?.stock_bultos || 0)
+                                            : (editingProduct as any).stockTotal}
                                         value={saleData.cantidad}
-                                        onChange={(e) => setSaleData({ ...saleData, cantidad: parseFloat(e.target.value) || 0.5 })}
+                                        onChange={(e) => setSaleData({ ...saleData, cantidad: e.target.value })}
                                         className="flex-1 h-10 text-center font-bold text-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                                     />
                                     <button
                                         type="button"
-                                        onClick={() => setSaleData({ ...saleData, cantidad: Math.min((editingProduct as any).stockTotal, saleData.cantidad + 0.5) })}
+                                        onClick={() => setSaleData({
+                                            ...saleData, cantidad: Math.min(
+                                                saleData.variante_index >= 0
+                                                    ? Number((editingProduct as any).variantes_tallas[saleData.variante_index]?.stock_bultos || 0)
+                                                    : (editingProduct as any).stockTotal,
+                                                Number(saleData.cantidad) + 0.5)
+                                        })}
                                         className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold transition-colors"
                                     >
                                         +
@@ -1627,19 +1991,20 @@ export default function ProductosAdmin() {
                                 {/* Accesos rápidos */}
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     {[
-                                        { label: '½ Docena', sub: '6 pares', val: 0.5 },
-                                        { label: '1 Docena', sub: '12 pares', val: 1 },
-                                        { label: '2 Docenas', sub: '24 pares', val: 2 },
-                                        { label: '3 Docenas', sub: '36 pares', val: 3 },
+                                        { label: '½ Bulto', sub: 'Mitad', val: 0.5 },
+                                        { label: '1 Bulto', sub: 'Completo', val: 1 },
+                                        { label: '2 Bultos', sub: 'Cajas', val: 2 },
                                     ].map(({ label, sub, val }) => (
                                         <button
                                             key={val}
                                             type="button"
                                             onClick={() => setSaleData({ ...saleData, cantidad: val })}
-                                            disabled={val > (editingProduct as any).stockTotal}
+                                            disabled={val > (saleData.variante_index >= 0
+                                                ? Number((editingProduct as any).variantes_tallas[saleData.variante_index]?.stock_bultos || 0)
+                                                : (editingProduct as any).stockTotal)}
                                             className={`flex-1 text-center py-1.5 rounded-lg border transition-colors text-xs disabled:opacity-30 disabled:cursor-not-allowed ${saleData.cantidad === val
-                                                    ? 'bg-green-600 border-green-600 text-white font-bold'
-                                                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                ? 'bg-green-600 border-green-600 text-white font-bold'
+                                                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                                 }`}
                                         >
                                             <span className="font-bold block">{label}</span>
@@ -1657,8 +2022,8 @@ export default function ProductosAdmin() {
                                         type="number"
                                         min="0"
                                         step="0.01"
-                                        value={saleData.precio_total === 0 ? '' : saleData.precio_total}
-                                        onChange={(e) => setSaleData({ ...saleData, precio_total: parseFloat(e.target.value) || 0 })}
+                                        value={saleData.precio_total}
+                                        onChange={(e) => setSaleData({ ...saleData, precio_total: e.target.value })}
                                         className="w-full pl-8 pr-4 h-12 text-xl font-bold text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-green-500 outline-none transition-all"
                                         placeholder="0.00"
                                     />
@@ -1667,7 +2032,7 @@ export default function ProductosAdmin() {
                                     <div className="mt-2 flex justify-between text-xs px-1">
                                         <span className="text-slate-500">Costo Ref. Total:</span>
                                         <span className="font-mono text-slate-700 dark:text-slate-300">
-                                            {((editingProduct as any).precio_costo * saleData.cantidad).toFixed(2)} Bs
+                                            {((editingProduct as any).precio_costo * Number(saleData.cantidad)).toFixed(2)} Bs
                                         </span>
                                     </div>
                                 )}
@@ -1686,7 +2051,11 @@ export default function ProductosAdmin() {
 
                             <button
                                 type="submit"
-                                disabled={isSubmitting || saleData.cantidad > (editingProduct as any).stockTotal || saleData.cantidad <= 0}
+                                disabled={isSubmitting || Number(saleData.cantidad) <= 0 || (
+                                    saleData.variante_index >= 0 && Number(saleData.cantidad) > Number((editingProduct as any).variantes_tallas[saleData.variante_index]?.stock_bultos)
+                                ) || (
+                                        saleData.variante_index < 0 && Number(saleData.cantidad) > (editingProduct as any).stockTotal
+                                    )}
                                 className="w-full py-4 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-lg hover:shadow-green-500/25 transition-all text-base flex items-center justify-center gap-2 mt-2"
                             >
                                 {isSubmitting ? 'Registrando...' : 'Confirmar Venta'}

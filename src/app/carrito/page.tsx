@@ -87,12 +87,12 @@ export default function CarritoPage() {
             mensaje += `--------------------------------\n\n`
 
             items.forEach((item, index) => {
-                const tipoPaquete = item.cantidad_pares === 6 ? 'Media Docena' : 'Docena'
+                const tipoPaquete = `${item.cantidad_pares} pares` // Texto genérico ahora que la cantidad varía
                 mensaje += `👟 *MODELO ${index + 1}: ${item.nombre.toUpperCase()}*\n`
                 if (item.marca) mensaje += `🏷️ Marca: ${item.marca}\n`
                 mensaje += `📏 Curva: ${item.tipo_curva}\n`
-                if (item.color) mensaje += `🎨 Color: ${item.color}\n`
-                mensaje += `📦 Cantidad: ${item.cantidad_pares} pares (${tipoPaquete})\n`
+                mensaje += `🎨 Color: ${item.color || 'Surtido'}\n`
+                mensaje += `📦 Cantidad: ${tipoPaquete} (1 caja/bulto)\n`
                 const productUrl = `${window.location.origin}/producto/${item.id_producto}`
                 mensaje += `🔗 Ver Modelo: ${productUrl}\n`
                 mensaje += `\n`
@@ -157,7 +157,6 @@ export default function CarritoPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
                     {/* Lista de Items */}
                     <div className="lg:col-span-2 space-y-4">
                         {items.map((item, index) => (

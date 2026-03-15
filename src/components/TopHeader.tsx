@@ -88,8 +88,20 @@ export default function TopHeader() {
     }, [])
 
     const checkUser = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
+        try {
+            const { data: { user }, error } = await supabase.auth.getUser()
+            if (error) {
+                // Si el token es inválido o expiró, limpia la sesión local (previene bugs visuales)
+                if (error.message.includes('Refresh Token')) {
+                    await supabase.auth.signOut().catch(() => {})
+                }
+                setUser(null)
+                return
+            }
+            setUser(user)
+        } catch (err) {
+            setUser(null)
+        }
     }
 
     const handleLogout = async () => {
