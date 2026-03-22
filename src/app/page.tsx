@@ -221,19 +221,19 @@ export default async function Home() {
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-black dark:text-white uppercase tracking-tight">Catálogo</h2>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 md:gap-3">
             <Link href="/catalogo">
-              <button className="px-4 py-2 rounded-none border-b-2 border-brand-orange text-brand-orange font-bold text-sm">
+              <button className="px-5 py-2 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all">
                 Todo
               </button>
             </Link>
             <Link href="/catalogo/adulto">
-              <button className="px-4 py-2 rounded-none border-b-2 border-transparent hover:border-black text-gray-500 hover:text-black transition-all text-sm font-medium">
+              <button className="px-5 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium text-sm shadow-sm hover:border-slate-400 dark:hover:border-slate-500 hover:-translate-y-0.5 transition-all">
                 Adulto
               </button>
             </Link>
             <Link href="/catalogo/niño">
-              <button className="px-4 py-2 rounded-none border-b-2 border-transparent hover:border-black text-gray-500 hover:text-black transition-all text-sm font-medium">
+              <button className="px-5 py-2 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-medium text-sm shadow-sm hover:border-slate-400 dark:hover:border-slate-500 hover:-translate-y-0.5 transition-all">
                 Niño
               </button>
             </Link>
