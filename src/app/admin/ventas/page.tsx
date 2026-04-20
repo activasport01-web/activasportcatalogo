@@ -63,7 +63,7 @@ export default function VentasPage() {
     const agregarProducto = (p: Producto, varianteIdx?: number, variant?: any) => {
         // Generar un ID temporal para la línea (Si tiene variante la usamos como key extra)
         const lineKey = varianteIdx !== undefined ? `${p.id}-${varianteIdx}` : p.id
-        const existeIdx = lineas.findIndex(l => 
+        const existeIdx = lineas.findIndex(l =>
             l.producto_id === p.id && l.variante_idx === varianteIdx
         )
 
@@ -116,7 +116,7 @@ export default function VentasPage() {
 
                 // Texto del detalle (incluye talla si es que hay)
                 const tallaInfo = linea.talla_rango ? ` (Talla: ${linea.talla_rango})` : ''
-                
+
                 // Registrar movimiento
                 await supabase.from('movimientos_kardex').insert({
                     producto_id: linea.producto_id,
@@ -268,8 +268,8 @@ export default function VentasPage() {
         doc.setFont('helvetica', 'bold')
         doc.text('ACTIVA SPORT', 105, pieY, { align: 'center' })
         doc.setFont('helvetica', 'normal')
-        doc.text('Importación y distribución de calzado deportivo · Cochabamba, Bolivia', 105, pieY + 5, { align: 'center' })
-        doc.text(`Tel: +591 70000000  ·  activasport@gmail.com  ·  Emitido: ${fechaHora}`, 105, pieY + 10, { align: 'center' })
+        doc.text('Importación y distribución de calzado deportivo · Santa Cruz, Bolivia', 105, pieY + 5, { align: 'center' })
+        doc.text(`Tel: +591 71319442  ·  activasport01@gmail.com  ·  Emitido: ${fechaHora}`, 105, pieY + 10, { align: 'center' })
         doc.setFontSize(7)
         doc.setTextColor(200, 200, 200)
         doc.text('Este documento es una nota de venta interna — No válida como factura fiscal', 105, pieY + 16, { align: 'center' })
@@ -370,7 +370,7 @@ export default function VentasPage() {
                                         <p className="text-center py-4 text-slate-400 text-sm">Sin resultados</p>
                                     ) : filteredProductos.map(p => {
                                         const hasVariants = p.variantes_tallas && p.variantes_tallas.length > 0;
-                                        
+
                                         if (!hasVariants) {
                                             return (
                                                 <button

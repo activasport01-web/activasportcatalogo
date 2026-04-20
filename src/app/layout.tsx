@@ -13,14 +13,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Activa Sport | Catálogo Mayorista",
     description: "Descubre nuestra colección de zapatos. Precios especiales para mayoristas.",
-    url: 'https://activasport.com', // Reemplazar con tu dominio real cuando lo tengas
+    url: 'https://activasportbo.com', // Reemplazar con tu dominio real cuando lo tengas
     siteName: 'Activa Sport',
     images: [
       {
-        url: 'https://images.unsplash.com/photo-1556048219-18ae6fd33138?q=80&w=1200&h=630&fit=crop', // Imagen default atractiva
+        url: 'https://activasportbo.com/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'Catálogo Activa Sport',
+        alt: 'Activa Sport — Catálogo Mayorista de Calzado Bolivia',
       },
     ],
     locale: 'es_BO',
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "Activa Sport",
     description: "Calzados de calidad al mejor precio. Envíos a toda Bolivia.",
-    images: ['https://images.unsplash.com/photo-1556048219-18ae6fd33138?q=80&w=1200&h=630&fit=crop'],
+    images: ['https://activasportbo.com/og-image.png'],
   },
   icons: {
     icon: '/activa_logo_exacto.svg',
