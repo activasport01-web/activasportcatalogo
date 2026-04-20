@@ -119,7 +119,7 @@ export default function VentasPage() {
                 
                 // Registrar movimiento
                 await supabase.from('movimientos_kardex').insert({
-                    zapato_id: linea.producto_id,
+                    producto_id: linea.producto_id,
                     tipo: 'VENTA',
                     cantidad: linea.cantidad,
                     precio_total: precioTotal,
