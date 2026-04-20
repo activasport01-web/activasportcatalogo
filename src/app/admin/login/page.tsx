@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
 
-export default function AdminLogin() {
+// Componente interno separado porque useSearchParams() requiere Suspense en Next.js
+function LoginForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const [email, setEmail] = useState('')
@@ -42,7 +43,6 @@ export default function AdminLogin() {
         <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden bg-slate-950">
             {/* Background Decoration */}
             <div className="absolute inset-0 z-0">
-                {/* Gradient Mesh */}
                 <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-indigo-500/20 rounded-full blur-[100px] animate-pulse-slow"></div>
                 <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] bg-brand-orange/20 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] mix-blend-overlay"></div>
@@ -55,7 +55,6 @@ export default function AdminLogin() {
                     {/* Header: Logo & Title */}
                     <div className="flex flex-col items-center text-center space-y-6 mb-10">
                         <div className="relative w-48 h-16 transform transition-transform hover:scale-105 duration-500">
-                            {/* Logo - Removed invert so it shows original colors. Added drop-shadow for contrast */}
                             <Image
                                 src="/logo.png"
                                 alt="ActivaSport Logo"
@@ -161,5 +160,14 @@ export default function AdminLogin() {
                 </p>
             </div>
         </div>
+    )
+}
+
+// Suspense es obligatorio en Next.js cuando se usa useSearchParams()
+export default function AdminLogin() {
+    return (
+        <Suspense>
+            <LoginForm />
+        </Suspense>
     )
 }
