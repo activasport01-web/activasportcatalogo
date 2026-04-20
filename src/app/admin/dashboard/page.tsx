@@ -146,7 +146,12 @@ export default function AdminDashboard() {
         setStockBajo(data || [])
     }
 
-    const handleLogout = async () => { await supabase.auth.signOut(); router.push('/admin/login') }
+    const handleLogout = async () => {
+        await supabase.auth.signOut()
+        // Borrar la cookie de sesión que el middleware usa para proteger /admin/*
+        document.cookie = 'admin_session=; path=/; max-age=0'
+        router.push('/admin/login')
+    }
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50">

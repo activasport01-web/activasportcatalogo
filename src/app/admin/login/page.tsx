@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
 
 export default function AdminLogin() {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
@@ -27,7 +28,13 @@ export default function AdminLogin() {
             alert('Error: ' + error.message)
             setLoading(false)
         } else {
-            router.push('/admin/dashboard')
+            // Poner cookie de sesión para que el middleware pueda proteger /admin/*
+            // Dura 8 horas (28800 segundos), que es una jornada laboral típica
+            document.cookie = 'admin_session=1; path=/; SameSite=Strict; max-age=28800'
+
+            // Si el middleware guardó a dónde iba el usuario, volver ahí
+            const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
+            router.push(redirectTo)
         }
     }
 
