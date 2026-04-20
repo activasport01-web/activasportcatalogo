@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# binarios locales (no deben subirse al repo)
+cloudflared.exe
+*.exe
