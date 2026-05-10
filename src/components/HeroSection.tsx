@@ -1,15 +1,16 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronRight, ChevronLeft, ArrowRight } from 'lucide-react'
+import { ChevronRight, ChevronLeft, MessageCircle } from 'lucide-react'
 import { proxyImageUrl } from '@/lib/supabase'
 
 interface Slide {
     id: string;
     title: string;
+    subtitle?: string;
     description: string;
-    image_url: string;
-    product_link: string;
+    image_url: string | null;
+    link: string;
     tag?: string;
 }
 
@@ -23,113 +24,138 @@ export default function HeroSection({ slides }: HeroProps) {
 
     // Si no hay slides, mostrar fallback
     if (!slides || slides.length === 0) return (
-        <div className="py-20 flex justify-center text-gray-400 dark:text-slate-500 bg-gray-100 dark:bg-slate-900">
-            <p className="text-sm">Portada no configurada.</p>
+        <div className="h-[60vh] flex items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-900">
+            <p className="text-sm">Portada no configurada. Ve a Admin → Portada.</p>
         </div>
     );
 
-    // Auto-advance
+    // Auto-advance cada 6 segundos
     useEffect(() => {
-        if (isHovered) return
+        if (isHovered || slides.length <= 1) return
         const interval = setInterval(() => {
             setCurrent((prev) => (prev + 1) % slides.length)
-        }, 5000)
+        }, 6000)
         return () => clearInterval(interval)
-    }, [slides.length, isHovered])
+    }, [slides.length, isHovered, current])
 
     const nextSlide = () => setCurrent((prev) => (prev + 1) % slides.length)
     const prevSlide = () => setCurrent((prev) => (prev - 1 + slides.length) % slides.length)
 
     const activeSlide = slides[current]
 
+    // WhatsApp
+    const handleWhatsApp = () => {
+        const message = `Hola Activa Sport 👟\nVi "${activeSlide.title}" en su catálogo web.\n¿Me podrían dar más información?`
+        window.open(`https://wa.me/59163448209?text=${encodeURIComponent(message)}`, '_blank')
+    }
+
     return (
         <section
-            className="relative w-full h-[65vh] min-h-[450px] md:h-[550px] overflow-hidden bg-slate-100 dark:bg-slate-950 group"
+            className="relative w-full h-[70vh] md:h-[85vh] min-h-[480px] max-h-[900px] overflow-hidden bg-slate-950"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* BACKGROUND / IMAGE LAYER */}
+            {/* ── SLIDES DE FONDO ── */}
             {slides.map((slide, index) => (
                 <div
                     key={slide.id}
-                    className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${index === current ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+                    className={`absolute inset-0 transition-all duration-[1200ms] ease-in-out ${
+                        index === current
+                            ? 'opacity-100 scale-100'
+                            : 'opacity-0 scale-[1.05]'
+                    }`}
                 >
-                    {/* Fondo base oscuro/color para evitar espacios blancos feos si la imagen no carga o es transparente */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900" />
-
-                    <img
-                        src={proxyImageUrl(slide.image_url)}
-                        alt={slide.title}
-                        className="absolute inset-0 w-full h-full object-cover md:object-contain md:scale-90"
-                        style={{ objectPosition: 'center' }}
-                    />
-
-                    {/* Overlay Gradiente SUPERIOR e INFERIOR para leer textos (Estilo Instagram/TikTok) */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/80 z-20" />
+                    {slide.image_url ? (
+                        <img
+                            src={proxyImageUrl(slide.image_url)}
+                            alt={slide.title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950" />
+                    )}
                 </div>
             ))}
 
-            {/* CONTENT LAYER (OVERLAY) */}
-            <div className="absolute inset-0 z-30 flex flex-col justify-end pb-12 px-6 md:justify-center md:items-start md:px-16 md:pb-0 pointer-events-none">
-                <div className="max-w-xl text-center md:text-left mx-auto md:mx-0 pointer-events-auto">
+            {/* ── OVERLAY GRADIENTE (estilo Nike: más oscuro abajo) ── */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5 z-10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20 z-10" />
 
-                    {/* Tag pequeña */}
-                    {activeSlide.tag && (
-                        <span className="inline-block text-[10px] font-bold tracking-[0.2em] uppercase text-white/90 mb-2 border border-white/20 px-2 py-1 rounded bg-black/20 backdrop-blur-sm">
-                            {activeSlide.tag}
-                        </span>
-                    )}
+            {/* ── CONTENIDO CENTRAL (estilo Nike: centrado abajo) ── */}
+            <div className="absolute inset-0 z-20 flex flex-col justify-end items-center text-center px-6 pb-20 md:pb-24">
 
-                    {/* Título Principal */}
-                    <h1 className="text-3xl md:text-5xl font-black text-white leading-tight drop-shadow-xl mb-2 text-balance">
-                        {activeSlide.title}
-                    </h1>
+                {/* Tag */}
+                {activeSlide.tag && (
+                    <span className="text-[11px] md:text-xs font-medium tracking-[0.25em] uppercase text-white/70 mb-3 transition-all duration-500">
+                        {activeSlide.tag}
+                    </span>
+                )}
 
-                    {/* Descripción Corta */}
-                    <p className="text-slate-200 text-sm md:text-lg font-medium mb-6 line-clamp-2 md:line-clamp-3 drop-shadow-md">
+                {/* Título Principal */}
+                <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white leading-[0.95] mb-3 md:mb-4 max-w-4xl text-balance drop-shadow-2xl transition-all duration-500">
+                    {activeSlide.title}
+                </h1>
+
+                {/* Descripción */}
+                {activeSlide.description && (
+                    <p className="text-white/60 text-xs sm:text-sm md:text-base font-medium mb-6 md:mb-8 max-w-lg line-clamp-2 transition-all duration-500">
                         {activeSlide.description}
                     </p>
+                )}
 
-                    {/* Botones de Acción */}
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
-                        <Link href={activeSlide.product_link} className="w-full sm:w-auto">
-                            <button className="w-full sm:w-auto bg-brand-orange hover:bg-orange-600 text-white text-sm font-bold py-3 px-8 rounded shadow-lg shadow-orange-900/50 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                                VER OFERTA
-                                <ArrowRight size={16} />
-                            </button>
-                        </Link>
-                    </div>
+                {/* Botones CTA (estilo Nike: pill buttons) */}
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <Link href={activeSlide.link} className="w-full sm:w-auto">
+                        <button className="w-full sm:w-auto bg-white text-black text-xs md:text-sm font-bold py-3 md:py-3.5 px-8 md:px-10 rounded-full hover:bg-slate-200 transition-all transform active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.15)]">
+                            Ver Catálogo
+                        </button>
+                    </Link>
+                    <button
+                        onClick={handleWhatsApp}
+                        className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white text-xs md:text-sm font-bold py-3 md:py-3.5 px-8 md:px-10 rounded-full transition-all transform active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                    >
+                        <MessageCircle size={16} />
+                        Consultar
+                    </button>
                 </div>
             </div>
 
-            {/* CONTROLES (Flechas Minimalistas) */}
-            <button
-                onClick={(e) => { e.stopPropagation(); prevSlide() }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white hover:bg-black/30 rounded-full transition-all z-40"
-            >
-                <ChevronLeft size={32} />
-            </button>
-
-            <button
-                onClick={(e) => { e.stopPropagation(); nextSlide() }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white hover:bg-black/30 rounded-full transition-all z-40"
-            >
-                <ChevronRight size={32} />
-            </button>
-
-            {/* Indicadores (Puntos) */}
-            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-40">
-                {slides.map((_, idx) => (
+            {/* ── FLECHAS DE NAVEGACIÓN ── */}
+            {slides.length > 1 && (
+                <>
                     <button
-                        key={idx}
-                        onClick={() => setCurrent(idx)}
-                        className={`transition-all duration-300 rounded-full shadow-sm ${idx === current
-                            ? 'bg-white w-6 h-1.5'
-                            : 'bg-white/40 w-1.5 h-1.5 hover:bg-white/70'
+                        onClick={(e) => { e.stopPropagation(); prevSlide() }}
+                        className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-30 p-2 text-white/30 hover:text-white/80 transition-all"
+                        aria-label="Anterior"
+                    >
+                        <ChevronLeft size={28} strokeWidth={1.5} className="md:w-9 md:h-9" />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); nextSlide() }}
+                        className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-30 p-2 text-white/30 hover:text-white/80 transition-all"
+                        aria-label="Siguiente"
+                    >
+                        <ChevronRight size={28} strokeWidth={1.5} className="md:w-9 md:h-9" />
+                    </button>
+                </>
+            )}
+
+            {/* ── INDICADORES / DOTS (estilo Nike: barras pequeñas) ── */}
+            {slides.length > 1 && (
+                <div className="absolute bottom-8 md:bottom-10 left-0 right-0 flex justify-center gap-2 z-30">
+                    {slides.map((_, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setCurrent(idx)}
+                            className={`transition-all duration-500 rounded-full h-[3px] ${
+                                idx === current
+                                    ? 'bg-white w-8'
+                                    : 'bg-white/30 w-4 hover:bg-white/60'
                             }`}
-                    />
-                ))}
-            </div>
+                        />
+                    ))}
+                </div>
+            )}
         </section>
     )
 }

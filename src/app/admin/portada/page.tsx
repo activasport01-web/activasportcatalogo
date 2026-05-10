@@ -8,6 +8,7 @@ import { ArrowLeft, Upload, Eye, EyeOff, Image as ImageIcon, Sparkles, Home, Sav
 export default function PortadaAdmin() {
     const router = useRouter()
     const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
     const [portada, setPortada] = useState<any>(null)
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [formData, setFormData] = useState({
@@ -33,7 +34,9 @@ export default function PortadaAdmin() {
         const { data, error } = await supabase
             .from('portada_destacada')
             .select('*')
-            .single()
+            .order('id', { ascending: true })
+            .limit(1)
+            .maybeSingle()
 
         if (data) {
             setPortada(data)
@@ -42,68 +45,50 @@ export default function PortadaAdmin() {
                 descripcion: data.descripcion || '',
                 activo: data.activo ?? true
             })
+        } else {
+            setPortada(null)
         }
         setLoading(false)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        setSaving(true)
 
         let url_imagen = portada?.url_imagen || ''
 
-        // Subir nueva imagen si se seleccionó
         if (imageFile) {
-            const fileName = `portada_${Date.now()}_${imageFile.name}`
+            const fileName = `portada_${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
             const { error: uploadError } = await supabase.storage
                 .from('imagenes-zapatos')
-                .upload(fileName, imageFile)
+                .upload(fileName, imageFile, { cacheControl: '3600', upsert: false })
 
             if (!uploadError) {
-                const { data } = supabase.storage
-                    .from('imagenes-zapatos')
-                    .getPublicUrl(fileName)
+                const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
                 url_imagen = data.publicUrl
             } else {
-                alert('Error al subir la imagen: ' + uploadError.message)
+                alert('❌ Error al subir imagen:\n' + uploadError.message)
+                setSaving(false)
                 return
             }
         }
 
-        const portadaData = {
-            titulo: formData.titulo,
-            descripcion: formData.descripcion,
-            url_imagen,
-            activo: formData.activo
+        if (!url_imagen) {
+            alert('⚠️ Debes seleccionar una imagen para la portada.')
+            setSaving(false)
+            return
         }
+
+        const portadaData = { titulo: formData.titulo, descripcion: formData.descripcion, url_imagen, activo: formData.activo }
 
         if (portada) {
-            // Actualizar
-            const { error } = await supabase
-                .from('portada_destacada')
-                .update(portadaData)
-                .eq('id', portada.id)
-
-            if (error) {
-                alert('Error: ' + error.message)
-            } else {
-
-                loadPortada()
-                setImageFile(null)
-            }
+            const { error } = await supabase.from('portada_destacada').update(portadaData).eq('id', portada.id)
+            if (error) { alert('❌ Error: ' + error.message) } else { alert('✅ Portada actualizada.'); loadPortada(); setImageFile(null) }
         } else {
-            // Crear
-            const { error } = await supabase
-                .from('portada_destacada')
-                .insert([portadaData])
-
-            if (error) {
-                alert('Error: ' + error.message)
-            } else {
-
-                loadPortada()
-                setImageFile(null)
-            }
+            const { error } = await supabase.from('portada_destacada').insert([portadaData])
+            if (error) { alert('❌ Error: ' + error.message) } else { alert('✅ Portada creada.'); loadPortada(); setImageFile(null) }
         }
+        setSaving(false)
     }
 
     const toggleActivo = async () => {
@@ -179,9 +164,9 @@ export default function PortadaAdmin() {
                             Vista Previa en Vivo
                         </h2>
 
-                        {/* Preview Card */}
-                        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-200 relative group">
-                            <div className="aspect-[16/9] bg-slate-100 relative overflow-hidden">
+                        {/* Preview Card — Estilo Nike */}
+                        <div className="bg-slate-950 rounded-3xl shadow-xl overflow-hidden border border-slate-800 relative group">
+                            <div className="aspect-[16/9] bg-slate-900 relative overflow-hidden">
                                 {portada?.url_imagen || imageFile ? (
                                     <img
                                         src={imageFile ? URL.createObjectURL(imageFile) : portada.url_imagen}
@@ -189,44 +174,35 @@ export default function PortadaAdmin() {
                                         className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700"
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800">
+                                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900">
                                         <ImageIcon size={48} className="mb-2" />
-                                        <p>Sin imagen seleccionada</p>
+                                        <p className="text-sm">Sube una imagen panorámica (1920×900)</p>
                                     </div>
                                 )}
-
-                                <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent flex items-center">
-                                    <div className="p-8 md:p-12 text-white max-w-xl">
-                                        <div className="inline-block px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full mb-4 shadow-lg shadow-orange-500/30 tracking-wider">
-                                            {portada?.activo ? 'DESTACADO' : 'INACTIVO'}
-                                        </div>
-                                        <h3 className="text-3xl md:text-4xl font-bold mb-4 leading-tight">
-                                            {formData.titulo || 'Tu Título Aquí'}
-                                        </h3>
-                                        <p className="text-lg md:text-xl text-white/90 mb-8 font-light leading-relaxed">
-                                            {formData.descripcion || 'Tu descripción aparecerá aquí...'}
-                                        </p>
-                                        <div className="flex gap-4">
-                                            <button className="bg-white text-slate-900 font-bold px-8 py-3 rounded-full hover:bg-slate-100 transition shadow-lg">
-                                                Comprar Ahora
-                                            </button>
-                                        </div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5" />
+                                <div className="absolute inset-0 flex flex-col justify-end items-center text-center p-6 pb-8">
+                                    <span className="text-[9px] font-medium tracking-[0.25em] uppercase text-white/60 mb-2">⭐ {portada?.activo ? 'DESTACADO' : 'INACTIVO'}</span>
+                                    <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mb-2 drop-shadow-xl">{formData.titulo || 'Tu Título Aquí'}</h3>
+                                    <p className="text-sm text-white/60 mb-4 max-w-sm">{formData.descripcion || 'Tu descripción aparecerá aquí...'}</p>
+                                    <div className="flex gap-3">
+                                        <button className="bg-white text-black font-bold px-6 py-2 rounded-full text-xs shadow-lg">Ver Catálogo</button>
+                                        <button className="bg-green-500 text-white font-bold px-6 py-2 rounded-full text-xs shadow-lg">💬 Consultar</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Info Box */}
+                        {/* Tips de Imagen */}
                         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-6 flex gap-4 items-start">
-                            <div className="bg-blue-100 dark:bg-blue-900/40 p-2 rounded-lg text-blue-600 dark:text-blue-400">
-                                <Sparkles size={24} />
-                            </div>
+                            <div className="bg-blue-100 dark:bg-blue-900/40 p-2 rounded-lg text-blue-600 dark:text-blue-400 shrink-0"><Sparkles size={24} /></div>
                             <div>
-                                <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2">Tips para una portada increíble</h3>
+                                <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2">📐 Tips para una portada estilo Nike</h3>
                                 <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-2 list-disc list-inside">
-                                    <li>Usa imágenes de alta resolución (min. 1920x800px)</li>
-                                    <li>Mantén el título corto y directo (max. 40 caracteres)</li>
-                                    <li>La imagen debe tener el foco a la derecha para no tapar el texto</li>
+                                    <li><strong>Resolución:</strong> Mínimo 1920×900px (panorámica)</li>
+                                    <li><strong>Proporción:</strong> 21:9 o 16:9 — <span className="text-red-500 font-bold">NUNCA 1:1 cuadrada</span></li>
+                                    <li><strong>Peso:</strong> Máximo 2MB (JPG o WebP)</li>
+                                    <li><strong>Composición:</strong> Producto centrado con espacio para texto</li>
+                                    <li><strong>Fondo:</strong> Oscuro o con gradiente — evitar blancos</li>
                                 </ul>
                             </div>
                         </div>
@@ -326,10 +302,11 @@ export default function PortadaAdmin() {
 
                             <button
                                 type="submit"
-                                className="w-full py-4 bg-slate-900 dark:bg-orange-500 dark:hover:bg-orange-600 hover:bg-black text-white rounded-xl font-bold shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all flex items-center justify-center gap-3"
+                                disabled={saving}
+                                className={`w-full py-4 rounded-xl font-bold shadow-xl transition-all flex items-center justify-center gap-3 ${saving ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 dark:bg-orange-500 dark:hover:bg-orange-600 hover:bg-black hover:shadow-2xl hover:-translate-y-1'} text-white`}
                             >
-                                <Save size={20} />
-                                {portada ? 'Guardar Cambios' : 'Crear Portada'}
+                                {saving ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> : <Save size={20} />}
+                                {saving ? 'Guardando...' : portada ? 'Guardar Cambios' : 'Crear Portada'}
                             </button>
                         </form>
                     </div>

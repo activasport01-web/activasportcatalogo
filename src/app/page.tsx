@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { supabase, proxyImageUrl } from '@/lib/supabase'
 import HeroSection from '@/components/HeroSection'
-import PromoCarousel from '@/components/PromoCarousel'
 import ProductCard from '@/components/ProductCard'
 import BrandsCarousel from '@/components/BrandsCarousel'
 import { Sparkles, TrendingUp, Award, ArrowRight } from 'lucide-react'
@@ -10,16 +9,14 @@ import { Sparkles, TrendingUp, Award, ArrowRight } from 'lucide-react'
 export const revalidate = 0;
 
 export default async function Home() {
-  // 1. Obtener Portada Destacada (Para el Slide Principal)
-  const { data: portada } = await supabase
+  // 1. Obtener TODAS las Portadas activas (carrusel de portadas)
+  const { data: portadas } = await supabase
     .from('portada_destacada')
     .select('*')
     .eq('activo', true)
-    .single()
+    .order('id', { ascending: true })
 
-  // 2. Obtener Zapatos Disponibles (Para Slides de Novedades/Tendencias)
   // 2. Obtener Zapatos Disponibles (Con Prioridad a Marca "Activa")
-  // Estrategia Doble Consulta: Traer 4 de Activa + 8 Generales, luego combinar.
   const activaQuery = supabase
     .from('zapatos')
     .select('*')
@@ -40,77 +37,43 @@ export default async function Home() {
     generalQuery
   ])
 
-  // Combinar: Primero Activa, luego el resto (sin duplicados)
   const combinedZapatos = [
     ...(activaProducts || []),
     ...(generalProducts || [])
   ]
 
-  // Deduplicar por ID
   const uniqueZapatosRaw = combinedZapatos.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
-
-  // Limitar total a 12 para la grilla
   const zapatos = uniqueZapatosRaw.slice(0, 12)
 
-  // Preparar datos para el Carrusel Principal (HeroSection)
-  // SUGERENCIA DEL USUARIO: Mostrar solo Novedades, Tendencias y Branding aquí.
-  const slides = [];
+  // ═══════════════════════════════════════════════════════════════
+  // PREPARAR SLIDES PARA EL HERO (Solo Portadas del Admin)
+  // 1 portada = sin carrusel  |  2-3+ portadas = carrusel
+  // ═══════════════════════════════════════════════════════════════
+  const slides: { id: string; title: string; subtitle?: string; description: string; image_url: string | null; link: string; tag?: string }[] = [];
 
-  // SLIDE 1: Portada Principal (Configurable desde Admin > Portada)
-  // Ideal para: Mensaje Institucional, Bienvenida Mayorista, o Aviso Importante.
-  if (portada) {
-    slides.push({
-      id: 'portada-main',
-      title: portada.titulo,
-      description: portada.descripcion,
-      image_url: portada.url_imagen,
-      product_link: '/catalogo', // Link general al catálogo
-      tag: '⭐ DESTACADO'
-    });
-  }
-
-  // SLIDE 2: Él Último Ingreso (Automático)
-  // Ideal para: Mostrar que la tienda se actualiza constantemente.
-  if (zapatos && zapatos.length > 0) {
-    const nuevo = zapatos[0];
-    slides.push({
-      id: `new-${nuevo.id}`,
-      title: '¡Acaba de Llegar!',
-      description: `Nuevo ${nuevo.nombre} disponible en curvas completas.`,
-      image_url: nuevo.url_imagen,
-      product_link: `/producto/${nuevo.id}`,
-      tag: '✨ NUEVO INGRESO'
-    });
-  }
-
-  // SLIDE 3: Tendencia / Popular (Lógica "Nike" o "TN" o el segundo más nuevo)
-  // Ideal para: Mostrar productos de alta demanda.
-  if (zapatos && zapatos.length > 1) {
-    const popular = zapatos.find((z: any) =>
-      (z.nombre.toLowerCase().includes('activa') || (z.marca && z.marca.toLowerCase().includes('activa'))) && z.id !== zapatos[0].id
-    ) || zapatos[1];
-
-    if (popular) {
+  // SLIDES: Todas las portadas activas (Admin > Portada Web)
+  if (portadas && portadas.length > 0) {
+    portadas.forEach((p: any) => {
       slides.push({
-        id: `trend-${popular.id}`,
-        title: 'Tendencia Mayorista',
-        description: 'Los modelos más buscados por tus clientes.',
-        image_url: popular.url_imagen,
-        product_link: `/producto/${popular.id}`,
-        tag: '🔥 MÁS VENDIDO'
+        id: `portada-${p.id}`,
+        title: p.titulo,
+        description: p.descripcion || '',
+        image_url: p.url_imagen,
+        link: '/catalogo',
+        tag: '⭐ DESTACADO'
       });
-    }
+    });
   }
 
-  // Fallback si no hay nada (raro, pero por seguridad visual)
+  // Fallback absoluto
   if (slides.length === 0) {
     slides.push({
       id: 'fallback',
-      title: 'Catálogo 2024',
+      title: 'Activa Sport',
       description: 'Explora nuestra colección completa de calzados al por mayor.',
-      image_url: null, // HeroSection manejará el fallback visual
-      product_link: '/catalogo',
-      tag: '👟 ACTIVA SPORT'
+      image_url: null,
+      link: '/catalogo',
+      tag: '👟 CATÁLOGO 2024'
     })
   }
 
@@ -140,8 +103,7 @@ export default async function Home() {
       {/* Banner Principal */}
       <HeroSection slides={slides} />
 
-      {/* Promociones Activas */}
-      <PromoCarousel />
+      {/* Promociones integradas en el HeroSection */}
 
       {/* Carrusel de Marcas */}
       <BrandsCarousel />
