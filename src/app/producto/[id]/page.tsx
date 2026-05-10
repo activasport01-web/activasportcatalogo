@@ -3,6 +3,7 @@ import { supabase, proxyImageUrl } from '@/lib/supabase'
 
 import { notFound } from 'next/navigation'
 import ProductView from '@/components/ProductView'
+import ProductCard from '@/components/ProductCard'
 
 export const revalidate = 0
 
@@ -87,41 +88,22 @@ export default async function ProductoPage({ params }: Props) {
     return (
         <main className="bg-slate-50 dark:bg-slate-950 min-h-screen flex flex-col transition-colors duration-300">
 
-            <div className="flex-grow pt-28 pb-12">
+            <div className="flex-grow pt-20 md:pt-28 pb-12">
                 <ProductView producto={producto} />
 
                 {/* Sección Productos Relacionados */}
                 {relacionados && relacionados.length > 0 && (
-                    <section className="max-w-7xl mx-auto px-4 mt-16">
-                        <div className="flex items-center gap-4 mb-8">
-                            <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    <section className="max-w-7xl mx-auto px-4 mt-10 md:mt-16">
+                        <div className="flex items-center gap-4 mb-6">
+                            <h2 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                                 También te podría interesar
                             </h2>
                             <div className="h-px bg-slate-200 dark:bg-slate-800 flex-grow"></div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                             {relacionados.map((item) => (
-                                <div key={item.id} className="group relative">
-                                    <a href={`/producto/${item.id}`} className="block bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm hover:shadow-xl transition-all border border-slate-100 dark:border-slate-800">
-                                        <div className="relative aspect-square mb-4 bg-slate-50 dark:bg-slate-800 rounded-xl overflow-hidden">
-                                            <img
-                                                src={proxyImageUrl(item.url_imagen)}
-                                                alt={item.nombre}
-                                                className="w-full h-full object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-500"
-                                            />
-                                            {item.etiquetas?.includes('nuevo') && (
-                                                <span className="absolute top-2 left-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">NUEVO</span>
-                                            )}
-                                        </div>
-                                        <h3 className="font-bold text-slate-800 dark:text-white text-sm line-clamp-1 mb-1 group-hover:text-brand-orange transition-colors">
-                                            {item.nombre}
-                                        </h3>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                                            {item.categoria}
-                                        </p>
-                                    </a>
-                                </div>
+                                <ProductCard key={item.id} zapato={item} />
                             ))}
                         </div>
                     </section>

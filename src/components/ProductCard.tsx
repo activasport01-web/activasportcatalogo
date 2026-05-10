@@ -64,12 +64,12 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                         )}
                         {zapato.etiquetas?.includes('nuevo') && (
                             <span className="bg-white/90 text-black text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm border border-black/5">
-                                NEW
+                                NUEVO
                             </span>
                         )}
                         {zapato.etiquetas?.includes('oferta') && (
                             <span className="bg-red-600 text-white text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm">
-                                SALE
+                                OFERTA
                             </span>
                         )}
                         {!zapato.disponible && (
@@ -115,7 +115,7 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
 
                     <div className="mt-1 flex items-center justify-between">
                         <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                            {zapato.precio ? `$${Number(zapato.precio).toLocaleString('es-AR')}` : 'Consultar'}
+                            Consultar
                         </span>
 
                         <button className="text-brand-orange hover:text-orange-600 transition-colors">

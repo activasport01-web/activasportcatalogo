@@ -146,72 +146,107 @@ export default async function Home() {
       {/* Carrusel de Marcas */}
       <BrandsCarousel />
 
-      {/* Sección de Categorías Destacadas (Mobile Grid 2x2) */}
-      <section className="relative z-10 max-w-7xl mx-auto px-2 py-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      {/* Sección de Categorías Destacadas (Banners Premium) */}
+      <section className="relative z-10 max-w-5xl mx-auto px-3 py-6 md:py-10">
+        <style dangerouslySetInnerHTML={{ __html: `
+          .banner-premium .shoe-img { transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
+          .banner-premium:hover .shoe-img { transform: scale(1.08) rotate(-2deg); }
+          .banner-premium .deco-stripe { transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1); }
+          .banner-premium:hover .deco-stripe { transform: skewX(-12deg) scaleX(1.15); }
+        `}} />
+        <div className="flex flex-col gap-4 md:gap-6">
 
-          {/* 1. NUEVO INGRESO (Vertical Grid Item) */}
-          <Link href={pNuevo ? `/producto/${pNuevo.id}` : '/catalogo?sort=recientes'} className="group relative aspect-[3/4] overflow-hidden">
+          {/* 1. NUEVO INGRESO (Banner Oscuro) */}
+          <Link href={pNuevo ? `/producto/${pNuevo.id}` : '/catalogo?sort=recientes'} className="banner-premium group relative w-full h-48 md:h-60 overflow-hidden rounded-3xl shadow-lg block bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
             {pNuevo ? (
               <>
-                <img
-                  src={proxyImageUrl(pNuevo.url_imagen)}
-                  alt="Nuevo"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90 transition-opacity" />
-                <div className="absolute bottom-3 left-3 right-3 text-white">
-                  <span className="block text-[10px] uppercase tracking-widest font-bold text-brand-orange mb-1">NUEVO</span>
-                  <h3 className="text-sm font-bold leading-tight line-clamp-2">{pNuevo.nombre}</h3>
+                {/* Decoración diagonal */}
+                <div className="deco-stripe absolute -right-10 top-0 w-[45%] h-full bg-white/[0.07] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -right-20 top-0 w-[30%] h-full bg-white/[0.04] skew-x-[-12deg] z-[1]" />
+
+                {/* Círculo decorativo sutil */}
+                <div className="absolute -bottom-16 -right-16 w-56 h-56 md:w-72 md:h-72 rounded-full border border-white/10 z-[1]" />
+
+                {/* Imagen del zapato (mix-blend-multiply elimina fondo blanco) */}
+                <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-[45%] md:w-[40%] h-[85%] z-[2] flex items-center justify-center">
+                  <img src={proxyImageUrl(pNuevo.url_imagen)} alt="Nuevo" className="shoe-img w-full h-full object-contain mix-blend-lighten drop-shadow-[0_5px_25px_rgba(255,255,255,0.15)] filter brightness-110" />
+                </div>
+
+                {/* Textos */}
+                <div className="relative z-20 flex flex-col justify-center h-full w-[55%] md:w-[50%] pl-5 md:pl-10 py-4">
+                  <span className="inline-block px-2.5 py-1 bg-white/10 text-white text-[10px] md:text-xs uppercase font-bold tracking-widest rounded-full w-max mb-2 backdrop-blur-md border border-white/20 shadow-sm">
+                    ⭐ NUEVO INGRESO
+                  </span>
+                  <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mb-1 drop-shadow-md line-clamp-2">{pNuevo.nombre}</h3>
+                  <p className="text-[11px] md:text-sm text-slate-400 mb-3 font-medium line-clamp-2 drop-shadow">Últimos modelos de la temporada.</p>
+                  <div className="flex items-center text-[10px] md:text-xs font-bold text-brand-orange uppercase tracking-wider mt-auto">
+                    Explorar modelo <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </>
             ) : (
-              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs font-bold">NUEVO</div>
+              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white">NUEVO</div>
             )}
           </Link>
 
-          {/* 2. MÁS POPULAR */}
-          <Link href={pPopular ? `/producto/${pPopular.id}` : '/catalogo'} className="group relative aspect-[3/4] overflow-hidden">
+          {/* 2. MÁS POPULAR (Banner Azul Vibrante) */}
+          <Link href={pPopular ? `/producto/${pPopular.id}` : '/catalogo'} className="banner-premium group relative w-full h-48 md:h-60 overflow-hidden rounded-3xl shadow-lg block bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500">
             {pPopular ? (
               <>
-                <img
-                  src={proxyImageUrl(pPopular.url_imagen)}
-                  alt="Popular"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90 transition-opacity" />
-                <div className="absolute bottom-3 left-3 right-3 text-white">
-                  <span className="block text-[10px] uppercase tracking-widest font-bold text-green-400 mb-1">TRENDING</span>
-                  <h3 className="text-sm font-bold leading-tight line-clamp-2">{pPopular.nombre}</h3>
+                <div className="deco-stripe absolute -right-10 top-0 w-[45%] h-full bg-white/[0.1] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -right-20 top-0 w-[30%] h-full bg-white/[0.05] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -top-16 -right-16 w-56 h-56 md:w-72 md:h-72 rounded-full border border-white/15 z-[1]" />
+
+                <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-[45%] md:w-[40%] h-[85%] z-[2] flex items-center justify-center">
+                  <img src={proxyImageUrl(pPopular.url_imagen)} alt="Popular" className="shoe-img w-full h-full object-contain mix-blend-multiply drop-shadow-[0_5px_25px_rgba(0,0,0,0.2)] filter brightness-105" />
+                </div>
+
+                <div className="relative z-20 flex flex-col justify-center h-full w-[55%] md:w-[50%] pl-5 md:pl-10 py-4">
+                  <span className="inline-block px-2.5 py-1 bg-white/20 text-white text-[10px] md:text-xs uppercase font-black tracking-widest rounded-full w-max mb-2 shadow-sm border border-white/30 backdrop-blur-sm">
+                    🔥 MÁS BUSCADO
+                  </span>
+                  <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mb-1 drop-shadow-md line-clamp-2">{pPopular.nombre}</h3>
+                  <p className="text-[11px] md:text-sm text-blue-100 mb-3 font-medium line-clamp-2 drop-shadow">El favorito de nuestros clientes.</p>
+                  <div className="flex items-center text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mt-auto">
+                    Ver modelo <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </>
             ) : (
-              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs font-bold">POPULAR</div>
+              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white">POPULAR</div>
             )}
           </Link>
 
-          {/* 3. MEJOR OFERTA */}
-          <Link href={pOferta ? `/producto/${pOferta.id}` : '/ofertas'} className="group relative aspect-[3/4] overflow-hidden col-span-2 md:col-span-1">
+          {/* 3. MEJOR OFERTA (Banner Rojo Impacto) */}
+          <Link href={pOferta ? `/producto/${pOferta.id}` : '/ofertas'} className="banner-premium group relative w-full h-48 md:h-60 overflow-hidden rounded-3xl shadow-lg block bg-gradient-to-br from-red-800 via-red-700 to-red-600">
             {pOferta ? (
               <>
-                <img
-                  src={proxyImageUrl(pOferta.url_imagen)}
-                  alt="Oferta"
-                  className="absolute inset-0 w-full h-full object-cover object-center"
-                />
-                <div className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1">
-                  OFERTA
+                <div className="deco-stripe absolute -right-10 top-0 w-[45%] h-full bg-white/[0.08] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -right-20 top-0 w-[30%] h-full bg-white/[0.04] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -bottom-10 -left-10 w-40 h-40 md:w-56 md:h-56 rounded-full bg-yellow-400/10 z-[1]" />
+
+                <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-[45%] md:w-[40%] h-[85%] z-[2] flex items-center justify-center">
+                  <img src={proxyImageUrl(pOferta.url_imagen)} alt="Oferta" className="shoe-img w-full h-full object-contain mix-blend-multiply drop-shadow-[0_5px_25px_rgba(0,0,0,0.2)] filter brightness-105" />
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90 transition-opacity" />
-                <div className="absolute bottom-3 left-3 right-3 text-white">
-                  <span className="block text-[10px] uppercase tracking-widest font-bold text-red-500 mb-1">SALE</span>
-                  <h3 className="text-sm font-bold leading-tight line-clamp-2">{pOferta.nombre}</h3>
+
+                <div className="relative z-20 flex flex-col justify-center h-full w-[55%] md:w-[50%] pl-5 md:pl-10 py-4">
+                  <span className="inline-block px-2.5 py-1 bg-yellow-400 text-red-900 text-[10px] md:text-xs uppercase font-black tracking-widest rounded-full w-max mb-2 shadow-sm">
+                    🏷️ MEJOR PRECIO
+                  </span>
+                  <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mb-1 drop-shadow-md line-clamp-2">{pOferta.nombre}</h3>
+                  
+                  <p className="text-[11px] md:text-sm text-red-100 mb-3 font-medium drop-shadow">🔥 Precio exclusivo por mayor. ¡Consulta ahora!</p>
+
+                  <div className="flex items-center text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mt-auto">
+                    Ver oferta <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
+                  </div>
                 </div>
               </>
             ) : (
-              <div className="w-full h-full bg-slate-100 flex items-center justify-center text-xs font-bold">OFERTAS</div>
+              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white">OFERTAS</div>
             )}
           </Link>
+
         </div>
       </section>
 

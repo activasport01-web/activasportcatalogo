@@ -240,11 +240,11 @@ export default function ProductView({ producto, productosRelacionados }: Product
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pt-28 pb-12 transition-colors duration-300">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-12 transition-colors duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
                 {/* Breadcrumbs Navigation */}
-                <nav className="flex items-center gap-2 mb-6 text-sm text-slate-500 dark:text-slate-400 overflow-x-auto whitespace-nowrap pb-1">
+                <nav className="flex items-center gap-2 mb-3 md:mb-6 text-sm text-slate-500 dark:text-slate-400 overflow-x-auto whitespace-nowrap pb-1">
                     <Link href="/" className="hover:text-brand-orange flex items-center gap-1 transition-colors">
                         <ShoppingBag size={14} /> Inicio
                     </Link>
