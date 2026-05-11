@@ -10,11 +10,13 @@ export const revalidate = 0;
 
 export default async function Home() {
   // 1. Obtener TODAS las Portadas activas (carrusel de portadas)
+  // Nota: Agregamos .limit(1) temporalmente para ignorar los duplicados creados por el bug anterior.
   const { data: portadas } = await supabase
     .from('portada_destacada')
     .select('*')
     .eq('activo', true)
     .order('id', { ascending: true })
+    .limit(1)
 
   // 2. Obtener Zapatos Disponibles (Con Prioridad a Marca "Activa")
   const activaQuery = supabase
@@ -59,8 +61,7 @@ export default async function Home() {
         title: p.titulo,
         description: p.descripcion || '',
         image_url: p.url_imagen,
-        link: '/catalogo',
-        tag: '⭐ DESTACADO'
+        link: '/catalogo'
       });
     });
   }

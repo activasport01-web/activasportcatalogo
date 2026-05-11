@@ -50,11 +50,17 @@ export default function HeroSection({ slides }: HeroProps) {
     }
 
     return (
-        <section
-            className="relative w-full h-[70vh] md:h-[85vh] min-h-[480px] max-h-[900px] overflow-hidden bg-slate-950"
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-        >
+        <>
+            {/* Precargar la primera imagen para mejorar velocidad de carga (LCP) */}
+            {slides[0]?.image_url && (
+                <link rel="preload" as="image" href={proxyImageUrl(slides[0].image_url)} fetchPriority="high" />
+            )}
+
+            <section
+                className="relative w-full h-[70vh] md:h-[85vh] min-h-[480px] max-h-[900px] overflow-hidden bg-slate-950"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+            >
             {/* ── SLIDES DE FONDO ── */}
             {slides.map((slide, index) => (
                 <div
@@ -70,6 +76,9 @@ export default function HeroSection({ slides }: HeroProps) {
                             src={proxyImageUrl(slide.image_url)}
                             alt={slide.title}
                             className="absolute inset-0 w-full h-full object-cover"
+                            loading="eager"
+                            fetchPriority="high"
+                            decoding="async"
                         />
                     ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950" />
@@ -157,5 +166,6 @@ export default function HeroSection({ slides }: HeroProps) {
                 </div>
             )}
         </section>
+        </>
     )
 }

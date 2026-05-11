@@ -181,7 +181,6 @@ export default function PortadaAdmin() {
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5" />
                                 <div className="absolute inset-0 flex flex-col justify-end items-center text-center p-6 pb-8">
-                                    <span className="text-[9px] font-medium tracking-[0.25em] uppercase text-white/60 mb-2">⭐ {portada?.activo ? 'DESTACADO' : 'INACTIVO'}</span>
                                     <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mb-2 drop-shadow-xl">{formData.titulo || 'Tu Título Aquí'}</h3>
                                     <p className="text-sm text-white/60 mb-4 max-w-sm">{formData.descripcion || 'Tu descripción aparecerá aquí...'}</p>
                                     <div className="flex gap-3">
