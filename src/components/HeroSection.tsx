@@ -72,14 +72,27 @@ export default function HeroSection({ slides }: HeroProps) {
                     }`}
                 >
                     {slide.image_url ? (
-                        <img
-                            src={proxyImageUrl(slide.image_url)}
-                            alt={slide.title}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            loading="eager"
-                            fetchPriority="high"
-                            decoding="async"
-                        />
+                        slide.image_url.toLowerCase().includes('.mp4') ? (
+                            <video
+                                src={proxyImageUrl(slide.image_url)}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                disablePictureInPicture
+                                preload="auto"
+                                className="absolute inset-0 w-full h-full object-cover"
+                            />
+                        ) : (
+                            <img
+                                src={proxyImageUrl(slide.image_url)}
+                                alt={slide.title}
+                                className="absolute inset-0 w-full h-full object-cover"
+                                loading="eager"
+                                fetchPriority="high"
+                                decoding="async"
+                            />
+                        )
                     ) : (
                         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950" />
                     )}
