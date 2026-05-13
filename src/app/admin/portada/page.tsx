@@ -254,9 +254,8 @@ export default function PortadaAdmin() {
                                     <div className="absolute inset-0 flex flex-col justify-end items-center text-center p-6 pb-8">
                                         <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mb-2 drop-shadow-xl">{formData.titulo || 'Tu Título Aquí'}</h3>
                                         <p className="text-sm text-white/60 mb-4 max-w-sm">{formData.descripcion || 'Tu descripción aparecerá aquí...'}</p>
-                                        <div className="flex gap-3">
-                                            <button className="bg-white text-black font-bold px-6 py-2 rounded-full text-xs shadow-lg">Ver Catálogo</button>
-                                            <button className="bg-green-500 text-white font-bold px-6 py-2 rounded-full text-xs shadow-lg">💬 Consultar</button>
+                                        <div className="flex justify-center mt-2">
+                                            <button className="bg-green-500 hover:bg-green-600 text-white font-bold px-8 py-3 rounded-full text-xs shadow-lg flex items-center justify-center gap-2">💬 Consultar</button>
                                         </div>
                                     </div>
                                 </div>

@@ -46,7 +46,7 @@ export default function HeroSection({ slides }: HeroProps) {
     // WhatsApp
     const handleWhatsApp = () => {
         const message = `Hola Activa Sport 👟\nVi "${activeSlide.title}" en su catálogo web.\n¿Me podrían dar más información?`
-        window.open(`https://wa.me/59163448209?text=${encodeURIComponent(message)}`, '_blank')
+        window.open(`https://wa.me/59173643433?text=${encodeURIComponent(message)}`, '_blank')
     }
 
     return (
@@ -126,15 +126,10 @@ export default function HeroSection({ slides }: HeroProps) {
                 )}
 
                 {/* Botones CTA (estilo Nike: pill buttons) */}
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                    <Link href={activeSlide.link} className="w-full sm:w-auto">
-                        <button className="w-full sm:w-auto bg-white text-black text-xs md:text-sm font-bold py-3 md:py-3.5 px-8 md:px-10 rounded-full hover:bg-slate-200 transition-all transform active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.15)]">
-                            Ver Catálogo
-                        </button>
-                    </Link>
+                <div className="flex flex-col sm:flex-row justify-center gap-3 mt-2">
                     <button
                         onClick={handleWhatsApp}
-                        className="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white text-xs md:text-sm font-bold py-3 md:py-3.5 px-8 md:px-10 rounded-full transition-all transform active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                        className="bg-green-500 hover:bg-green-600 text-white text-xs md:text-sm font-bold py-3 md:py-3.5 px-8 md:px-10 rounded-full transition-all transform active:scale-95 shadow-lg flex items-center justify-center gap-2"
                     >
                         <MessageCircle size={16} />
                         Consultar
