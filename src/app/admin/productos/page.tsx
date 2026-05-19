@@ -129,6 +129,8 @@ export default function ProductosAdmin() {
             return
         }
         setSavingCompra(true)
+
+        // 1. Registrar la compra (financiero)
         const { error } = await supabase.from('compras_producto').insert({
             producto_id: editingProduct.id,
             precio_usd: usd,
@@ -137,11 +139,41 @@ export default function ProductosAdmin() {
             precio_venta_ref: Number(nuevaCompra.precio_venta_ref) || null,
             notas: nuevaCompra.notas || null,
         })
+
         if (!error) {
-            showNotification('Compra registrada correctamente ✅', 'success')
+            // 2. INCREMENTAR stock_bultos en el producto
+            const stockActual = (editingProduct as any).stock_bultos || 0
+            const nuevoStock = stockActual + qty
+            const costoTotal = usd * tc
+            const costoPorBulto = qty > 0 ? costoTotal / qty : 0
+
+            await supabase
+                .from('zapatos')
+                .update({
+                    stock_bultos: nuevoStock,
+                    precio_costo: costoPorBulto, // Actualizar costo unitario
+                })
+                .eq('id', editingProduct.id)
+
+            // 3. Crear movimiento ENTRADA en kardex
+            await supabase.from('movimientos_kardex').insert({
+                producto_id: editingProduct.id,
+                tipo: 'ENTRADA',
+                cantidad: qty,
+                precio_total: costoTotal,
+                detalle: `Compra registrada: ${usd} USD × TC ${tc} = ${costoTotal.toFixed(2)} Bs (${qty} bultos)`,
+                fecha: new Date().toISOString(),
+            })
+
+            // 4. Actualizar el objeto local para que la UI refleje el cambio
+            ;(editingProduct as any).stock_bultos = nuevoStock
+            setFormData(prev => ({ ...prev, stock_bultos: nuevoStock }))
+
+            showNotification(`✅ Compra registrada + ${qty} bultos agregados al stock (Total: ${nuevoStock})`, 'success')
             setNuevaCompra({ precio_usd: '', bultos_qty: '', tipo_cambio: '', precio_venta_ref: '', notas: '' })
             setShowComprasForm(false)
             await loadCompras(editingProduct.id)
+            await loadProductos() // Refrescar la lista de productos
         } else {
             showNotification('Error al guardar: ' + error.message, 'error')
         }
