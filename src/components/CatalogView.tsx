@@ -335,7 +335,11 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
                             </div>
 
                             {/* GRUPO 4: TIPO DE PLANTA (Solo si es Deportivo) */}
-                            {selectedCategories.some(c => c.toLowerCase() === 'deportivo') && SUBCATEGORIAS.some(s => s.catRel?.toLowerCase() === 'deportivo') && (
+                            {selectedCategories.some(c => {
+                                if (!c) return false;
+                                const catLabel = CATEGORIAS.find(cat => cat.value === c)?.label || c;
+                                return typeof catLabel === 'string' && catLabel.toLowerCase() === 'deportivo';
+                            }) && SUBCATEGORIAS.some(s => s.catRel?.toLowerCase() === 'deportivo') && (
                                 <div className="flex items-center p-0.5 rounded-full bg-slate-100/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex-shrink-0 relative overflow-hidden group animate-fade-in-left">
                                     <span className="pl-3 pr-1 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                                         Planta:
