@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase, proxyImageUrl } from '@/lib/supabase'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -14,140 +14,130 @@ interface Marca {
 
 export default function BrandsCarousel() {
     const [marcas, setMarcas] = useState<Marca[]>([])
-    const [currentIndex, setCurrentIndex] = useState(0)
-    const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+    const scrollRef = useRef<HTMLDivElement>(null)
+    const [canScrollLeft, setCanScrollLeft] = useState(false)
+    const [canScrollRight, setCanScrollRight] = useState(false)
 
     useEffect(() => {
         loadMarcas()
     }, [])
 
     const loadMarcas = async () => {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('marcas')
             .select('*')
             .eq('active', true)
-            .not('logo_url', 'is', null)
             .order('nombre')
 
-        if (data) {
-            setMarcas(data)
-        }
+        if (data) setMarcas(data)
     }
 
-    // Auto-play carousel
+    const checkScroll = () => {
+        const el = scrollRef.current
+        if (!el) return
+        setCanScrollLeft(el.scrollLeft > 5)
+        setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 5)
+    }
+
     useEffect(() => {
-        if (!isAutoPlaying || marcas.length === 0) return
+        checkScroll()
+        const el = scrollRef.current
+        if (el) {
+            el.addEventListener('scroll', checkScroll, { passive: true })
+            window.addEventListener('resize', checkScroll)
+        }
+        return () => {
+            el?.removeEventListener('scroll', checkScroll)
+            window.removeEventListener('resize', checkScroll)
+        }
+    }, [marcas])
 
-        const interval = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % marcas.length)
-        }, 4000)
-
-        return () => clearInterval(interval)
-    }, [isAutoPlaying, marcas.length])
-
-    const nextSlide = () => {
-        setCurrentIndex((prev) => (prev + 1) % marcas.length)
-        setIsAutoPlaying(false)
-    }
-
-    const prevSlide = () => {
-        setCurrentIndex((prev) => (prev - 1 + marcas.length) % marcas.length)
-        setIsAutoPlaying(false)
-    }
-
-    const goToSlide = (index: number) => {
-        setCurrentIndex(index)
-        setIsAutoPlaying(false)
+    const scroll = (direction: 'left' | 'right') => {
+        const el = scrollRef.current
+        if (!el) return
+        const scrollAmount = el.clientWidth * 0.6
+        el.scrollBy({
+            left: direction === 'left' ? -scrollAmount : scrollAmount,
+            behavior: 'smooth'
+        })
     }
 
     if (marcas.length === 0) return null
 
-    const currentMarca = marcas[currentIndex]
-
     return (
-        <section className="py-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
-            <div className="max-w-7xl mx-auto md:px-4">
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 mb-4 md:mb-6">
-                    <div>
-                        <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                            Nuestras Marcas
-                        </h2>
-                    </div>
-                    <div className="text-xs font-bold text-slate-400">
-                        {currentIndex + 1} / {marcas.length}
-                    </div>
-                </div>
+        <section className="py-10 md:py-14 bg-white dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800/50">
+            <div className="max-w-7xl mx-auto px-4">
+                {/* Título */}
+                <h2 className="text-center text-sm md:text-base font-black uppercase tracking-[0.25em] text-slate-800 dark:text-white mb-8 md:mb-10">
+                    Nuestras Marcas
+                </h2>
 
-                {/* Carousel Container */}
-                <div className="relative px-2 md:px-0">
-                    {/* Navigation Buttons (Hidden on mobile for clean look, visible on desktop) */}
-                    <button
-                        onClick={prevSlide}
-                        className="flex absolute left-2 md:-left-4 top-1/2 -translate-y-1/2 z-20 bg-white/40 backdrop-blur-md md:bg-white dark:bg-black/30 md:dark:bg-slate-800 hover:bg-slate-50 border border-white/20 md:border-slate-200 dark:border-slate-700 p-1.5 md:p-3 rounded-full shadow-sm md:shadow-lg transition-all hover:scale-110"
-                        aria-label="Anterior"
-                    >
-                        <ChevronLeft size={18} className="text-slate-900 dark:text-white md:w-6 md:h-6" />
-                    </button>
-
-                    <button
-                        onClick={nextSlide}
-                        className="flex absolute right-2 md:-right-4 top-1/2 -translate-y-1/2 z-20 bg-white/40 backdrop-blur-md md:bg-white dark:bg-black/30 md:dark:bg-slate-800 hover:bg-slate-50 border border-white/20 md:border-slate-200 dark:border-slate-700 p-1.5 md:p-3 rounded-full shadow-sm md:shadow-lg transition-all hover:scale-110"
-                        aria-label="Siguiente"
-                    >
-                        <ChevronRight size={18} className="text-slate-900 dark:text-white md:w-6 md:h-6" />
-                    </button>
-
-                    {/* Main Slide */}
-                    <Link
-                        href={`/catalogo?marca=${encodeURIComponent(currentMarca.nombre)}`}
-                        className="block group"
-                    >
-                        <div className="relative overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800 shadow-sm transition-all hover:shadow-md h-[250px] md:h-[350px]">
-                            {/* Logo Area - FULL WIDTH/HEIGHT BACKGROUND */}
-                            <div className="absolute inset-0 flex items-center justify-center bg-white">
-                                {currentMarca.logo_url ? (
-                                    <img
-                                        src={proxyImageUrl(currentMarca.logo_url)}
-                                        alt={currentMarca.nombre}
-                                        className="w-full h-full object-cover"
-                                    />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center bg-slate-100 text-6xl font-black text-slate-300">
-                                        {currentMarca.nombre.charAt(0)}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Brand Name & CTA Bar - Overlay at bottom */}
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 md:p-6 flex justify-between items-end">
-                                <div>
-                                    <h3 className="text-white text-xl md:text-3xl font-black uppercase tracking-wider drop-shadow-md">
-                                        {currentMarca.nombre}
-                                    </h3>
-                                    <p className="text-white/80 text-xs md:text-sm font-medium mt-1">Colección 2024</p>
-                                </div>
-                                <span className="bg-white text-black text-xs font-bold px-4 py-2 rounded-full uppercase shadow-lg transform translate-y-0 group-hover:-translate-y-1 transition-transform">
-                                    Ver Todo
-                                </span>
-                            </div>
-                        </div>
-                    </Link>
-                </div>
-
-                {/* Puntos (Dots) para navegación minimalista */}
-                <div className="flex justify-center gap-1.5 mt-4">
-                    {marcas.map((_, index) => (
+                {/* Container con navegación */}
+                <div className="relative">
+                    {/* Flecha Izquierda */}
+                    {canScrollLeft && (
                         <button
-                            key={index}
-                            onClick={() => goToSlide(index)}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${index === currentIndex
-                                ? 'bg-slate-800 dark:bg-white w-6'
-                                : 'bg-slate-300 dark:bg-slate-700 w-1.5'
-                                }`}
-                            aria-label={`Ir a marca ${index + 1}`}
-                        />
-                    ))}
+                            onClick={() => scroll('left')}
+                            className="absolute -left-2 md:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 hover:scale-110 transition-all duration-200"
+                            aria-label="Anterior"
+                        >
+                            <ChevronLeft size={20} className="text-slate-700 dark:text-white" />
+                        </button>
+                    )}
+
+                    {/* Flecha Derecha */}
+                    {canScrollRight && (
+                        <button
+                            onClick={() => scroll('right')}
+                            className="absolute -right-2 md:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-lg flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 hover:scale-110 transition-all duration-200"
+                            aria-label="Siguiente"
+                        >
+                            <ChevronRight size={20} className="text-slate-700 dark:text-white" />
+                        </button>
+                    )}
+
+                    {/* Fade edges */}
+                    {canScrollLeft && (
+                        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white dark:from-slate-950 to-transparent z-10 pointer-events-none" />
+                    )}
+                    {canScrollRight && (
+                        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white dark:from-slate-950 to-transparent z-10 pointer-events-none" />
+                    )}
+
+                    {/* Scroll Container — fila de círculos */}
+                    <div
+                        ref={scrollRef}
+                        className="flex gap-6 md:gap-8 overflow-x-auto scroll-smooth px-4 py-2 justify-center flex-wrap md:flex-nowrap"
+                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}
+                    >
+                        {marcas.map((marca) => (
+                            <Link
+                                key={marca.id}
+                                href={`/catalogo?marca=${encodeURIComponent(marca.nombre)}`}
+                                className="flex-shrink-0 group flex flex-col items-center gap-3 transition-transform duration-200 hover:-translate-y-1"
+                            >
+                                {/* Círculo del logo */}
+                                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-slate-900 dark:bg-white flex items-center justify-center overflow-hidden border-2 border-slate-800 dark:border-slate-300 shadow-md group-hover:shadow-xl group-hover:shadow-orange-500/20 group-hover:border-orange-500 dark:group-hover:border-orange-400 transition-all duration-300">
+                                    {marca.logo_url ? (
+                                        <img
+                                            src={proxyImageUrl(marca.logo_url)}
+                                            alt={marca.nombre}
+                                            className="w-[65%] h-[65%] object-contain brightness-0 invert dark:invert-0 dark:brightness-0 group-hover:scale-110 transition-transform duration-300"
+                                        />
+                                    ) : (
+                                        <span className="text-2xl md:text-3xl font-black text-white dark:text-slate-900 select-none group-hover:scale-110 transition-transform duration-300">
+                                            {marca.nombre.charAt(0).toUpperCase()}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Nombre de la marca */}
+                                <span className="text-[11px] md:text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors duration-200 whitespace-nowrap">
+                                    {marca.nombre}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
                 </div>
             </div>
         </section>
