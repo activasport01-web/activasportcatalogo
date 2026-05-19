@@ -12,32 +12,25 @@ export default function Footer() {
 
     useEffect(() => {
         const fetchCategories = async () => {
-            const { data } = await supabase
-                .from('zapatos')
-                .select('categoria, subcategoria')
-                .eq('disponible', true)
+            // Leer desde tablas maestras en vez de columnas de texto en zapatos
+            const [catRes, subcatRes] = await Promise.all([
+                supabase.from('categorias').select('id, nombre').eq('activa', true).order('orden'),
+                supabase.from('subcategorias').select('id, nombre, categoria_id, cat_ref:categorias(nombre)').eq('activa', true).order('orden')
+            ])
 
-            if (data) {
-                const groups: Record<string, Set<string>> = {}
+            if (catRes.data) {
+                const groups: Record<string, string[]> = {}
 
-                data.forEach(item => {
-                    if (item.categoria) {
-                        const catNormalizada = item.categoria.charAt(0).toUpperCase() + item.categoria.slice(1).toLowerCase();
-                        if (!groups[catNormalizada]) {
-                            groups[catNormalizada] = new Set()
-                        }
-                        if (item.subcategoria) {
-                            groups[catNormalizada].add(item.subcategoria)
-                        }
-                    }
+                catRes.data.forEach(cat => {
+                    const catNombre = cat.nombre.charAt(0).toUpperCase() + cat.nombre.slice(1).toLowerCase()
+                    const subs = (subcatRes.data || [])
+                        .filter(s => s.categoria_id === cat.id)
+                        .map(s => s.nombre)
+                        .slice(0, 5)
+                    groups[catNombre] = subs
                 })
 
-                const finalGroups: Record<string, string[]> = {}
-                Object.keys(groups).sort().forEach(key => {
-                    finalGroups[key] = Array.from(groups[key]).slice(0, 5)
-                })
-
-                setGroupedCategories(finalGroups)
+                setGroupedCategories(groups)
             }
         }
 

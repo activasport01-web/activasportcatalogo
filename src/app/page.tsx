@@ -18,25 +18,32 @@ export default async function Home() {
     .order('id', { ascending: false })
 
   // 2. Obtener Zapatos Disponibles (Con Prioridad a Marca "Activa")
-  const activaQuery = supabase
-    .from('zapatos')
-    .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
-    .eq('disponible', true)
-    .ilike('marca', '%activa%')
-    .order('fecha_creacion', { ascending: false })
-    .limit(4)
+  // Buscar el ID de la marca "Activa" primero
+  const { data: activaMarca } = await supabase
+    .from('marcas')
+    .select('id')
+    .ilike('nombre', '%activa%')
+    .limit(1)
+    .single()
 
-  const generalQuery = supabase
+  let activaProducts: any[] = []
+  if (activaMarca?.id) {
+    const { data } = await supabase
+      .from('zapatos')
+      .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
+      .eq('disponible', true)
+      .eq('marca_id', activaMarca.id)
+      .order('fecha_creacion', { ascending: false })
+      .limit(4)
+    activaProducts = data || []
+  }
+
+  const { data: generalProducts } = await supabase
     .from('zapatos')
     .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
     .eq('disponible', true)
     .order('fecha_creacion', { ascending: false })
     .limit(12)
-
-  const [{ data: activaProducts }, { data: generalProducts }] = await Promise.all([
-    activaQuery,
-    generalQuery
-  ])
 
   const combinedZapatos = [
     ...(activaProducts || []),
@@ -81,7 +88,7 @@ export default async function Home() {
   const pNuevo = zapatos && zapatos.length > 0 ? zapatos[0] : null
 
   const pPopular = zapatos && zapatos.length > 0 ? (
-    zapatos.find((z: any) => z.nombre.toLowerCase().includes('activa') || (z.marca && z.marca.toLowerCase().includes('activa')))
+    zapatos.find((z: any) => z.nombre.toLowerCase().includes('activa') || (z.marca_obj?.nombre || z.marca || '').toLowerCase().includes('activa'))
     || zapatos[1]
     || zapatos[0]
   ) : null

@@ -24,7 +24,7 @@ interface Producto {
     nombre: string
     codigo: string | null
     caja: string | null
-    categoria: string
+    cat_obj: any
     stock_bultos: number
     variantes_tallas?: any[] // Para manejar múltiples tallas
 }
@@ -43,7 +43,7 @@ export default function VentasPage() {
     const loadProductos = async () => {
         const { data } = await supabase
             .from('zapatos')
-            .select('id, nombre, codigo, caja, categoria, stock_bultos, variantes_tallas')
+            .select('id, nombre, codigo, caja, cat_obj:categorias(nombre), stock_bultos, variantes_tallas')
             .eq('disponible', true)
             .gt('stock_bultos', 0)
             .order('nombre')
@@ -52,11 +52,12 @@ export default function VentasPage() {
 
     const filteredProductos = productos.filter(p => {
         const term = searchTerm.toLowerCase()
+        const catNombre = p.cat_obj?.nombre || ''
         return (
             p.nombre.toLowerCase().includes(term) ||
             p.codigo?.toLowerCase().includes(term) ||
             p.caja?.toLowerCase().includes(term) ||
-            p.categoria?.toLowerCase().includes(term)
+            catNombre.toLowerCase().includes(term)
         )
     })
 
@@ -380,7 +381,7 @@ export default function VentasPage() {
                                                 >
                                                     <div>
                                                         <p className="font-bold text-sm text-slate-800 dark:text-white">{p.nombre}</p>
-                                                        <p className="text-xs text-slate-400">{p.codigo || p.caja} · {p.categoria}</p>
+                                                        <p className="text-xs text-slate-400">{p.codigo || p.caja} · {p.cat_obj?.nombre || ''}</p>
                                                     </div>
                                                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${p.stock_bultos > 3 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                                         {p.stock_bultos} bultos
@@ -402,7 +403,7 @@ export default function VentasPage() {
                                                 >
                                                     <div>
                                                         <p className="font-bold text-sm text-slate-800 dark:text-white">{p.nombre} <span className="text-orange-500 font-black">[{v.rango}]</span></p>
-                                                        <p className="text-xs text-slate-400">{p.codigo || p.caja} · {p.categoria} · {v.pares_por_bulto} pares/bulto</p>
+                                                        <p className="text-xs text-slate-400">{p.codigo || p.caja} · {p.cat_obj?.nombre || ''} · {v.pares_por_bulto} pares/bulto</p>
                                                     </div>
                                                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${stockVar > 3 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                                                         {stockVar} bultos

@@ -57,7 +57,8 @@ export default function TopHeader() {
         nombre: string
         precio: number
         url_imagen: string
-        categoria: string
+        cat_obj: any
+        categoria?: string
     }
     const [searchResults, setSearchResults] = useState<SearchResult[]>([])
     const [isSearching, setIsSearching] = useState(false)
@@ -73,7 +74,7 @@ export default function TopHeader() {
         setIsSearching(true)
         const { data } = await supabase
             .from('zapatos')
-            .select('id, nombre, precio, url_imagen, categoria')
+            .select('id, nombre, precio, url_imagen, cat_obj:categorias(nombre)')
             .ilike('nombre', `%${term}%`)
             .eq('disponible', true)
             .limit(5)
@@ -171,7 +172,7 @@ export default function TopHeader() {
                                             <img src={proxyImageUrl(result.url_imagen)} alt={result.nombre} className="w-10 h-10 object-contain bg-white rounded-md border border-gray-100" />
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm font-bold text-black dark:text-white truncate group-hover:text-brand-orange">{result.nombre}</p>
-                                                <p className="text-xs text-gray-500">{result.categoria}</p>
+                                                <p className="text-xs text-gray-500">{result.cat_obj?.nombre || result.categoria || ''}</p>
                                             </div>
                                             <span className="text-sm font-bold text-brand-orange">${result.precio}</span>
                                         </Link>

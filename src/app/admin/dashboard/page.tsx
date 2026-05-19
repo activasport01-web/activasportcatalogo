@@ -45,11 +45,10 @@ export default function AdminDashboard() {
     const loadStats = async () => {
         const { count: totalProductos } = await supabase.from('zapatos').select('*', { count: 'exact', head: true })
         const { count: productosActivos } = await supabase.from('zapatos').select('*', { count: 'exact', head: true }).eq('disponible', true)
-        const { data: categoriasData } = await supabase.from('zapatos').select('categoria')
-        const categoriasUnicas = new Set(categoriasData?.map((p: any) => p.categoria))
+        const { count: categoriasCount } = await supabase.from('categorias').select('*', { count: 'exact', head: true }).eq('activa', true)
         const hace7Dias = new Date(); hace7Dias.setDate(hace7Dias.getDate() - 7)
         const { count: productosNuevos } = await supabase.from('zapatos').select('*', { count: 'exact', head: true }).gte('fecha_creacion', hace7Dias.toISOString())
-        setStats({ totalProductos: totalProductos || 0, productosActivos: productosActivos || 0, categorias: categoriasUnicas.size, productosNuevos: productosNuevos || 0 })
+        setStats({ totalProductos: totalProductos || 0, productosActivos: productosActivos || 0, categorias: categoriasCount || 0, productosNuevos: productosNuevos || 0 })
     }
 
     const loadCharts = async () => {
@@ -88,7 +87,7 @@ export default function AdminDashboard() {
 
         // --- 2. Top 8 productos por stock ---
         const { data: productos } = await supabase.from('zapatos')
-            .select('nombre, stock_bultos, categoria')
+            .select('nombre, stock_bultos, cat_obj:categorias(nombre)')
             .gt('stock_bultos', 0)
             .order('stock_bultos', { ascending: false })
             .limit(8)
@@ -113,7 +112,7 @@ export default function AdminDashboard() {
     const loadCapital = async () => {
         const { data } = await supabase
             .from('zapatos')
-            .select('nombre, categoria, stock_bultos, precio_costo')
+            .select('nombre, cat_obj:categorias(nombre), stock_bultos, precio_costo')
             .gt('stock_bultos', 0)
 
         if (!data) return
@@ -126,7 +125,7 @@ export default function AdminDashboard() {
             const stock = p.stock_bultos || 0
             const valor = costo * stock
             total += valor
-            const cat = p.categoria || 'Sin Categoría'
+            const cat = p.cat_obj?.nombre || 'Sin Categoría'
             catMap[cat] = (catMap[cat] || 0) + valor
         })
 
@@ -140,7 +139,7 @@ export default function AdminDashboard() {
     const loadStockBajo = async () => {
         const { data } = await supabase
             .from('zapatos')
-            .select('id, nombre, categoria, stock_bultos, disponible')
+            .select('id, nombre, cat_obj:categorias(nombre), stock_bultos, disponible')
             .lte('stock_bultos', 3)
             .order('stock_bultos', { ascending: true })
         setStockBajo(data || [])

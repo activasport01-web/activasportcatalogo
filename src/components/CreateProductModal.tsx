@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { X, Upload, Loader2 } from 'lucide-react'
 
@@ -14,15 +14,53 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Modal
     const [imagePreview, setImagePreview] = useState<string | null>(null)
     const [imageFile, setImageFile] = useState<File | null>(null)
 
+    // Listas maestras desde la BD
+    const [categorias, setCategorias] = useState<any[]>([])
+    const [marcas, setMarcas] = useState<any[]>([])
+    const [generos, setGeneros] = useState<any[]>([])
+    const [subcategorias, setSubcategorias] = useState<any[]>([])
+
     const [formData, setFormData] = useState({
         name: '',
         price: '',
-        category: 'adulto',
+        categoria_id: '',
+        marca_id: '',
+        genero_id: '',
+        subcategoria_id: '',
         description: '',
         sizes: '',
+        origen: 'Nacional',
+        codigo: '',
+        caja: '',
         tags: [] as string[],
         stockStatus: 'normal' // normal, ultimos_pares, llega_pronto, agotado
     })
+
+    // Cargar listas maestras al abrir el modal
+    useEffect(() => {
+        if (!isOpen) return
+
+        const fetchMasterData = async () => {
+            const [catRes, marcaRes, genRes, subcatRes] = await Promise.all([
+                supabase.from('categorias').select('id, nombre').eq('activa', true).order('orden'),
+                supabase.from('marcas').select('id, nombre').eq('active', true).order('nombre'),
+                supabase.from('generos').select('id, nombre').eq('activa', true).order('orden'),
+                supabase.from('subcategorias').select('id, nombre, categoria_id').eq('activa', true).order('orden')
+            ])
+
+            if (catRes.data) setCategorias(catRes.data)
+            if (marcaRes.data) setMarcas(marcaRes.data)
+            if (genRes.data) setGeneros(genRes.data)
+            if (subcatRes.data) setSubcategorias(subcatRes.data)
+        }
+
+        fetchMasterData()
+    }, [isOpen])
+
+    // Filtrar subcategorías por la categoría seleccionada
+    const filteredSubcategorias = subcategorias.filter(
+        s => !formData.categoria_id || s.categoria_id === formData.categoria_id
+    )
 
     const handleTagChange = (tag: string) => {
         if (formData.tags.includes(tag)) {
@@ -69,26 +107,39 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Modal
             // 3. Convertir tallas de texto a array
             const sizeArray = formData.sizes.split(',').map(s => s.trim()).filter(s => s !== '')
 
-            // 4. Guardar en base de datos
-            const { error: dbError } = await supabase.from('zapatos').insert({
+            // 4. Guardar en base de datos con FKs relacionales
+            const insertData: any = {
                 nombre: formData.name,
                 descripcion: formData.description,
-                precio: parseFloat(formData.price),
-                categoria: formData.category,
+                precio: parseFloat(formData.price) || 0,
                 tallas: sizeArray,
                 etiquetas: finalTags,
                 url_imagen: publicUrlData.publicUrl,
-                disponible: isAvailable
-            })
+                disponible: isAvailable,
+                origen: formData.origen || 'Nacional',
+                codigo: formData.codigo || null,
+                caja: formData.caja || null,
+            }
+
+            // Asignar FKs solo si fueron seleccionados
+            if (formData.categoria_id) insertData.categoria_id = formData.categoria_id
+            if (formData.marca_id) insertData.marca_id = formData.marca_id
+            if (formData.genero_id) insertData.genero_id = formData.genero_id
+            if (formData.subcategoria_id) insertData.subcategoria_id = formData.subcategoria_id
+
+            const { error: dbError } = await supabase.from('zapatos').insert(insertData)
             if (dbError) throw dbError
 
             onSuccess()
             onClose()
             // Limpiar formulario completo
             setFormData({
-                name: '', price: '', category: 'adulto', description: '', sizes: '', tags: [], stockStatus: 'normal'
+                name: '', price: '', categoria_id: '', marca_id: '', genero_id: '',
+                subcategoria_id: '', description: '', sizes: '', origen: 'Nacional',
+                codigo: '', caja: '', tags: [], stockStatus: 'normal'
             })
             setImagePreview(null)
+            setImageFile(null)
         } catch (error: any) {
             alert('Error: ' + error.message)
         } finally {
@@ -114,12 +165,66 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Modal
                             </div>
 
                             <div className="flex gap-2">
-                                <input required type="number" placeholder="Precio ($)" className="w-full border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-orange" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} />
-                                <select className="border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none cursor-pointer" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
-                                    <option value="adulto">Adulto</option>
-                                    <option value="niño">Niño</option>
-                                    <option value="deportivo">Deportivo</option>
+                                <input required type="number" placeholder="Precio ($)" className="w-1/2 border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-orange" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} />
+                                <input type="text" placeholder="Código (ej: 267)" className="w-1/2 border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-orange" value={formData.codigo} onChange={e => setFormData({ ...formData, codigo: e.target.value })} />
+                            </div>
+
+                            {/* Categoría (desde BD) */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Categoría</label>
+                                <select className="w-full border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none cursor-pointer" value={formData.categoria_id} onChange={e => setFormData({ ...formData, categoria_id: e.target.value, subcategoria_id: '' })}>
+                                    <option value="">— Seleccionar —</option>
+                                    {categorias.map(c => (
+                                        <option key={c.id} value={c.id}>{c.nombre}</option>
+                                    ))}
                                 </select>
+                            </div>
+
+                            {/* Subcategoría (filtrada por categoría) */}
+                            {filteredSubcategorias.length > 0 && (
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Subcategoría</label>
+                                    <select className="w-full border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none cursor-pointer" value={formData.subcategoria_id} onChange={e => setFormData({ ...formData, subcategoria_id: e.target.value })}>
+                                        <option value="">— Seleccionar —</option>
+                                        {filteredSubcategorias.map(s => (
+                                            <option key={s.id} value={s.id}>{s.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Marca (desde BD) */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Marca</label>
+                                <select className="w-full border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none cursor-pointer" value={formData.marca_id} onChange={e => setFormData({ ...formData, marca_id: e.target.value })}>
+                                    <option value="">— Seleccionar —</option>
+                                    {marcas.map(m => (
+                                        <option key={m.id} value={m.id}>{m.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Género (desde BD) */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Género</label>
+                                <select className="w-full border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none cursor-pointer" value={formData.genero_id} onChange={e => setFormData({ ...formData, genero_id: e.target.value })}>
+                                    <option value="">— Seleccionar —</option>
+                                    {generos.map(g => (
+                                        <option key={g.id} value={g.id}>{g.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Origen y Caja */}
+                            <div className="flex gap-2">
+                                <div className="w-1/2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Origen / Marca Texto</label>
+                                    <input type="text" placeholder="Ej: Gasper" className="w-full border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-orange" value={formData.origen} onChange={e => setFormData({ ...formData, origen: e.target.value })} />
+                                </div>
+                                <div className="w-1/2">
+                                    <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Caja</label>
+                                    <input type="text" placeholder="Ej: caja celeste" className="w-full border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-orange" value={formData.caja} onChange={e => setFormData({ ...formData, caja: e.target.value })} />
+                                </div>
                             </div>
 
                             <input type="text" placeholder="Tallas (ej: 40, 42, 44)" className="w-full border p-2 rounded-lg bg-gray-50 dark:bg-slate-800 dark:border-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-brand-orange" value={formData.sizes} onChange={e => setFormData({ ...formData, sizes: e.target.value })} />

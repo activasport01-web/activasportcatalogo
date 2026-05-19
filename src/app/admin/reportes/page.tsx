@@ -74,7 +74,7 @@ export default function ReportesPage() {
         const [{ data, error }, { data: comprasData }] = await Promise.all([
             supabase
                 .from('movimientos_kardex')
-                .select('*, zapatos (nombre, codigo, categoria)')
+                .select('*, zapatos (nombre, codigo, cat_obj:categorias(nombre))')
                 .gte('fecha', start.toISOString())
                 .lte('fecha', end.toISOString())
                 .order('fecha', { ascending: false }),
@@ -262,8 +262,8 @@ export default function ReportesPage() {
         setLoadingInv(true)
         const { data } = await supabase
             .from('zapatos')
-            .select('nombre, codigo, caja, categoria, stock_bultos, precio_costo, disponible')
-            .order('categoria')
+            .select('nombre, codigo, caja, cat_obj:categorias(nombre), stock_bultos, precio_costo, disponible')
+            .order('nombre')
             .order('nombre')
         setInventario(data || [])
         setLoadingInv(false)
@@ -275,7 +275,7 @@ export default function ReportesPage() {
             .from('compras_producto')
             .select(`
                 id, fecha, precio_usd, bultos_qty, tipo_cambio, costo_bs_total, costo_bs_por_bulto, precio_venta_ref, notas, producto_id,
-                zapatos (nombre, codigo, categoria, stock_bultos, precio)
+                zapatos (nombre, codigo, cat_obj:categorias(nombre), stock_bultos, precio)
             `)
             .order('fecha', { ascending: false })
 
@@ -289,7 +289,7 @@ export default function ReportesPage() {
                         producto_id: pid,
                         nombre: c.zapatos?.nombre || 'Producto desconocido',
                         codigo: c.zapatos?.codigo || '—',
-                        categoria: c.zapatos?.categoria || '—',
+                        categoria: c.zapatos?.cat_obj?.nombre || '—',
                         stock_actual: c.zapatos?.stock_bultos || 0,
                         precio_venta: c.zapatos?.precio || 0,
                         compras: []
@@ -344,7 +344,7 @@ export default function ReportesPage() {
             body: inventario.map(p => [
                 p.nombre,
                 p.codigo || p.caja || '—',
-                p.categoria || '—',
+                p.cat_obj?.nombre || '—',
                 `${p.stock_bultos || 0} bultos`,
                 p.precio_costo ? `${p.precio_costo.toFixed(2)} Bs` : '—',
                 p.precio_costo ? `${((p.stock_bultos || 0) * p.precio_costo).toFixed(2)} Bs` : '—',
@@ -584,7 +584,7 @@ export default function ReportesPage() {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="font-bold text-slate-800 dark:text-slate-200">{mov.zapatos?.nombre || 'Producto Desconocido'}</div>
-                                                    <div className="text-xs text-slate-400">{mov.zapatos?.categoria}</div>
+                                                    <div className="text-xs text-slate-400">{mov.zapatos?.cat_obj?.nombre || ''}</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300">{mov.cantidad}</td>
                                                 <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{mov.precio_total ? `${mov.precio_total} Bs` : '-'}</td>
@@ -645,7 +645,7 @@ export default function ReportesPage() {
                                             <tr key={i} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${p.stock_bultos === 0 ? 'opacity-50' : ''}`}>
                                                 <td className="px-6 py-4 font-bold text-slate-800 dark:text-white">{p.nombre}</td>
                                                 <td className="px-6 py-4 text-slate-500 text-xs">{p.codigo || p.caja || '—'}</td>
-                                                <td className="px-6 py-4 text-slate-500">{p.categoria || '—'}</td>
+                                                <td className="px-6 py-4 text-slate-500">{p.cat_obj?.nombre || '—'}</td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className={`font-black text-sm px-2 py-0.5 rounded-full ${p.stock_bultos === 0 ? 'bg-red-100 text-red-600' : p.stock_bultos <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
                                                         {p.stock_bultos || 0}

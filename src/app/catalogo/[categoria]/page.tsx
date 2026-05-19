@@ -22,15 +22,26 @@ export default async function CategoriaPage({ params }: Props) {
     if (dbCategoria === 'ninos') dbCategoria = 'nino'
     if (dbCategoria === 'adultos') dbCategoria = 'adulto'
 
-    // Fetch productos filtrados por Categoría
-    const { data: zapatos } = await supabase
+    // Buscar la categoría en la tabla maestra por slug o nombre
+    const { data: catRow } = await supabase
+        .from('categorias')
+        .select('id, nombre')
+        .or(`slug.eq.${dbCategoria},nombre.ilike.%${dbCategoria}%`)
+        .limit(1)
+        .single()
+
+    // Fetch productos filtrados por categoria_id (relacional)
+    let zapatosQuery = supabase
         .from('zapatos')
-        .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
+        .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre), subcat_obj:subcategorias(nombre)')
         .eq('disponible', true)
-        // Usamos 'ilike' para que no importe mayúsculas/minúsculas o coincidencia parcial
-        // Usamos 'ilike' con comodines % para coincidencia parcial (ej: "deportivo" encuentra "Deportivos")
-        .ilike('categoria', `%${dbCategoria}%`)
         .order('fecha_creacion', { ascending: false })
+
+    if (catRow?.id) {
+        zapatosQuery = zapatosQuery.eq('categoria_id', catRow.id)
+    }
+
+    const { data: zapatos } = await zapatosQuery
 
     return (
         <main className="min-h-screen bg-slate-50">
