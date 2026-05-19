@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { Suspense } from 'react'
 
 import CatalogView from '@/components/CatalogView'
 
@@ -68,12 +69,14 @@ export default async function CategoriaPage({ params }: Props) {
                 const uniqueMarcas = Array.from(new Set((zapatos || []).map(z => z.marca_obj?.nombre || z.marca).filter(Boolean))).map(m => ({ id: m, nombre: m }));
 
                 return (
-                    <CatalogView
-                        initialProducts={zapatos || []}
-                        availCategorias={uniqueCategorias}
-                        availSubcategorias={uniqueSubcategorias}
-                        availMarcas={uniqueMarcas}
-                    />
+                    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-500">Cargando catálogo...</div>}>
+                        <CatalogView
+                            initialProducts={zapatos || []}
+                            availCategorias={uniqueCategorias}
+                            availSubcategorias={uniqueSubcategorias}
+                            availMarcas={uniqueMarcas}
+                        />
+                    </Suspense>
                 );
             })()}
 

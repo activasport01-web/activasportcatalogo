@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { Suspense } from 'react'
 
 import CatalogView from '@/components/CatalogView'
 
@@ -52,12 +53,14 @@ export default async function CatalogoPage() {
 
 
             {/* Vista Interactiva (Filtros + Grid) */}
-            <CatalogView
-                initialProducts={sortedZapatos}
-                availCategorias={categorias || []}
-                availSubcategorias={subcategorias || []}
-                availMarcas={marcas || []}
-            />
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-500">Cargando catálogo...</div>}>
+                <CatalogView
+                    initialProducts={sortedZapatos}
+                    availCategorias={categorias || []}
+                    availSubcategorias={subcategorias || []}
+                    availMarcas={marcas || []}
+                />
+            </Suspense>
         </main>
     )
 }
