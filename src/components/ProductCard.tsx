@@ -107,7 +107,7 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                 {/* Info del Producto (Ultra Compacto Mobile) */}
                 <div className="flex flex-col gap-0.5 px-0.5">
                     <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider truncate">
-                        {zapato.marca_obj?.nombre || zapato.marca || zapato.cat_obj?.nombre || zapato.categoria || 'Genérico'}
+                        {zapato.marca_obj?.nombre || zapato.marca || zapato.origen || zapato.cat_obj?.nombre || zapato.categoria || 'Genérico'}
                     </h3>
                     <h2 className="text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-medium leading-tight line-clamp-2 min-h-[2.5em]">
                         {zapato.nombre}

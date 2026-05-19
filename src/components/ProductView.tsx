@@ -188,15 +188,11 @@ export default function ProductView({ producto, productosRelacionados }: Product
             tallaSeleccionada = variantesTallas[selectedVariantIndex].rango
         }
 
-        const marcaFinal = producto.marca_obj?.nombre || producto.marca || producto.origen || 'Genérica'
-        const generoFinal = producto.gen_obj?.nombre || producto.genero || 'Unisex'
-
         const texto = `Hola Activa Sport, me interesa este modelo:
 📸 *Foto:* ${selectedImage}
 
 👟 *Modelo:* ${producto.nombre}
-🏷️ *Marca:* ${marcaFinal}
-🚻 *Género:* ${generoFinal}
+🏷️ *Marca:* ${producto.marca || producto.origen || 'Genérica'}
 🔖 *Código:* ${producto.codigo || 'N/A'}
 📦 *Caja:* ${producto.caja || 'N/A'}
 📏 *Talla/Curva:* ${tallaSeleccionada}
@@ -494,12 +490,6 @@ export default function ProductView({ producto, productosRelacionados }: Product
 
                                 {/* Detalles del Producto */}
                                 <div className="mb-6 grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {/* Marca */}
-                                    <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                                        <p className="text-xs text-slate-400 font-medium mb-1">Marca</p>
-                                        <p className="text-sm font-bold text-orange-600 uppercase">{producto.marca_obj?.nombre || producto.marca || 'S/M'}</p>
-                                    </div>
-
                                     {/* Categoría */}
                                     {(producto.cat_obj?.nombre || producto.categoria) && (
                                         <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -524,27 +514,11 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                         </div>
                                     )}
 
-                                    {/* Origen */}
+                                    {/* Origen transformado visualmente a Marca */}
                                     {producto.origen && (
                                         <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                                            <p className="text-xs text-slate-400 font-medium mb-1">Origen</p>
-                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">{producto.origen}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Código */}
-                                    {producto.codigo && (
-                                        <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                                            <p className="text-xs text-slate-400 font-medium mb-1">Código</p>
-                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase">{producto.codigo}</p>
-                                        </div>
-                                    )}
-
-                                    {/* Caja */}
-                                    {producto.caja && (
-                                        <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                                            <p className="text-xs text-slate-400 font-medium mb-1">Caja</p>
-                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{producto.caja}</p>
+                                            <p className="text-xs text-slate-400 font-medium mb-1">Marca</p>
+                                            <p className="text-sm font-bold text-orange-600 uppercase">{producto.origen}</p>
                                         </div>
                                     )}
 
