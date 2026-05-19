@@ -122,7 +122,7 @@ export default function BrandsCarousel() {
                                         <img
                                             src={proxyImageUrl(marca.logo_url)}
                                             alt={marca.nombre}
-                                            className="w-[65%] h-[65%] object-contain brightness-0 invert dark:invert-0 dark:brightness-0 group-hover:scale-110 transition-transform duration-300"
+                                            className="w-[75%] h-[75%] object-contain invert mix-blend-screen dark:invert-0 dark:mix-blend-multiply group-hover:scale-110 transition-transform duration-300"
                                         />
                                     ) : (
                                         <span className="text-2xl md:text-3xl font-black text-white dark:text-slate-900 select-none group-hover:scale-110 transition-transform duration-300">
