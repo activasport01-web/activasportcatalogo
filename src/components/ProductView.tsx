@@ -253,13 +253,13 @@ export default function ProductView({ producto, productosRelacionados }: Product
                         Catálogo
                     </Link>
                     <span className="text-slate-300 dark:text-slate-600">/</span>
-                    <Link href={`/catalogo?categoria=${producto.categoria}`} className="hover:text-brand-orange capitalize transition-colors">
-                        {producto.categoria}
+                    <Link href={`/catalogo?categoria=${producto.cat_obj?.nombre || producto.categoria || ''}`} className="hover:text-brand-orange capitalize transition-colors">
+                        {producto.cat_obj?.nombre || producto.categoria}
                     </Link>
-                    {producto.subcategoria && (
+                    {(producto.subcat_obj?.nombre || producto.subcategoria) && (
                         <>
                             <span className="text-slate-300 dark:text-slate-600">/</span>
-                            <span className="capitalize text-slate-400">{producto.subcategoria}</span>
+                            <span className="capitalize text-slate-400">{producto.subcat_obj?.nombre || producto.subcategoria}</span>
                         </>
                     )}
                     <span className="text-slate-300 dark:text-slate-600">/</span>
@@ -491,26 +491,26 @@ export default function ProductView({ producto, productosRelacionados }: Product
                                 {/* Detalles del Producto */}
                                 <div className="mb-6 grid grid-cols-2 gap-3">
                                     {/* Categoría */}
-                                    {producto.categoria && (
+                                    {(producto.cat_obj?.nombre || producto.categoria) && (
                                         <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <p className="text-xs text-slate-400 font-medium mb-1">Categoría</p>
-                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">{producto.categoria}</p>
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">{producto.cat_obj?.nombre || producto.categoria}</p>
                                         </div>
                                     )}
 
                                     {/* Subcategoría */}
-                                    {producto.subcategoria && (
+                                    {(producto.subcat_obj?.nombre || producto.subcategoria) && (
                                         <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <p className="text-xs text-slate-400 font-medium mb-1">Tipo</p>
-                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">{producto.subcategoria}</p>
+                                            <p className="text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">{producto.subcat_obj?.nombre || producto.subcategoria}</p>
                                         </div>
                                     )}
 
                                     {/* Marca */}
-                                    {producto.marca && (
+                                    {(producto.marca_obj?.nombre || producto.marca) && (
                                         <div className="bg-white dark:bg-slate-800/80 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
                                             <p className="text-xs text-slate-400 font-medium mb-1">Marca</p>
-                                            <p className="text-sm font-bold text-orange-600 uppercase">{producto.marca}</p>
+                                            <p className="text-sm font-bold text-orange-600 uppercase">{producto.marca_obj?.nombre || producto.marca}</p>
                                         </div>
                                     )}
 

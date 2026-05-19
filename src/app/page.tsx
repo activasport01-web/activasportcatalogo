@@ -5,8 +5,9 @@ import ProductCard from '@/components/ProductCard'
 import BrandsCarousel from '@/components/BrandsCarousel'
 import { Sparkles, TrendingUp, Award, ArrowRight } from 'lucide-react'
 
-// Esto asegura que la página no guarde caché vieja y muestre siempre lo nuevo
-export const revalidate = 0;
+// ISR (Incremental Static Regeneration): Actualiza la caché en segundo plano cada 60 segundos 
+// para que la web vuele sin saturar las consultas a Supabase.
+export const revalidate = 60;
 
 export default async function Home() {
   // 1. Obtener TODAS las Portadas activas (carrusel de portadas)
@@ -19,7 +20,7 @@ export default async function Home() {
   // 2. Obtener Zapatos Disponibles (Con Prioridad a Marca "Activa")
   const activaQuery = supabase
     .from('zapatos')
-    .select('*')
+    .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
     .eq('disponible', true)
     .ilike('marca', '%activa%')
     .order('fecha_creacion', { ascending: false })
@@ -27,7 +28,7 @@ export default async function Home() {
 
   const generalQuery = supabase
     .from('zapatos')
-    .select('*')
+    .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
     .eq('disponible', true)
     .order('fecha_creacion', { ascending: false })
     .limit(12)

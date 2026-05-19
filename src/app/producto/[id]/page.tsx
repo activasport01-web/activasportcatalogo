@@ -67,7 +67,7 @@ export default async function ProductoPage({ params }: Props) {
     // Fetch Producto Principal
     const { data: producto } = await supabase
         .from('zapatos')
-        .select('*')
+        .select('*, cat_obj:categorias(nombre), marca_obj:marcas(nombre), subcat_obj:subcategorias(nombre), gen_obj:generos(nombre)')
         .eq('id', id)
         .single()
 
@@ -79,8 +79,8 @@ export default async function ProductoPage({ params }: Props) {
     // Buscamos hasta 4 productos similares para mostrar abajo
     const { data: relacionados } = await supabase
         .from('zapatos')
-        .select('*')
-        .eq('categoria', producto.categoria)
+        .select('*, cat_obj:categorias(nombre), marca_obj:marcas(nombre), subcat_obj:subcategorias(nombre), gen_obj:generos(nombre)')
+        .eq('categoria_id', producto.categoria_id) // Match using ID instead of text
         .eq('disponible', true)
         .neq('id', id) // Excluir el actual
         .limit(4)

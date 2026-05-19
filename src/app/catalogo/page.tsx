@@ -2,14 +2,14 @@ import { supabase } from '@/lib/supabase'
 
 import CatalogView from '@/components/CatalogView'
 
-export const revalidate = 0 // Datos frescos siempre
+export const revalidate = 60 // ISR: Datos actualizados cada minuto, pero cargan al instante.
 
 export default async function CatalogoPage() {
     // 1. Fetch de TODOS los productos disponibles
     // La estrategia es traer todos (~X00 items) y filtrar en cliente para velocidad instantánea.
     const productsPromise = supabase
         .from('zapatos')
-        .select('*')
+        .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
         .eq('disponible', true)
         .order('fecha_creacion', { ascending: false })
 

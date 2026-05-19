@@ -35,7 +35,7 @@ function LoginForm() {
 
             // Si el middleware guardó a dónde iba el usuario, volver ahí
             const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
-            router.push(redirectTo)
+            window.location.href = redirectTo
         }
     }
 

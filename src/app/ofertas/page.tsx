@@ -9,7 +9,7 @@ export default async function OfertasPage() {
     // Obtener zapatos con etiqueta "oferta"
     const { data: zapatos } = await supabase
         .from('zapatos')
-        .select('*')
+        .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
         .eq('disponible', true)
         .contains('etiquetas', ['oferta'])
         .order('fecha_creacion', { ascending: false })

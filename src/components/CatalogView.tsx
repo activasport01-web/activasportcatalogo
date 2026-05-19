@@ -52,7 +52,7 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
         if (!availCategorias || availCategorias.length === 0) return []
         return availCategorias.map(c => ({
             label: c.nombre,
-            value: c.nombre // Usamos el nombre real para filtrar (ej: "Deportivo")
+            value: c.id || c.nombre // Prioridad al ID (UUID) para filtrado relacional
         }))
     }, [availCategorias])
 
@@ -60,15 +60,15 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
         if (!availSubcategorias || availSubcategorias.length === 0) return []
         return availSubcategorias.map(s => ({
             label: s.nombre,
-            value: s.nombre,
+            value: s.id || s.nombre,
             catRel: s.categoria_relacionada
         }))
     }, [availSubcategorias])
 
-    // Marcas desde DB
+    // Marcas desde DB (Usamos objetos para tener ID y Nombre)
     const MARCAS = useMemo(() => {
         if (!availMarcas || availMarcas.length === 0) return []
-        return availMarcas.map(m => m.nombre)
+        return availMarcas.map(m => ({ label: m.nombre, value: m.id || m.nombre }))
     }, [availMarcas])
 
     // Nuevos filtros fijos
@@ -106,27 +106,44 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
         // 0. Búsqueda por Texto
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase().trim()
-            result = result.filter(p =>
-                p.nombre.toLowerCase().includes(query) ||
-                p.marca?.toLowerCase().includes(query) ||
-                p.categoria?.toLowerCase().includes(query)
-            )
+            result = result.filter(p => {
+                const marcaNombre = p.marca_obj?.nombre || p.marca || ''
+                const catNombre = p.cat_obj?.nombre || p.categoria || ''
+                return p.nombre.toLowerCase().includes(query) ||
+                marcaNombre.toLowerCase().includes(query) ||
+                catNombre.toLowerCase().includes(query)
+            })
         }
 
         // 1. Categoría
         if (selectedCategories.length > 0) {
-            result = result.filter(p => selectedCategories.some(cat => p.categoria.toLowerCase().includes(cat.toLowerCase())))
+            result = result.filter(p => selectedCategories.some(catVal => {
+                if (p.categoria_id && p.categoria_id === catVal) return true;
+                
+                // Fallbacks texturizados (en caso de que catVal sea un string)
+                if (p.cat_obj && p.cat_obj.nombre && p.cat_obj.nombre.toLowerCase().includes(catVal.toLowerCase())) return true;
+                if (p.categoria && p.categoria.toLowerCase().includes(catVal.toLowerCase())) return true;
+                return false;
+            }))
         }
 
         // 2. Subcategoría
         if (selectedSubcategories.length > 0) {
-            result = result.filter(p => p.subcategoria && selectedSubcategories.some(sub => p.subcategoria.toLowerCase().includes(sub.toLowerCase())))
+            result = result.filter(p => selectedSubcategories.some(subVal => {
+                if (p.subcategoria_id && p.subcategoria_id === subVal) return true;
+                
+                // Fallbacks texturizados
+                if (p.subcat_obj && p.subcat_obj.nombre && p.subcat_obj.nombre.toLowerCase().includes(subVal.toLowerCase())) return true;
+                if (p.subcategoria && p.subcategoria.toLowerCase().includes(subVal.toLowerCase())) return true;
+                return false;
+            }))
         }
 
         // 3. Género (Lógica Inteligente)
         if (selectedGenders.length > 0) {
             result = result.filter(p => {
-                const pGen = p.genero ? p.genero.trim().toLowerCase() : '';
+                const pGenRaw = p.gen_obj?.nombre || p.genero || '';
+                const pGen = pGenRaw.trim().toLowerCase();
                 return selectedGenders.some(selected => {
                     const sGen = selected.trim().toLowerCase();
                     if (pGen === sGen) return true;
@@ -142,28 +159,31 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
             result = result.filter(p => p.grupo_talla && selectedGroups.some(grp => p.grupo_talla.trim().toLowerCase() === grp.trim().toLowerCase()))
         }
 
-        // 5. Marca (Robustez Extrema: Origen, String, ID, o Fallback)
+        // 5. Marca (Robustez Extrema: ID, Origen, String o Fallback)
         if (selectedBrands.length > 0) {
             result = result.filter(p =>
-                selectedBrands.some(brand => {
-                    const brandClean = brand.trim().toLowerCase()
+                selectedBrands.some(brandVal => {
+                    // 1. Chequeo por ID exacto
+                    if (p.marca_id && p.marca_id === brandVal) return true;
+                    
+                    // Si brandVal es un UUID, extraer su nombre real del mapa para los fallbacks
+                    // type coercion here works because JS objects can use strings as keys
+                    const resolvedBrandName = (brandIdToName as any)[brandVal] || brandVal
+                    const brandClean = resolvedBrandName.trim().toLowerCase()
 
-                    // 1. Chequeo por Campo 'origen' (Visto en DB del usuario)
+                    // 2. Chequeo por Objeto Relacional
+                    if (p.marca_obj && p.marca_obj.nombre && p.marca_obj.nombre.trim().toLowerCase() === brandClean) return true;
+
+                    // 3. Chequeo por Campo 'origen' (Visto en DB del usuario)
                     if (p.origen && p.origen.trim().toLowerCase() === brandClean) return true
 
-                    // 2. Chequeo Directo (Campo 'marca')
+                    // 4. Chequeo Directo (Campo 'marca' - Legacy)
                     if (p.marca && p.marca.trim().toLowerCase() === brandClean) return true
 
-                    // 3. Coincidencia por ID (Si 'marca' string está vacío pero 'marca_id' existe)
-                    if (p.marca_id) {
-                        const brandObjName = brandIdToName[p.marca_id]
-                        if (brandObjName === brandClean) return true
-                    }
-
-                    // 4. Fallback: Nombre del producto
+                    // 5. Fallback: Nombre del producto
                     if (p.nombre && p.nombre.toLowerCase().includes(brandClean)) return true
 
-                    // 5. Fix específico para typos comunes en el nombre (Gracep vs Grasep)
+                    // 6. Fix específico para typos comunes en el nombre (Gracep vs Grasep)
                     if ((brandClean === 'grasep' || brandClean === 'gracep') && p.nombre.toLowerCase().includes('gra')) {
                         if (p.nombre.toLowerCase().includes('gracep') || p.nombre.toLowerCase().includes('grasep')) return true
                     }
@@ -344,20 +364,20 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
                             <div className="flex items-center p-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-max">
                                 {MARCAS.map(marca => (
                                     <button
-                                        key={marca}
+                                        key={marca.value}
                                         onClick={() => {
-                                            if (selectedBrands.includes(marca)) {
-                                                setSelectedBrands(prev => prev.filter(b => b !== marca))
+                                            if (selectedBrands.includes(marca.value)) {
+                                                setSelectedBrands(prev => prev.filter(b => b !== marca.value))
                                             } else {
-                                                setSelectedBrands(prev => [...prev, marca])
+                                                setSelectedBrands(prev => [...prev, marca.value])
                                             }
                                         }}
-                                        className={`px-4 py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all ${selectedBrands.includes(marca)
+                                        className={`px-4 py-1.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider transition-all ${selectedBrands.includes(marca.value)
                                             ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
                                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                                             }`}
                                     >
-                                        {marca}
+                                        {marca.label}
                                     </button>
                                 ))}
                             </div>

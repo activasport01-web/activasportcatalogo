@@ -9,7 +9,7 @@ export default async function NuevosPage() {
     // Obtener zapatos con etiqueta "nuevo"
     const { data: zapatos } = await supabase
         .from('zapatos')
-        .select('*')
+        .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
         .eq('disponible', true)
         .contains('etiquetas', ['nuevo'])
         .order('fecha_creacion', { ascending: false })

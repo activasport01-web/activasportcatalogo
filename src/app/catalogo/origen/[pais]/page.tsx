@@ -37,7 +37,7 @@ export default async function OrigenPage({ params }: Props) {
     // Fetch productos filtrados por Origen
     const { data: zapatos } = await supabase
         .from('zapatos')
-        .select('*')
+        .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
         .eq('disponible', true)
         .eq('origen', dbOrigen)
         .order('fecha_creacion', { ascending: false })
@@ -64,17 +64,19 @@ export default async function OrigenPage({ params }: Props) {
             {/* Reutilizamos el CatalogView pero ya vendrá con los productos filtrados */}
             {/* Derivar filtros del resultado actual */}
             {(() => {
-                const uniqueCategorias = Array.from(new Set((zapatos || []).map(z => z.categoria).filter(Boolean))).map(c => ({ nombre: c }));
+                const uniqueCategorias = Array.from(new Set((zapatos || []).map(z => z.cat_obj?.nombre || z.categoria).filter(Boolean))).map(c => ({ id: c, nombre: c }));
 
                 const uniqueSubMap = new Map();
                 (zapatos || []).forEach(z => {
-                    if (z.subcategoria && !uniqueSubMap.has(z.subcategoria)) {
-                        uniqueSubMap.set(z.subcategoria, { nombre: z.subcategoria, categoria_relacionada: z.categoria });
+                    const subNombre = z.subcat_obj?.nombre || z.subcategoria;
+                    const catNombre = z.cat_obj?.nombre || z.categoria;
+                    if (subNombre && !uniqueSubMap.has(subNombre)) {
+                        uniqueSubMap.set(subNombre, { id: subNombre, nombre: subNombre, categoria_relacionada: catNombre });
                     }
                 });
                 const uniqueSubcategorias = Array.from(uniqueSubMap.values());
 
-                const uniqueMarcas = Array.from(new Set((zapatos || []).map(z => z.marca).filter(Boolean))).map(m => ({ nombre: m }));
+                const uniqueMarcas = Array.from(new Set((zapatos || []).map(z => z.marca_obj?.nombre || z.marca).filter(Boolean))).map(m => ({ id: m, nombre: m }));
 
                 return (
                     <CatalogView

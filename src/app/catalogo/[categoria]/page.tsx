@@ -24,7 +24,7 @@ export default async function CategoriaPage({ params }: Props) {
     // Fetch productos filtrados por Categoría
     const { data: zapatos } = await supabase
         .from('zapatos')
-        .select('*')
+        .select('*, marca_obj:marcas(nombre), cat_obj:categorias(nombre), gen_obj:generos(nombre)')
         .eq('disponible', true)
         // Usamos 'ilike' para que no importe mayúsculas/minúsculas o coincidencia parcial
         // Usamos 'ilike' con comodines % para coincidencia parcial (ej: "deportivo" encuentra "Deportivos")
@@ -53,17 +53,19 @@ export default async function CategoriaPage({ params }: Props) {
             {/* La vista recibe SOLO los productos de esta categoría */}
             {/* Derivar filtros del resultado actual */}
             {(() => {
-                const uniqueCategorias = Array.from(new Set((zapatos || []).map(z => z.categoria).filter(Boolean))).map(c => ({ nombre: c }));
+                const uniqueCategorias = Array.from(new Set((zapatos || []).map(z => z.cat_obj?.nombre || z.categoria).filter(Boolean))).map(c => ({ id: c, nombre: c }));
 
                 const uniqueSubMap = new Map();
                 (zapatos || []).forEach(z => {
-                    if (z.subcategoria && !uniqueSubMap.has(z.subcategoria)) {
-                        uniqueSubMap.set(z.subcategoria, { nombre: z.subcategoria, categoria_relacionada: z.categoria });
+                    const subNombre = z.subcat_obj?.nombre || z.subcategoria;
+                    const catNombre = z.cat_obj?.nombre || z.categoria;
+                    if (subNombre && !uniqueSubMap.has(subNombre)) {
+                        uniqueSubMap.set(subNombre, { id: subNombre, nombre: subNombre, categoria_relacionada: catNombre });
                     }
                 });
                 const uniqueSubcategorias = Array.from(uniqueSubMap.values());
 
-                const uniqueMarcas = Array.from(new Set((zapatos || []).map(z => z.marca).filter(Boolean))).map(m => ({ nombre: m }));
+                const uniqueMarcas = Array.from(new Set((zapatos || []).map(z => z.marca_obj?.nombre || z.marca).filter(Boolean))).map(m => ({ id: m, nombre: m }));
 
                 return (
                     <CatalogView

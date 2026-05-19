@@ -46,6 +46,9 @@ interface Producto {
     fecha_creacion: string
     precio_costo?: number // NUEVO: Precio de compra por bulto/unidad
     variantes_tallas?: any[] // NUEVO: Array de curvas de tallas y su stock
+    cat_obj?: { nombre: string }
+    marca_obj?: { nombre: string }
+    gen_obj?: { nombre: string }
 }
 
 export default function ProductosAdmin() {
@@ -169,13 +172,17 @@ export default function ProductosAdmin() {
         descripcion: '',
         precio: '',
         categoria: 'Deportivo',
+        categoria_id: '',
         subcategoria: '',
+        subcategoria_id: '',
         genero: '', // Ahora vacío por defecto para obligar selección o usar fallback
+        genero_id: '',
         grupo_talla: '',
         tallas: '',
         colores: '',
         etiquetas: [] as string[],
         origen: '', // Marca
+        marca_id: '',
         disponible: true,
         precio_costo: 0, // NUEVO: Costo de compra
         stock_bultos: 0 // NUEVO: Stock de cajas cerradas
@@ -220,7 +227,7 @@ export default function ProductosAdmin() {
         setLoading(true)
         const { data: productosData, error } = await supabase
             .from('zapatos')
-            .select('*')
+            .select('*, cat_obj:categorias(nombre), marca_obj:marcas(nombre), gen_obj:generos(nombre)')
             .order('fecha_creacion', { ascending: false })
 
         if (!error && productosData) {
@@ -345,9 +352,9 @@ export default function ProductosAdmin() {
                 caja: formData.caja || null,
                 descripcion: formData.descripcion || null,
                 precio: 0, // Venta por mayor, precio oculto/negociable/docena
-                categoria: formData.categoria,
-                subcategoria: formData.subcategoria || null,
-                genero: formData.genero || 'Unisex',
+                categoria_id: formData.categoria_id || null,
+                subcategoria_id: formData.subcategoria_id || null,
+                genero_id: formData.genero_id || null,
                 grupo_talla: formData.grupo_talla || 'Adulto',
                 tallas: formData.tallas ? formData.tallas.split(',').map(t => t.trim()).filter(t => t) : [],
                 // ACTUALIZADO: Guardar variantes completas si existen, sino array vacío
@@ -355,7 +362,8 @@ export default function ProductosAdmin() {
                 etiquetas: formData.etiquetas || [],
                 url_imagen,
                 imagen_hover,
-                origen: formData.origen, // Nuevo: Enviar origen
+                origen: formData.origen, // Se mantiene origen como texto si se usaba para otra cosa
+                marca_id: formData.marca_id || null,
                 disponible: formData.disponible,
                 stock_bultos: formData.stock_bultos, // NUEVO: Guardar stock de bultos general (suma opcional)
                 precio_costo: formData.precio_costo, // NUEVO: Guardar costo
@@ -487,13 +495,17 @@ export default function ProductosAdmin() {
                 descripcion: producto.descripcion || '',
                 precio: producto.precio.toString(),
                 categoria: producto.categoria,
+                categoria_id: (producto as any).categoria_id || '',
                 subcategoria: (producto as any).subcategoria || '',
+                subcategoria_id: (producto as any).subcategoria_id || '',
                 genero: (producto as any).genero || 'Unisex',
+                genero_id: (producto as any).genero_id || '',
                 grupo_talla: (producto as any).grupo_talla || 'Adulto',
                 tallas: producto.tallas?.join(', ') || '',
                 colores: '',
                 etiquetas: producto.etiquetas || [],
-                origen: producto.origen || 'Nacional',
+                origen: producto.origen || (producto as any).marca || 'Nacional',
+                marca_id: (producto as any).marca_id || '',
                 disponible: producto.disponible,
                 precio_costo: (producto as any).precio_costo || 0,
                 stock_bultos: (producto as any).stock_bultos || 0
@@ -535,13 +547,17 @@ export default function ProductosAdmin() {
                 descripcion: '',
                 precio: '',
                 categoria: 'Deportivo',
+                categoria_id: '',
                 subcategoria: '',
+                subcategoria_id: '',
                 genero: 'Unisex',
+                genero_id: '',
                 grupo_talla: 'Adulto',
                 tallas: '',
                 colores: '',
                 etiquetas: [],
                 origen: '',
+                marca_id: '',
                 disponible: true,
                 precio_costo: 0,
                 stock_bultos: 0
@@ -759,7 +775,7 @@ export default function ProductosAdmin() {
                             <div className="p-5 flex-1 flex flex-col">
                                 <div className="mb-4 flex-1">
                                     <span className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-1 block">
-                                        {producto.categoria}
+                                        {producto.cat_obj?.nombre || producto.categoria || 'Genérico'}
                                     </span>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                                     </h3>
@@ -1073,14 +1089,17 @@ export default function ProductosAdmin() {
                                                 <div>
                                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Categoría Global *</label>
                                                     <select
-                                                        value={formData.categoria}
-                                                        onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+                                                        value={formData.categoria_id}
+                                                        onChange={(e) => {
+                                                            const selected = categoriasList.find((c: any) => c.id === e.target.value);
+                                                            setFormData({ ...formData, categoria: selected ? selected.nombre : '', categoria_id: e.target.value });
+                                                        }}
                                                         className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
                                                         required
                                                     >
                                                         <option value="">Seleccionar...</option>
                                                         {categoriasList.map((cat: any) => (
-                                                            <option key={cat.nombre} value={cat.nombre}>{cat.nombre}</option>
+                                                            <option key={cat.id} value={cat.id}>{cat.nombre}</option>
                                                         ))}
                                                     </select>
                                                 </div>
@@ -1091,15 +1110,18 @@ export default function ProductosAdmin() {
                                                     Subcategoría / Tipo <span className="text-slate-400 font-normal">(Opcional)</span>
                                                 </label>
                                                 <select
-                                                    value={(formData as any).subcategoria || ''}
-                                                    onChange={(e) => setFormData({ ...formData, subcategoria: e.target.value } as any)}
+                                                    value={formData.subcategoria_id || ''}
+                                                    onChange={(e) => {
+                                                        const selected = subcategoriasList.find((s: any) => s.id === e.target.value);
+                                                        setFormData({ ...formData, subcategoria: selected ? selected.nombre : '', subcategoria_id: e.target.value } as any);
+                                                    }}
                                                     className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
                                                 >
                                                     <option value="">Sin subcategoría</option>
                                                     {subcategoriasList
                                                         .filter((sub: any) => !sub.categoria_relacionada || sub.categoria_relacionada === formData.categoria || sub.categoria_relacionada === '')
                                                         .map((sub: any) => (
-                                                            <option key={sub.id} value={sub.nombre}>{sub.nombre}</option>
+                                                            <option key={sub.id} value={sub.id}>{sub.nombre}</option>
                                                         ))
                                                     }
                                                 </select>
@@ -1111,13 +1133,16 @@ export default function ProductosAdmin() {
                                                 <div>
                                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Género</label>
                                                     <select
-                                                        value={formData.genero}
-                                                        onChange={(e) => setFormData({ ...formData, genero: e.target.value } as any)}
+                                                        value={formData.genero_id || ''}
+                                                        onChange={(e) => {
+                                                            const selected = generosList.find((g: any) => g.id === e.target.value);
+                                                            setFormData({ ...formData, genero: selected ? selected.nombre : '', genero_id: e.target.value } as any);
+                                                        }}
                                                         className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
                                                     >
                                                         <option value="">Seleccionar...</option>
                                                         {generosList.map((g: any) => (
-                                                            <option key={g.nombre} value={g.nombre}>{g.nombre}</option>
+                                                            <option key={g.id} value={g.id}>{g.nombre}</option>
                                                         ))}
                                                     </select>
                                                 </div>
@@ -1142,10 +1167,10 @@ export default function ProductosAdmin() {
                                                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                                     {marcasList.map((m) => (
                                                         <button
-                                                            key={m.nombre}
+                                                            key={m.id}
                                                             type="button"
-                                                            onClick={() => setFormData({ ...formData, origen: m.nombre })}
-                                                            className={`flex items-center justify-center p-2 rounded-lg border text-xs font-bold uppercase transition-all ${formData.origen === m.nombre
+                                                            onClick={() => setFormData({ ...formData, origen: m.nombre, marca_id: m.id })}
+                                                            className={`flex items-center justify-center p-2 rounded-lg border text-xs font-bold uppercase transition-all ${formData.marca_id === m.id
                                                                 ? 'border-orange-500 bg-orange-50 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400 ring-1 ring-orange-200 dark:ring-orange-900'
                                                                 : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-700 dark:hover:text-slate-300'
                                                                 }`}
