@@ -158,55 +158,55 @@ export default async function Home() {
             )}
           </Link>
 
-          {/* 2. MÁS POPULAR (Banner Azul Vibrante) */}
-          <Link href={pPopular ? `/producto/${pPopular.id}` : '/catalogo'} className="banner-premium group relative w-full h-48 md:h-60 overflow-hidden rounded-3xl shadow-lg block bg-gradient-to-br from-blue-700 via-blue-600 to-blue-500">
+          {/* 2. MÁS POPULAR (Banner Blanco) */}
+          <Link href={pPopular ? `/producto/${pPopular.id}` : '/catalogo'} className="banner-premium group relative w-full h-48 md:h-60 overflow-hidden rounded-3xl shadow-md block bg-white dark:bg-slate-200 border border-slate-100 dark:border-none">
             {pPopular ? (
               <>
-                <div className="deco-stripe absolute -right-10 top-0 w-[45%] h-full bg-white/[0.1] skew-x-[-12deg] z-[1]" />
-                <div className="absolute -right-20 top-0 w-[30%] h-full bg-white/[0.05] skew-x-[-12deg] z-[1]" />
-                <div className="absolute -top-16 -right-16 w-56 h-56 md:w-72 md:h-72 rounded-full border border-white/15 z-[1]" />
+                <div className="deco-stripe absolute -right-10 top-0 w-[45%] h-full bg-slate-100/[0.8] dark:bg-white/[0.3] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -right-20 top-0 w-[30%] h-full bg-slate-50/[0.5] dark:bg-white/[0.2] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -top-16 -right-16 w-56 h-56 md:w-72 md:h-72 rounded-full border border-slate-200 dark:border-white/40 z-[1]" />
 
                 <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-[45%] md:w-[40%] h-[85%] z-[2] flex items-center justify-center">
-                  <img src={proxyImageUrl(pPopular.url_imagen)} alt="Popular" className="shoe-img w-full h-full object-contain mix-blend-multiply drop-shadow-[0_5px_25px_rgba(0,0,0,0.2)] filter brightness-105" />
+                  <img src={proxyImageUrl(pPopular.url_imagen)} alt="Popular" className="shoe-img w-full h-full object-contain mix-blend-multiply drop-shadow-[0_15px_25px_rgba(0,0,0,0.15)] filter brightness-105" />
                 </div>
 
                 <div className="relative z-20 flex flex-col justify-center h-full w-[55%] md:w-[50%] pl-5 md:pl-10 py-4">
-                  <span className="inline-block px-2.5 py-1 bg-white/20 text-white text-[10px] md:text-xs uppercase font-black tracking-widest rounded-full w-max mb-2 shadow-sm border border-white/30 backdrop-blur-sm">
+                  <span className="inline-block px-2.5 py-1 bg-slate-900 text-white text-[10px] md:text-xs uppercase font-black tracking-widest rounded-full w-max mb-2 shadow-sm">
                     🔥 MÁS BUSCADO
                   </span>
-                  <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mb-1 drop-shadow-md line-clamp-2">{pPopular.nombre}</h3>
-                  <p className="text-[11px] md:text-sm text-blue-100 mb-3 font-medium line-clamp-2 drop-shadow">El favorito de nuestros clientes.</p>
-                  <div className="flex items-center text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mt-auto">
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-1 drop-shadow-sm line-clamp-2">{pPopular.nombre}</h3>
+                  <p className="text-[11px] md:text-sm text-slate-500 mb-3 font-medium line-clamp-2">El favorito de nuestros clientes.</p>
+                  <div className="flex items-center text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-wider mt-auto group-hover:text-orange-500 transition-colors">
                     Ver modelo <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
               </>
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white">POPULAR</div>
+              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-900">POPULAR</div>
             )}
           </Link>
 
-          {/* 3. MEJOR OFERTA (Banner Rojo Impacto) */}
-          <Link href={pOferta ? `/producto/${pOferta.id}` : '/ofertas'} className="banner-premium group relative w-full h-48 md:h-60 overflow-hidden rounded-3xl shadow-lg block bg-gradient-to-br from-red-800 via-red-700 to-red-600">
+          {/* 3. MEJOR OFERTA (Banner Naranja Suave) */}
+          <Link href={pOferta ? `/producto/${pOferta.id}` : '/ofertas'} className="banner-premium group relative w-full h-48 md:h-60 overflow-hidden rounded-3xl shadow-lg block bg-gradient-to-br from-orange-400 via-orange-400 to-orange-300">
             {pOferta ? (
               <>
-                <div className="deco-stripe absolute -right-10 top-0 w-[45%] h-full bg-white/[0.08] skew-x-[-12deg] z-[1]" />
-                <div className="absolute -right-20 top-0 w-[30%] h-full bg-white/[0.04] skew-x-[-12deg] z-[1]" />
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 md:w-56 md:h-56 rounded-full bg-yellow-400/10 z-[1]" />
+                <div className="deco-stripe absolute -right-10 top-0 w-[45%] h-full bg-white/[0.15] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -right-20 top-0 w-[30%] h-full bg-white/[0.08] skew-x-[-12deg] z-[1]" />
+                <div className="absolute -bottom-10 -left-10 w-40 h-40 md:w-56 md:h-56 rounded-full bg-white/10 z-[1]" />
 
                 <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-[45%] md:w-[40%] h-[85%] z-[2] flex items-center justify-center">
-                  <img src={proxyImageUrl(pOferta.url_imagen)} alt="Oferta" className="shoe-img w-full h-full object-contain mix-blend-multiply drop-shadow-[0_5px_25px_rgba(0,0,0,0.2)] filter brightness-105" />
+                  <img src={proxyImageUrl(pOferta.url_imagen)} alt="Oferta" className="shoe-img w-full h-full object-contain mix-blend-multiply drop-shadow-[0_10px_20px_rgba(0,0,0,0.15)] filter brightness-105" />
                 </div>
 
                 <div className="relative z-20 flex flex-col justify-center h-full w-[55%] md:w-[50%] pl-5 md:pl-10 py-4">
-                  <span className="inline-block px-2.5 py-1 bg-yellow-400 text-red-900 text-[10px] md:text-xs uppercase font-black tracking-widest rounded-full w-max mb-2 shadow-sm">
+                  <span className="inline-block px-2.5 py-1 bg-white text-orange-600 text-[10px] md:text-xs uppercase font-black tracking-widest rounded-full w-max mb-2 shadow-sm">
                     🏷️ MEJOR PRECIO
                   </span>
-                  <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mb-1 drop-shadow-md line-clamp-2">{pOferta.nombre}</h3>
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-1 drop-shadow-sm line-clamp-2">{pOferta.nombre}</h3>
                   
-                  <p className="text-[11px] md:text-sm text-red-100 mb-3 font-medium drop-shadow">🔥 Precio exclusivo por mayor. ¡Consulta ahora!</p>
+                  <p className="text-[11px] md:text-sm text-slate-800/80 mb-3 font-medium">🔥 Precio exclusivo por mayor. ¡Consulta ahora!</p>
 
-                  <div className="flex items-center text-[10px] md:text-xs font-bold text-white uppercase tracking-wider mt-auto">
+                  <div className="flex items-center text-[10px] md:text-xs font-bold text-slate-900 uppercase tracking-wider mt-auto">
                     Ver oferta <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
