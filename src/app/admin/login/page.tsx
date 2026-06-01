@@ -20,7 +20,7 @@ function LoginForm() {
         e.preventDefault()
         setLoading(true)
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
             email,
             password
         })
@@ -28,15 +28,30 @@ function LoginForm() {
         if (error) {
             alert('Error: ' + error.message)
             setLoading(false)
-        } else {
-            // Poner cookie de sesión para que el middleware pueda proteger /admin/*
-            // Dura 8 horas (28800 segundos), que es una jornada laboral típica
-            document.cookie = 'admin_session=1; path=/; SameSite=Strict; max-age=28800'
-
-            // Si el middleware guardó a dónde iba el usuario, volver ahí
-            const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
-            window.location.href = redirectTo
+            return
         }
+
+        // Verificar si tiene un perfil activo en el panel administrativo
+        const { data: profile, error: profileError } = await supabase
+            .from('usuarios')
+            .select('activo')
+            .eq('id', authData.user.id)
+            .single()
+
+        if (profileError || !profile || !profile.activo) {
+            await supabase.auth.signOut()
+            alert('Acceso denegado. Su cuenta no tiene permisos administrativos o está inactiva.')
+            setLoading(false)
+            return
+        }
+
+        // Poner cookie de sesión para que el middleware pueda proteger /admin/*
+        // Dura 8 horas (28800 segundos), que es una jornada laboral típica
+        document.cookie = 'admin_session=1; path=/; SameSite=Strict; max-age=28800'
+
+        // Si el middleware guardó a dónde iba el usuario, volver ahí
+        const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
+        window.location.href = redirectTo
     }
 
     return (

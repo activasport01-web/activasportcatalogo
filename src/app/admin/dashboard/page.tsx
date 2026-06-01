@@ -6,12 +6,13 @@ import Link from 'next/link'
 import {
     LayoutDashboard, Package, Tags, Image, LogOut, TrendingUp,
     Eye, ArrowUpRight, Sparkles, Clock, CheckCircle2, BarChart3,
-    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, AlertTriangle
+    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, AlertTriangle, ShieldCheck
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend
 } from 'recharts'
+import { useAuth } from '@/context/AuthContext'
 
 export default function AdminDashboard() {
     const router = useRouter()
@@ -27,16 +28,18 @@ export default function AdminDashboard() {
     const [stockBajo, setStockBajo] = useState<any[]>([])
     const STOCK_MINIMO = 3 // Umbral: 3 bultos o menos = alerta
 
-    useEffect(() => {
-        checkAuth()
-        loadAll()
-    }, [])
+    const { profile, loading: authLoading, hasPermission, logout } = useAuth()
 
-    const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) router.push('/admin/login')
-        setLoading(false)
-    }
+    useEffect(() => {
+        if (!authLoading) {
+            if (!profile) {
+                router.push('/admin/login')
+            } else {
+                loadAll()
+                setLoading(false)
+            }
+        }
+    }, [authLoading, profile])
 
     const loadAll = async () => {
         await Promise.all([loadStats(), loadCharts(), loadCapital(), loadStockBajo()])
@@ -146,10 +149,7 @@ export default function AdminDashboard() {
     }
 
     const handleLogout = async () => {
-        await supabase.auth.signOut()
-        // Borrar la cookie de sesión que el middleware usa para proteger /admin/*
-        document.cookie = 'admin_session=; path=/; max-age=0'
-        router.push('/admin/login')
+        await logout()
     }
 
     if (loading) return (
@@ -190,7 +190,12 @@ export default function AdminDashboard() {
                             <LayoutDashboard className="text-orange-500" size={28} />
                             <h2 className="text-3xl font-black text-black dark:text-white uppercase">Dashboard</h2>
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">Bienvenido al sistema de gestión.</p>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium">
+                            Bienvenido, <span className="font-bold text-orange-500">{profile?.nombre_completo || 'Usuario'}</span> 
+                            <span className="ml-2 inline-flex items-center gap-1 bg-slate-200 dark:bg-slate-800 text-xs px-2 py-0.5 rounded-full uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                <ShieldCheck size={12}/> {profile?.roles?.nombre || 'Rol'}
+                            </span>
+                        </p>
                     </div>
                     <p className="text-xs font-bold text-slate-400 uppercase bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 py-1.5 px-4 rounded-full shadow-sm hidden md:block">
                         {new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -381,18 +386,19 @@ export default function AdminDashboard() {
                             Acciones Rápidas
                         </h3>
                         {[
-                            { href: '/admin/ventas', icon: ShoppingCart, label: 'NUEVA VENTA', sub: 'Nota de venta + PDF', color: 'bg-green-600', shadow: 'shadow-green-600/20' },
-                            { href: '/admin/reportes', icon: BarChart3, label: 'REPORTES', sub: 'Ventas y exportar PDF', color: 'bg-orange-500', shadow: 'shadow-orange-500/20' },
-                            { href: '/admin/productos', icon: Package, label: 'PRODUCTOS', sub: 'Inventario completo', color: 'bg-orange-500', shadow: 'shadow-orange-500/20' },
-                            { href: '/admin/proveedores', icon: Warehouse, label: 'PROVEEDORES', sub: 'Contactos y compras', color: 'bg-teal-600', shadow: 'shadow-teal-600/20' },
-                            { href: '/admin/categorias', icon: Tags, label: 'CATEGORÍAS', sub: 'Organizar catálogo', color: 'bg-blue-600', shadow: 'shadow-blue-600/20' },
-                            { href: '/admin/subcategorias', icon: Layers, label: 'SUBCATEGORÍAS', sub: 'Tipos de planta', color: 'bg-indigo-600', shadow: 'shadow-indigo-600/20' },
-                            { href: '/admin/marcas', icon: CheckCircle2, label: 'MARCAS', sub: 'Gestión de marcas', color: 'bg-green-600', shadow: 'shadow-green-600/20' },
-                            { href: '/admin/generos', icon: Users, label: 'GÉNEROS', sub: 'Hombre / Mujer', color: 'bg-pink-600', shadow: 'shadow-pink-600/20' },
-                            { href: '/admin/grupos', icon: Ruler, label: 'TALLAS', sub: 'Grupos de talla', color: 'bg-purple-600', shadow: 'shadow-purple-600/20' },
-                            { href: '/admin/promociones', icon: Sparkles, label: 'PROMOCIONES', sub: 'Ofertas y campañas', color: 'bg-red-500', shadow: 'shadow-red-500/20' },
-                            { href: '/admin/portada', icon: Image, label: 'PORTADA WEB', sub: 'Banner principal', color: 'bg-purple-600', shadow: 'shadow-purple-600/20' },
-                        ].map(({ href, icon: Icon, label, sub, color, shadow }) => (
+                            { href: '/admin/ventas', icon: ShoppingCart, label: 'NUEVA VENTA', sub: 'Nota de venta + PDF', color: 'bg-green-600', shadow: 'shadow-green-600/20', perm: 'registrar_ventas' },
+                            { href: '/admin/pedidos', icon: ShoppingCart, label: 'PEDIDOS', sub: 'Pedidos WhatsApp', color: 'bg-blue-500', shadow: 'shadow-blue-500/20', perm: 'gestionar_pedidos' },
+                            { href: '/admin/reportes', icon: BarChart3, label: 'REPORTES', sub: 'Ventas y exportar PDF', color: 'bg-orange-500', shadow: 'shadow-orange-500/20', perm: 'ver_finanzas' },
+                            { href: '/admin/productos', icon: Package, label: 'PRODUCTOS', sub: 'Inventario completo', color: 'bg-orange-500', shadow: 'shadow-orange-500/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/proveedores', icon: Warehouse, label: 'PROVEEDORES', sub: 'Contactos y compras', color: 'bg-teal-600', shadow: 'shadow-teal-600/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/categorias', icon: Tags, label: 'CATEGORÍAS', sub: 'Organizar catálogo', color: 'bg-blue-600', shadow: 'shadow-blue-600/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/subcategorias', icon: Layers, label: 'SUBCATEGORÍAS', sub: 'Tipos de planta', color: 'bg-indigo-600', shadow: 'shadow-indigo-600/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/marcas', icon: CheckCircle2, label: 'MARCAS', sub: 'Gestión de marcas', color: 'bg-green-600', shadow: 'shadow-green-600/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/generos', icon: Users, label: 'GÉNEROS', sub: 'Hombre / Mujer', color: 'bg-pink-600', shadow: 'shadow-pink-600/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/grupos', icon: Ruler, label: 'TALLAS', sub: 'Grupos de talla', color: 'bg-purple-600', shadow: 'shadow-purple-600/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/promociones', icon: Sparkles, label: 'PROMOCIONES', sub: 'Ofertas y campañas', color: 'bg-red-500', shadow: 'shadow-red-500/20', perm: 'gestionar_configuracion' },
+                            { href: '/admin/portada', icon: Image, label: 'PORTADA WEB', sub: 'Banner principal', color: 'bg-purple-600', shadow: 'shadow-purple-600/20', perm: 'gestionar_configuracion' },
+                        ].filter(action => hasPermission(action.perm)).map(({ href, icon: Icon, label, sub, color, shadow }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
                                 <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center text-white shadow-lg ${shadow} shrink-0`}><Icon size={18} /></div>
                                 <div>

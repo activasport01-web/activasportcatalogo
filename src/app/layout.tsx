@@ -49,6 +49,7 @@ import Footer from '@/components/Footer';
 import { CartProvider } from '@/context/CartContext';
 import { FavoritesProvider } from '@/context/FavoritesContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { AuthProvider } from '@/context/AuthContext';
 import { Analytics } from "@vercel/analytics/react"
 
 export default function RootLayout({
@@ -60,22 +61,24 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${outfit.className} overflow-x-hidden`}>
         <ThemeProvider>
-          <CartProvider>
-            <FavoritesProvider>
-              <PublicOnly>
-                <TopHeader />
-              </PublicOnly>
-              {children}
-              <PublicOnly>
-                <Footer />
-                <DockNavbar />
-                <CookieBanner />
-                <NetworkStatus />
-              </PublicOnly>
-              <Analytics debug={false} />
+          <AuthProvider>
+            <CartProvider>
+              <FavoritesProvider>
+                <PublicOnly>
+                  <TopHeader />
+                </PublicOnly>
+                {children}
+                <PublicOnly>
+                  <Footer />
+                  <DockNavbar />
+                  <CookieBanner />
+                  <NetworkStatus />
+                </PublicOnly>
+                <Analytics debug={false} />
 
-            </FavoritesProvider>
-          </CartProvider>
+              </FavoritesProvider>
+            </CartProvider>
+          </AuthProvider>
         </ThemeProvider>
 
         {/* Script para silenciar logs de desarrollo molestos */}
