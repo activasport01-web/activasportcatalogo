@@ -192,6 +192,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
 📸 *Foto:* ${selectedImage}
 
 👟 *Modelo:* ${producto.nombre}
+👟 *Tipo:* ${producto.subcat_obj?.nombre || producto.subcategoria || 'N/A'}
 🏷️ *Marca:* ${producto.marca || producto.origen || 'Genérica'}
 🔖 *Código:* ${producto.codigo || 'N/A'}
 📦 *Caja:* ${producto.caja || 'N/A'}
@@ -223,6 +224,7 @@ export default function ProductView({ producto, productosRelacionados }: Product
             cantidad_pares: cantidadCajon,
             color: 'Colores Variados',
             marca: producto.marca_obj?.nombre || producto.marca || producto.origen || 'Genérica',
+            tipo_zapatilla: producto.subcat_obj?.nombre || producto.subcategoria || 'N/A',
             total_item: 0 // Set to 0 or internal value since we don't show price
         })
 

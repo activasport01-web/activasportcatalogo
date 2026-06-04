@@ -90,6 +90,7 @@ export default function CarritoPage() {
                 const tipoPaquete = `${item.cantidad_pares} pares` // Texto genérico ahora que la cantidad varía
                 mensaje += `👟 *MODELO ${index + 1}: ${item.nombre.toUpperCase()}*\n`
                 if (item.marca) mensaje += `🏷️ Marca: ${item.marca}\n`
+                if (item.tipo_zapatilla) mensaje += `👟 Tipo: ${item.tipo_zapatilla}\n`
                 mensaje += `📏 Curva: ${item.tipo_curva}\n`
                 mensaje += `🎨 Color: ${item.color || 'Surtido'}\n`
                 mensaje += `📦 Cantidad: ${tipoPaquete} (1 caja/bulto)\n`

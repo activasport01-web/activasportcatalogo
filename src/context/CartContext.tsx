@@ -11,6 +11,7 @@ export type CartItem = {
     cantidad_pares: number // Ahora soporta cantidades genéricas
     color?: string // Nuevo: Color específico del bulto
     marca?: string // Marca del producto
+    tipo_zapatilla?: string // Tipo de zapatilla (subcategoria)
     total_item: number
 }
 
