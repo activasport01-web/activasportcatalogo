@@ -43,9 +43,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true
 
     async function loadSession() {
+      // Timeout de seguridad: si Supabase tarda más de 8 segundos, forzamos la salida del estado de carga
+      const fallbackTimer = setTimeout(() => {
+        if (mounted) setLoading(false)
+      }, 8000)
+
       try {
-        const { data: { session } } = await supabase.auth.getSession()
+        const { data: { session }, error } = await supabase.auth.getSession()
         
+        if (error) {
+           console.error("Session error:", error)
+        }
+
         if (session?.user) {
           if (mounted) setUser(session.user)
           await loadProfile(session.user.id, mounted)
@@ -59,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error loading session:', error)
       } finally {
+        clearTimeout(fallbackTimer)
         if (mounted) setLoading(false)
       }
     }

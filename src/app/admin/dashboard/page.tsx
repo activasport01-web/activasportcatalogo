@@ -33,16 +33,23 @@ export default function AdminDashboard() {
     useEffect(() => {
         if (!authLoading) {
             if (!profile) {
-                router.push('/admin/login')
+                // Forzar redirección limpia si no hay perfil válido
+                window.location.replace('/admin/login')
             } else {
+                // Disparamos la carga de datos en segundo plano
                 loadAll()
+                // Quitamos la pantalla de carga inmediatamente para que sea fluido
                 setLoading(false)
             }
         }
     }, [authLoading, profile])
 
     const loadAll = async () => {
-        await Promise.all([loadStats(), loadCharts(), loadCapital(), loadStockBajo()])
+        try {
+            await Promise.all([loadStats(), loadCharts(), loadCapital(), loadStockBajo()])
+        } catch (error) {
+            console.error("Error al cargar datos del panel:", error)
+        }
     }
 
     const loadStats = async () => {
