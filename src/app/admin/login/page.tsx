@@ -20,38 +20,50 @@ function LoginForm() {
         e.preventDefault()
         setLoading(true)
 
-        const { data: authData, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        })
+        try {
+            const { data: authData, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            })
 
-        if (error) {
-            alert('Error: ' + error.message)
+            if (error) {
+                alert('Error: ' + error.message)
+                setLoading(false)
+                return
+            }
+
+            if (!authData || !authData.user) {
+                alert('Error: No se pudo verificar la identidad del usuario.')
+                setLoading(false)
+                return
+            }
+
+            // Verificar si tiene un perfil activo en el panel administrativo
+            const { data: profile, error: profileError } = await supabase
+                .from('usuarios')
+                .select('activo')
+                .eq('id', authData.user.id)
+                .single()
+
+            if (profileError || !profile || !profile.activo) {
+                await supabase.auth.signOut()
+                alert('Acceso denegado. Su cuenta no tiene permisos administrativos o está inactiva.')
+                setLoading(false)
+                return
+            }
+
+            // Poner cookie de sesión para que el middleware pueda proteger /admin/*
+            // Dura 30 días (2592000 segundos) para que la sesión se mantenga activa
+            document.cookie = 'admin_session=1; path=/; SameSite=Strict; max-age=2592000'
+
+            // Si el middleware guardó a dónde iba el usuario, volver ahí
+            const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
+            window.location.href = redirectTo
+        } catch (err: any) {
+            console.error('Error inesperado en login:', err)
+            alert('Ocurrió un error inesperado de conexión. Por favor, intenta de nuevo.')
             setLoading(false)
-            return
         }
-
-        // Verificar si tiene un perfil activo en el panel administrativo
-        const { data: profile, error: profileError } = await supabase
-            .from('usuarios')
-            .select('activo')
-            .eq('id', authData.user.id)
-            .single()
-
-        if (profileError || !profile || !profile.activo) {
-            await supabase.auth.signOut()
-            alert('Acceso denegado. Su cuenta no tiene permisos administrativos o está inactiva.')
-            setLoading(false)
-            return
-        }
-
-        // Poner cookie de sesión para que el middleware pueda proteger /admin/*
-        // Dura 8 horas (28800 segundos), que es una jornada laboral típica
-        document.cookie = 'admin_session=1; path=/; SameSite=Strict; max-age=28800'
-
-        // Si el middleware guardó a dónde iba el usuario, volver ahí
-        const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
-        window.location.href = redirectTo
     }
 
     return (
