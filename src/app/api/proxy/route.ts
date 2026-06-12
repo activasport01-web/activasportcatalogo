@@ -49,10 +49,20 @@ async function handler(request: NextRequest) {
     }
 
     const method = request.method
-    const hasBody = method !== 'GET' && method !== 'HEAD' && request.body
-    // Si tiene cuerpo, usamos el stream directamente para streaming en POST/PUT/PATCH,
-    // de lo contrario, undefined. Esto optimiza subidas de archivos en servidores Vercel.
-    const body = hasBody ? request.body : undefined
+    let body: any = undefined
+    let isStream = false
+
+    if (method !== 'GET' && method !== 'HEAD') {
+        // Usar streaming solo para subidas a storage (que manejan archivos grandes)
+        if (target.includes('/storage/v1/')) {
+            body = request.body
+            isStream = true
+        } else {
+            // Para base de datos (REST) y auth, leemos el cuerpo en memoria.
+            // Esto evita problemas de streaming/chunked transfer encoding y previene cuelgues.
+            body = await request.arrayBuffer()
+        }
+    }
 
     try {
         const upstream = await fetch(target, {
@@ -60,8 +70,9 @@ async function handler(request: NextRequest) {
             headers: forwardHeaders,
             body: body ?? undefined,
             // Requerido cuando se envía un stream en el body en Next.js/Vercel
-            duplex: body ? 'half' : undefined
+            duplex: isStream ? 'half' : undefined
         } as any)
+
 
         // Reenviar cabeceras de respuesta importantes
         const responseHeaders: Record<string, string> = {
