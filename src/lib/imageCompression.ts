@@ -1,6 +1,11 @@
 import imageCompression from 'browser-image-compression';
 
 export async function compressImage(file: File): Promise<File> {
+  // Optimización: si ya es WebP y pesa menos de 150 KB, no procesar para ahorrar CPU
+  if (file.type === 'image/webp' && file.size <= 150 * 1024) {
+    return file;
+  }
+
   const options = {
     maxSizeMB: 0.15, // Max 150 KB
     maxWidthOrHeight: 1024, // Reasonable max dimension to maintain quality

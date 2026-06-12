@@ -49,15 +49,21 @@ async function handler(request: NextRequest) {
     }
 
     const method = request.method
-    const body =
-        method !== 'GET' && method !== 'HEAD' ? await request.arrayBuffer() : undefined
+    const hasBody = method !== 'GET' && method !== 'HEAD' && request.body
+
+    const fetchOptions: any = {
+        method,
+        headers: forwardHeaders,
+        body: hasBody ? request.body : undefined,
+    }
+
+    // Node.js fetch requiere duplex: 'half' al pasar un ReadableStream como body
+    if (hasBody) {
+        fetchOptions.duplex = 'half'
+    }
 
     try {
-        const upstream = await fetch(target, {
-            method,
-            headers: forwardHeaders,
-            body: body ?? undefined,
-        })
+        const upstream = await fetch(target, fetchOptions)
 
         // Reenviar cabeceras de respuesta importantes
         const responseHeaders: Record<string, string> = {
@@ -68,13 +74,10 @@ async function handler(request: NextRequest) {
             if (val) responseHeaders[h] = val
         }
 
-        const responseBody = await upstream.arrayBuffer()
-
         // IMPORTANTE: Según el estándar HTTP, las respuestas 204, 205 y 304 no pueden tener cuerpo.
-        // Si le pasamos un ArrayBuffer vacío, NodeJS/Next.js lanza un TypeError que rompe el proxy.
         const isBodyAllowed = ![204, 205, 304].includes(upstream.status);
 
-        return new Response(isBodyAllowed ? responseBody : null, {
+        return new Response(isBodyAllowed ? upstream.body : null, {
             status: upstream.status,
             headers: responseHeaders,
         })

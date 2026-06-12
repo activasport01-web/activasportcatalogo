@@ -61,6 +61,7 @@ export default function ProductosAdmin() {
     const [editingProduct, setEditingProduct] = useState<Producto | null>(null)
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imageHoverFile, setImageHoverFile] = useState<File | null>(null)
+    const [submitStatus, setSubmitStatus] = useState<string | null>(null)
 
     // Listas dinámicas
     const [marcasList, setMarcasList] = useState<any[]>([])
@@ -303,6 +304,7 @@ export default function ProductosAdmin() {
         setEditingProduct(null)
         setImageFile(null)
         setImageHoverFile(null)
+        setSubmitStatus(null)
     }
 
     const [isSubmitting, setIsSubmitting] = useState(false) // Nuevo estado para prevenir doble click
@@ -312,64 +314,79 @@ export default function ProductosAdmin() {
         if (isSubmitting) return
 
         setIsSubmitting(true)
+        setSubmitStatus('Iniciando guardado...')
         try {
-            // NUEVO: Subir imágenes de variantes de color PRIMERO
-            const variantsWithUrls = await Promise.all(
-                colorVariants.map(async (variant) => {
-                    let imageUrl = variant.imagen
-                    let galleryUrls: string[] = variant.imagenes || []
+            // Subir imágenes de variantes de color de forma secuencial con progreso en la interfaz
+            const variantsWithUrls = []
+            
+            for (let i = 0; i < colorVariants.length; i++) {
+                const variant = colorVariants[i]
+                const variantLabel = variant.nombre || `Variante ${i + 1}`
+                let imageUrl = variant.imagen
+                let galleryUrls: string[] = variant.imagenes || []
 
-                    // 1. Subir imagen principal si hay archivo nuevo
-                    if (variant.imageFile) {
-                        const compressedFile = await compressImage(variant.imageFile)
-                        const cleanName = sanitizeFileName(compressedFile.name)
-                        const fileName = `variant_${Date.now()}_${cleanName}`
+                // 1. Subir imagen principal si hay archivo nuevo
+                if (variant.imageFile) {
+                    setSubmitStatus(`Comprimiendo imagen de ${variantLabel}...`)
+                    const compressedFile = await compressImage(variant.imageFile)
+                    
+                    setSubmitStatus(`Subiendo imagen de ${variantLabel}...`)
+                    const cleanName = sanitizeFileName(compressedFile.name)
+                    const fileName = `variant_${Date.now()}_${cleanName}`
 
-                        const { error: uploadError } = await supabase.storage
-                            .from('imagenes-zapatos')
-                            .upload(fileName, compressedFile)
+                    const { error: uploadError } = await supabase.storage
+                        .from('imagenes-zapatos')
+                        .upload(fileName, compressedFile)
 
-                        if (uploadError) {
-                            console.error('Error subiendo variante:', uploadError)
-                            showNotification('Error al subir imagen: ' + uploadError.message, 'error')
-                            return variant // Retornar sin cambios si falla
-                        }
-
+                    if (uploadError) {
+                        console.error('Error subiendo variante:', uploadError)
+                        showNotification('Error al subir imagen: ' + uploadError.message, 'error')
+                    } else {
                         const { data } = supabase.storage
                             .from('imagenes-zapatos')
                             .getPublicUrl(fileName)
                         imageUrl = data.publicUrl
                     }
+                }
 
-                    // 2. Subir imágenes de galería extra
-                    if (variant.extraFiles && variant.extraFiles.length > 0) {
-                        const newGalleryUrls = await Promise.all(variant.extraFiles.map(async (file) => {
-                            const compressedFile = await compressImage(file)
-                            const cleanName = sanitizeFileName(compressedFile.name)
-                            const fileName = `gallery_${Date.now()}_${cleanName}`
+                // 2. Subir imágenes de galería extra
+                if (variant.extraFiles && variant.extraFiles.length > 0) {
+                    const extraFiles = variant.extraFiles
+                    const newGalleryUrls: string[] = []
 
-                            const { error } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressedFile)
-                            if (error) {
-                                console.error('Error subiendo gallery:', error)
-                                return null
-                            }
+                    for (let j = 0; j < extraFiles.length; j++) {
+                        const file = extraFiles[j]
+                        setSubmitStatus(`Comprimiendo galería (${j + 1}/${extraFiles.length}) de ${variantLabel}...`)
+                        const compressedFile = await compressImage(file)
+
+                        setSubmitStatus(`Subiendo galería (${j + 1}/${extraFiles.length}) de ${variantLabel}...`)
+                        const cleanName = sanitizeFileName(compressedFile.name)
+                        const fileName = `gallery_${Date.now()}_${cleanName}`
+
+                        const { error } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressedFile)
+                        if (error) {
+                            console.error('Error subiendo gallery:', error)
+                        } else {
                             const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
-                            return data.publicUrl
-                        }))
-
-                        // Filtrar nulos y agregar a lista existente
-                        galleryUrls = [...galleryUrls, ...newGalleryUrls.filter((u): u is string => !!u)]
+                            if (data.publicUrl) {
+                                newGalleryUrls.push(data.publicUrl)
+                            }
+                        }
                     }
 
-                    return {
-                        color: variant.color,
-                        color2: variant.color2 || undefined,
-                        nombre: variant.nombre,
-                        imagen: imageUrl,
-                        imagenes: galleryUrls
-                    }
+                    galleryUrls = [...galleryUrls, ...newGalleryUrls]
+                }
+
+                variantsWithUrls.push({
+                    color: variant.color,
+                    color2: variant.color2 || undefined,
+                    nombre: variant.nombre,
+                    imagen: imageUrl,
+                    imagenes: galleryUrls
                 })
-            )
+            }
+
+            setSubmitStatus('Guardando datos del producto...')
 
             // Usar la primera variante como imagen principal
             const url_imagen = variantsWithUrls.length > 0 && variantsWithUrls[0].imagen
@@ -1620,7 +1637,7 @@ export default function ProductosAdmin() {
                                     disabled={isSubmitting}
                                     className={`flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all shadow-lg hover:shadow-xl text-sm ${isSubmitting ? 'opacity-70 cursor-wait' : ''}`}
                                 >
-                                    {isSubmitting ? 'Guardando...' : (editingProduct ? 'Actualizar Producto' : 'Crear Producto')}
+                                    {isSubmitting ? (submitStatus || 'Guardando...') : (editingProduct ? 'Actualizar Producto' : 'Crear Producto')}
                                 </button>
                             </div>
                         </form>
