@@ -51,10 +51,6 @@ export default function HeroSection({ slides }: HeroProps) {
 
     return (
         <>
-            {/* Precargar la primera imagen para mejorar velocidad de carga (LCP) */}
-            {slides[0]?.image_url && (
-                <link rel="preload" as="image" href={proxyImageUrl(slides[0].image_url)} fetchPriority="high" />
-            )}
 
             <section
                 className="relative w-full h-[70vh] md:h-[85vh] min-h-[480px] max-h-[900px] overflow-hidden bg-slate-950"

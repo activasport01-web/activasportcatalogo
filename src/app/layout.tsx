@@ -98,6 +98,16 @@ export default function RootLayout({
                         if (args[0]?.name === 'AuthApiError' && args[0]?.message?.includes('Refresh Token')) return;
                         originalError.apply(console, args);
                     };
+
+                    const originalWarn = console.warn;
+                    console.warn = (...args) => {
+                        if (typeof args[0] === 'string' && (
+                            args[0].includes('was preloaded using link preload') ||
+                            args[0].includes('preloaded but not used')
+                        )) return;
+                        originalWarn.apply(console, args);
+                    };
+
                 `
           }}
         />
