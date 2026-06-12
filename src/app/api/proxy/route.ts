@@ -50,28 +50,23 @@ async function handler(request: NextRequest) {
 
     const method = request.method
     let body: any = undefined
-    let isStream = false
+
 
     if (method !== 'GET' && method !== 'HEAD') {
-        // Usar streaming solo para subidas a storage (que manejan archivos grandes)
-        if (target.includes('/storage/v1/')) {
-            body = request.body
-            isStream = true
-        } else {
-            // Para base de datos (REST) y auth, leemos el cuerpo en memoria.
-            // Esto evita problemas de streaming/chunked transfer encoding y previene cuelgues.
-            body = await request.arrayBuffer()
-        }
+        // Leemos el cuerpo en memoria como ArrayBuffer para todas las peticiones (REST, Auth y Storage).
+        // Esto evita que las peticiones se queden colgadas en el entorno serverless de Vercel/AWS Lambda,
+        // el cual no soporta streaming nativo de peticiones HTTP salientes desde funciones serverless.
+        // Dado que las imágenes ya son comprimidas en el cliente (<150KB), la subida en memoria es inmediata.
+        body = await request.arrayBuffer()
     }
 
     try {
         const upstream = await fetch(target, {
             method,
             headers: forwardHeaders,
-            body: body ?? undefined,
-            // Requerido cuando se envía un stream en el body en Next.js/Vercel
-            duplex: isStream ? 'half' : undefined
+            body: body ?? undefined
         } as any)
+
 
 
         // Reenviar cabeceras de respuesta importantes
