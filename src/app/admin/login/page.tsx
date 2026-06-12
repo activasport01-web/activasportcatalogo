@@ -20,13 +20,13 @@ function LoginForm() {
     const [showPassword, setShowPassword] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-    // Redirección automática si ya tiene sesión activa
+    // Redirección automática si ya tiene sesión activa (solo si no se está procesando un login manual)
     useEffect(() => {
-        if (!authLoading && profile && profile.activo) {
+        if (!loading && !authLoading && profile && profile.activo) {
             const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
             router.replace(redirectTo)
         }
-    }, [profile, authLoading, router, searchParams])
+    }, [profile, authLoading, loading, router, searchParams])
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()

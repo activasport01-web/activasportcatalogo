@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null)
             setProfile(null)
             setPermissions([])
+            document.cookie = 'admin_session=; path=/; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:01 GMT'
           }
         }
       } catch (error) {
@@ -89,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null)
           setProfile(null)
           setPermissions([])
+          document.cookie = 'admin_session=; path=/; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:01 GMT'
         }
       }
       
@@ -123,13 +125,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileError) throw profileError
 
       if (profileData && mounted) {
-        setProfile(profileData as any)
-
         // Si el usuario está desactivado, cerrar sesión
         if (!profileData.activo) {
           await logout()
           return
         }
+
+        // Escribir cookie de sesión antes de actualizar el estado para evitar condiciones de carrera en redirecciones
+        document.cookie = 'admin_session=1; path=/; SameSite=Strict; max-age=2592000'
+        setProfile(profileData as any)
 
         // 2. Fetch permissions for the role
         if (profileData.rol_id) {
