@@ -29,11 +29,23 @@ const proxiedFetch = async (
     const targetUrl = encodeURIComponent(url.toString())
     const proxyUrl = `/api/proxy?target=${targetUrl}`
 
-    return fetch(proxyUrl, {
-        method: options?.method || 'GET',
-        headers: options?.headers,
-        body: options?.body,
-    })
+    // Agregar un timeout de 45 segundos para evitar cuelgues indefinidos en conexiones móviles lentas
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 45000)
+
+    try {
+        const response = await fetch(proxyUrl, {
+            method: options?.method || 'GET',
+            headers: options?.headers,
+            body: options?.body,
+            signal: controller.signal
+        })
+        clearTimeout(timeoutId)
+        return response
+    } catch (err) {
+        clearTimeout(timeoutId)
+        throw err
+    }
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {

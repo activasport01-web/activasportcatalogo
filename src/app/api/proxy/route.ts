@@ -50,14 +50,18 @@ async function handler(request: NextRequest) {
 
     const method = request.method
     const hasBody = method !== 'GET' && method !== 'HEAD' && request.body
-    const body = hasBody ? await request.arrayBuffer() : undefined
+    // Si tiene cuerpo, usamos el stream directamente para streaming en POST/PUT/PATCH,
+    // de lo contrario, undefined. Esto optimiza subidas de archivos en servidores Vercel.
+    const body = hasBody ? request.body : undefined
 
     try {
         const upstream = await fetch(target, {
             method,
             headers: forwardHeaders,
             body: body ?? undefined,
-        })
+            // Requerido cuando se envía un stream en el body en Next.js/Vercel
+            duplex: body ? 'half' : undefined
+        } as any)
 
         // Reenviar cabeceras de respuesta importantes
         const responseHeaders: Record<string, string> = {
