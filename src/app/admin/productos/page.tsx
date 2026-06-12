@@ -261,50 +261,71 @@ export default function ProductosAdmin() {
     }, [])
 
     const loadListas = async () => {
-        // Cargar Marcas
-        const { data: marcas } = await supabase.from('marcas').select('*').eq('active', true).order('nombre')
-        if (marcas) setMarcasList(marcas)
+        try {
+            // Cargar Marcas
+            const { data: marcas, error: e1 } = await supabase.from('marcas').select('*').eq('active', true).order('nombre')
+            if (e1) console.error("Error cargando marcas:", e1)
+            else if (marcas) setMarcasList(marcas)
 
-        // Cargar Categorias
-        const { data: cats } = await supabase.from('categorias').select('*').eq('activa', true).order('orden')
-        if (cats) setCategoriasList(cats)
+            // Cargar Categorias
+            const { data: cats, error: e2 } = await supabase.from('categorias').select('*').eq('activa', true).order('orden')
+            if (e2) console.error("Error cargando categorias:", e2)
+            else if (cats) setCategoriasList(cats)
 
-        // Cargar Subcategorías
-        const { data: subcats } = await supabase.from('subcategorias').select('*').eq('activa', true).order('orden')
-        if (subcats) setSubcategoriasList(subcats)
+            // Cargar Subcategorías
+            const { data: subcats, error: e3 } = await supabase.from('subcategorias').select('*').eq('activa', true).order('orden')
+            if (e3) console.error("Error cargando subcategorias:", e3)
+            else if (subcats) setSubcategoriasList(subcats)
 
-        // Cargar Géneros
-        const { data: gens } = await supabase.from('generos').select('*').eq('activa', true).order('orden')
-        if (gens) setGenerosList(gens)
+            // Cargar Géneros
+            const { data: gens, error: e4 } = await supabase.from('generos').select('*').eq('activa', true).order('orden')
+            if (e4) console.error("Error cargando generos:", e4)
+            else if (gens) setGenerosList(gens)
 
-        // Cargar Grupos
-        const { data: grps } = await supabase.from('grupos_tallas').select('*').eq('activa', true).order('orden')
-        if (grps) setGruposList(grps)
+            // Cargar Grupos
+            const { data: grps, error: e5 } = await supabase.from('grupos_tallas').select('*').eq('activa', true).order('orden')
+            if (e5) console.error("Error cargando grupos:", e5)
+            else if (grps) setGruposList(grps)
+        } catch (err) {
+            console.error("Crash inesperado en loadListas:", err)
+        }
     }
 
     const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session) {
+                router.push('/admin/login')
+            }
+        } catch (err) {
+            console.error("Crash inesperado en checkAuth:", err)
             router.push('/admin/login')
         }
     }
 
     const loadProductos = async () => {
         setLoading(true)
-        const { data: productosData, error } = await supabase
-            .from('zapatos')
-            .select('*, cat_obj:categorias(nombre), marca_obj:marcas(nombre), gen_obj:generos(nombre)')
-            .order('fecha_creacion', { ascending: false })
+        try {
+            const { data: productosData, error } = await supabase
+                .from('zapatos')
+                .select('*, cat_obj:categorias(nombre), marca_obj:marcas(nombre), gen_obj:generos(nombre)')
+                .order('fecha_creacion', { ascending: false })
 
-        if (!error && productosData) {
-            // Cargar stock bultos directamente del producto
-            const productosConStock = productosData.map((p: any) => ({
-                ...p,
-                stockTotal: p.stock_bultos || 0
-            }))
-            setProductos(productosConStock)
+            if (error) {
+                console.error("Error de Supabase cargando productos:", error)
+            } else if (productosData) {
+                // Cargar stock bultos directamente del producto
+                const productosConStock = productosData.map((p: any) => ({
+                    ...p,
+                    stockTotal: p.stock_bultos || 0
+                }))
+                setProductos(productosConStock)
+            }
+        } catch (err) {
+            console.error("Crash inesperado en loadProductos:", err)
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }
 
     // Estado para notificaciones Toast
@@ -578,7 +599,7 @@ export default function ProductosAdmin() {
                 caja: (producto as any).caja || '',
                 descripcion: producto.descripcion || '',
                 precio: producto.precio.toString(),
-                categoria: producto.categoria,
+                categoria: producto.categoria || (producto as any).cat_obj?.nombre || '',
                 categoria_id: (producto as any).categoria_id || '',
                 subcategoria: (producto as any).subcategoria || '',
                 subcategoria_id: (producto as any).subcategoria_id || '',
@@ -742,7 +763,7 @@ export default function ProductosAdmin() {
 
     const filteredProductos = productos.filter(p =>
         p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.categoria.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.categoria || p.cat_obj?.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.codigo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         ((p as any).caja || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
@@ -2038,7 +2059,7 @@ export default function ProductosAdmin() {
                                 />
                                 <div className="flex-1 min-w-0">
                                     <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 line-clamp-1">{editingProduct.nombre}</h4>
-                                    <p className="text-xs text-slate-500">{editingProduct.categoria}</p>
+                                    <p className="text-xs text-slate-500">{editingProduct.cat_obj?.nombre || editingProduct.categoria || ''}</p>
                                     {/* Código del producto — visible discretamente */}
                                     {((editingProduct as any).codigo || (editingProduct as any).caja) && (
                                         <p className="text-xs font-mono text-slate-400 mt-0.5">

@@ -447,7 +447,7 @@ export default function AdminDashboard() {
                                             <ArrowUpRight size={16} className="text-slate-400 group-hover:text-orange-500 transition-colors" />
                                         </div>
                                         <p className="font-black text-slate-800 dark:text-white text-sm leading-tight mb-1 line-clamp-2">{p.nombre}</p>
-                                        <p className="text-xs text-slate-400 mb-3">{p.categoria}</p>
+                                        <p className="text-xs text-slate-400 mb-3">{p.cat_obj?.nombre || p.categoria || ''}</p>
                                         <div className="flex items-center gap-2">
                                             <div className="flex-1 bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
                                                 <div
