@@ -1,24 +1,37 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
+import { useAuth } from '@/context/AuthContext'
 
 // Componente interno separado porque useSearchParams() requiere Suspense en Next.js
 function LoginForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
+    const { profile, loading: authLoading } = useAuth()
+    
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
+    const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+    // Redirección automática si ya tiene sesión activa
+    useEffect(() => {
+        if (!authLoading && profile && profile.activo) {
+            const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
+            router.replace(redirectTo)
+        }
+    }, [profile, authLoading, router, searchParams])
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
+        setErrorMsg(null)
 
         try {
             const { data: authData, error } = await supabase.auth.signInWithPassword({
@@ -27,13 +40,17 @@ function LoginForm() {
             })
 
             if (error) {
-                alert('Error: ' + error.message)
+                let msg = error.message
+                if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
+                    msg = 'Credenciales incorrectas. Por favor, verifica tu correo y contraseña.'
+                }
+                setErrorMsg(msg)
                 setLoading(false)
                 return
             }
 
             if (!authData || !authData.user) {
-                alert('Error: No se pudo verificar la identidad del usuario.')
+                setErrorMsg('No se pudo verificar la identidad del usuario.')
                 setLoading(false)
                 return
             }
@@ -47,7 +64,7 @@ function LoginForm() {
 
             if (profileError || !profile || !profile.activo) {
                 await supabase.auth.signOut()
-                alert('Acceso denegado. Su cuenta no tiene permisos administrativos o está inactiva.')
+                setErrorMsg('Acceso denegado. Su cuenta no tiene permisos administrativos o está inactiva.')
                 setLoading(false)
                 return
             }
@@ -61,7 +78,7 @@ function LoginForm() {
             window.location.href = redirectTo
         } catch (err: any) {
             console.error('Error inesperado en login:', err)
-            alert('Ocurrió un error inesperado de conexión. Por favor, intenta de nuevo.')
+            setErrorMsg('Ocurrió un error inesperado de conexión. Por favor, intenta de nuevo.')
             setLoading(false)
         }
     }
@@ -103,6 +120,13 @@ function LoginForm() {
 
                     {/* Form */}
                     <form onSubmit={handleLogin} className="space-y-6">
+                        {errorMsg && (
+                            <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-4 rounded-xl flex items-start gap-3 animate-fade-in text-sm font-medium">
+                                <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
+                                <span>{errorMsg}</span>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block ml-1">
                                 Correo Electrónico

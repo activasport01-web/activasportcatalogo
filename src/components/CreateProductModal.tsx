@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/imageCompression'
 import { X, Upload, Loader2 } from 'lucide-react'
 
 interface ModalProps {
@@ -84,10 +85,11 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Modal
         try {
             if (!imageFile) throw new Error("Falta la imagen")
 
-            // 1. Subir imagen con nombre único
-            const fileExt = imageFile.name.split('.').pop()
+            // 1. Comprimir imagen y subir con nombre único
+            const compressedFile = await compressImage(imageFile)
+            const fileExt = compressedFile.name.split('.').pop()
             const fileName = `${Date.now()}.${fileExt}`
-            const { error: uploadError } = await supabase.storage.from('imagenes-zapatos').upload(fileName, imageFile)
+            const { error: uploadError } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressedFile)
             if (uploadError) throw uploadError
 
             const { data: publicUrlData } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)

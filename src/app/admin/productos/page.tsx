@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -320,12 +321,13 @@ export default function ProductosAdmin() {
 
                     // 1. Subir imagen principal si hay archivo nuevo
                     if (variant.imageFile) {
-                        const cleanName = sanitizeFileName(variant.imageFile.name)
+                        const compressedFile = await compressImage(variant.imageFile)
+                        const cleanName = sanitizeFileName(compressedFile.name)
                         const fileName = `variant_${Date.now()}_${cleanName}`
 
                         const { error: uploadError } = await supabase.storage
                             .from('imagenes-zapatos')
-                            .upload(fileName, variant.imageFile)
+                            .upload(fileName, compressedFile)
 
                         if (uploadError) {
                             console.error('Error subiendo variante:', uploadError)
@@ -342,10 +344,11 @@ export default function ProductosAdmin() {
                     // 2. Subir imágenes de galería extra
                     if (variant.extraFiles && variant.extraFiles.length > 0) {
                         const newGalleryUrls = await Promise.all(variant.extraFiles.map(async (file) => {
-                            const cleanName = sanitizeFileName(file.name)
+                            const compressedFile = await compressImage(file)
+                            const cleanName = sanitizeFileName(compressedFile.name)
                             const fileName = `gallery_${Date.now()}_${cleanName}`
 
-                            const { error } = await supabase.storage.from('imagenes-zapatos').upload(fileName, file)
+                            const { error } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressedFile)
                             if (error) {
                                 console.error('Error subiendo gallery:', error)
                                 return null

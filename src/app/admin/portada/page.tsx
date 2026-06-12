@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Upload, Eye, EyeOff, Image as ImageIcon, Sparkles, Home, Save, Check, Plus, Trash2, Edit2, Video } from 'lucide-react'
@@ -95,10 +96,14 @@ export default function PortadaAdmin() {
         let finalUrl = formData.url_imagen
 
         if (imageFile) {
-            const fileName = `portada_${Date.now()}_${imageFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+            let finalUploadFile = imageFile;
+            if (imageFile.type.startsWith('image/')) {
+                finalUploadFile = await compressImage(imageFile);
+            }
+            const fileName = `portada_${Date.now()}_${finalUploadFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
             const { error: uploadError } = await supabase.storage
                 .from('imagenes-zapatos')
-                .upload(fileName, imageFile, { cacheControl: '3600', upsert: false })
+                .upload(fileName, finalUploadFile, { cacheControl: '3600', upsert: false })
 
             if (!uploadError) {
                 const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)

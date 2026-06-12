@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -101,14 +102,16 @@ export default function AdminPromociones() {
 
         setUploading(true)
         const file = e.target.files[0]
-        const fileExt = file.name.split('.').pop()
-        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
-        const filePath = `${fileName}`
-
+        
         try {
+            const compressedFile = await compressImage(file)
+            const fileExt = compressedFile.name.split('.').pop()
+            const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`
+            const filePath = `${fileName}`
+
             const { error: uploadError } = await supabase.storage
                 .from('promociones')
-                .upload(filePath, file)
+                .upload(filePath, compressedFile)
 
             if (uploadError) throw uploadError
 

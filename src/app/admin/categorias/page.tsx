@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Plus, Edit, Trash2, X, Upload, Home, LayoutGrid, Check, Search, AlertCircle } from 'lucide-react'
@@ -139,10 +140,12 @@ export default function CategoriasAdmin() {
 
         // Subir imagen
         if (imageFile) {
-            const fileName = `categoria_${Date.now()}_${imageFile.name}`
+            const compressedFile = await compressImage(imageFile)
+            const fileExt = compressedFile.name.split('.').pop()
+            const fileName = `categoria_${Date.now()}_${compressedFile.name}`
             const { error: uploadError } = await supabase.storage
                 .from('imagenes-zapatos')
-                .upload(fileName, imageFile)
+                .upload(fileName, compressedFile)
 
             if (!uploadError) {
                 const { data } = supabase.storage

@@ -37,6 +37,11 @@ const proxiedFetch = async (
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+    },
     global: {
         fetch: proxiedFetch,
     },

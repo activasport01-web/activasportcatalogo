@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -97,12 +98,13 @@ export default function MarcasAdmin() {
 
             // Subir logo si hay archivo nuevo
             if (logoFile) {
-                const cleanName = sanitizeFileName(logoFile.name)
+                const compressedFile = await compressImage(logoFile)
+                const cleanName = sanitizeFileName(compressedFile.name)
                 const fileName = `marca_${Date.now()}_${cleanName}`
 
                 const { error: uploadError } = await supabase.storage
                     .from('imagenes-zapatos')
-                    .upload(fileName, logoFile)
+                    .upload(fileName, compressedFile)
 
                 if (uploadError) throw uploadError
 

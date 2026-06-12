@@ -41,8 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    let initialCheckDone = false
 
-    async function loadSession() {
+    async function initializeAuth() {
       // Timeout de seguridad: si Supabase tarda más de 8 segundos, forzamos la salida del estado de carga
       const fallbackTimer = setTimeout(() => {
         if (mounted) setLoading(false)
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
-           console.error("Session error:", error)
+           console.error("Session error during initialization:", error)
         }
 
         if (session?.user) {
@@ -69,13 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error loading session:', error)
       } finally {
         clearTimeout(fallbackTimer)
+        initialCheckDone = true
         if (mounted) setLoading(false)
       }
     }
 
-    loadSession()
+    initializeAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // Ignorar el evento inicial si ya se está cargando para evitar condiciones de carrera
+      if (event === 'INITIAL_SESSION') return
+
       if (session?.user) {
         if (mounted) setUser(session.user)
         await loadProfile(session.user.id, mounted)
@@ -86,7 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setPermissions([])
         }
       }
-      if (mounted) setLoading(false)
+      
+      if (mounted && initialCheckDone) {
+        setLoading(false)
+      }
     })
 
     return () => {
