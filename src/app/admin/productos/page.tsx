@@ -106,7 +106,8 @@ export default function ProductosAdmin() {
         bultos_qty: '' as string | number,
         tipo_cambio: '' as string | number,
         precio_venta_ref: '' as string | number,
-        notas: ''
+        notas: '',
+        variante_index: 0 // NUEVO: Índice de la variante seleccionada para asignar compra
     })
     const [savingCompra, setSavingCompra] = useState(false)
 
@@ -143,17 +144,41 @@ export default function ProductosAdmin() {
         })
 
         if (!error) {
-            // 2. INCREMENTAR stock_bultos en el producto
+            // 2. INCREMENTAR stock_bultos y variantes_tallas en el producto
             const stockActual = (editingProduct as any).stock_bultos || 0
             const nuevoStock = stockActual + qty
             const costoTotal = usd * tc
             const costoPorBulto = qty > 0 ? costoTotal / qty : 0
+
+            // Sincronizar variantes_tallas
+            let updatedVariantes = [...variantesTallas]
+            if (updatedVariantes.length > 0) {
+                const varIdx = nuevaCompra.variante_index >= 0 && nuevaCompra.variante_index < updatedVariantes.length
+                    ? nuevaCompra.variante_index
+                    : 0
+                const currentVarStock = Number(updatedVariantes[varIdx].stock_bultos) || 0
+                updatedVariantes[varIdx].stock_bultos = currentVarStock + qty
+            } else {
+                // Si es un producto viejo o sin variantes configuradas aún
+                let pares = 12
+                if (editingProduct.descripcion?.includes('[Bulto de 6 pares]')) pares = 6
+                else if (editingProduct.descripcion?.includes('[Bulto de 18 pares]')) pares = 18
+                else if (editingProduct.descripcion?.includes('[Bulto de 24 pares]')) pares = 24
+                
+                const oldTallas = editingProduct.tallas?.join(', ') || ''
+                updatedVariantes = [{
+                    rango: oldTallas || 'Adulto (Por defecto)',
+                    pares_por_bulto: pares,
+                    stock_bultos: qty
+                }]
+            }
 
             await supabase
                 .from('zapatos')
                 .update({
                     stock_bultos: nuevoStock,
                     precio_costo: costoPorBulto, // Actualizar costo unitario
+                    variantes_tallas: updatedVariantes
                 })
                 .eq('id', editingProduct.id)
 
@@ -165,14 +190,21 @@ export default function ProductosAdmin() {
                 precio_total: costoTotal,
                 detalle: `Compra registrada: ${usd} USD × TC ${tc} = ${costoTotal.toFixed(2)} Bs (${qty} bultos)`,
                 fecha: new Date().toISOString(),
+                usuario_id: (await supabase.auth.getUser()).data.user?.id
             })
 
             // 4. Actualizar el objeto local para que la UI refleje el cambio
             ;(editingProduct as any).stock_bultos = nuevoStock
-            setFormData(prev => ({ ...prev, stock_bultos: nuevoStock }))
+            ;(editingProduct as any).variantes_tallas = updatedVariantes
+            setVariantesTallas(updatedVariantes)
+            setFormData(prev => ({ 
+                ...prev, 
+                stock_bultos: nuevoStock,
+                precio_costo: costoPorBulto
+            }))
 
             showNotification(`✅ Compra registrada + ${qty} bultos agregados al stock (Total: ${nuevoStock})`, 'success')
-            setNuevaCompra({ precio_usd: '', bultos_qty: '', tipo_cambio: '', precio_venta_ref: '', notas: '' })
+            setNuevaCompra({ precio_usd: '', bultos_qty: '', tipo_cambio: '', precio_venta_ref: '', notas: '', variante_index: 0 })
             setShowComprasForm(false)
             await loadCompras(editingProduct.id)
             await loadProductos() // Refrescar la lista de productos
@@ -588,6 +620,7 @@ export default function ProductosAdmin() {
             }
             // Cargar historial de compras
             loadCompras(producto.id)
+            setNuevaCompra({ precio_usd: '', bultos_qty: '', tipo_cambio: '', precio_venta_ref: '', notas: '', variante_index: 0 })
         } else {
             // NUEVO PRODCUTO
             setEditingProduct(null)
@@ -1509,6 +1542,30 @@ export default function ProductosAdmin() {
                                                     />
                                                 </div>
                                             </div>
+                                            {/* Si hay múltiples variantes de tallas, seleccionar a cuál asignar la compra */}
+                                            {variantesTallas.length > 1 && (
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-green-400 mb-1">Asignar a Variante/Talla *</label>
+                                                    <select
+                                                        value={nuevaCompra.variante_index}
+                                                        onChange={e => setNuevaCompra({ ...nuevaCompra, variante_index: parseInt(e.target.value) || 0 })}
+                                                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-1 focus:ring-green-500 outline-none"
+                                                    >
+                                                        {variantesTallas.map((v, i) => (
+                                                            <option key={i} value={i}>
+                                                                Tallas: {v.rango || 'Sin especificar'} ({v.pares_por_bulto} pares/bulto) — Quedan: {v.stock_bultos} bultos
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {variantesTallas.length === 1 && (
+                                                <div className="text-[11px] text-slate-400 font-semibold bg-slate-800/50 p-2 rounded-lg border border-slate-700">
+                                                    Se agregará al stock de la variante: <strong className="text-orange-400">{variantesTallas[0].rango || 'Por defecto'}</strong>
+                                                </div>
+                                            )}
+
                                             <div>
                                                 <label className="block text-[11px] font-bold text-slate-400 mb-1">Notas (opcional)</label>
                                                 <input
