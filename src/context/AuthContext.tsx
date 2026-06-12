@@ -161,7 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
-    await supabase.auth.signOut()
+    try {
+      await supabase.auth.signOut()
+    } catch (error) {
+      console.error('Error during Supabase signOut:', error)
+    }
     // Borrar cookie de sesión admin manual si existe
     document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
     // Forzar limpieza y recarga para limpiar memoria

@@ -68,7 +68,11 @@ export default function PerfilPage() {
     }
 
     const handleLogout = async () => {
-        await supabase.auth.signOut()
+        try {
+            await supabase.auth.signOut()
+        } catch (error) {
+            console.error('Error during signOut:', error)
+        }
         router.push('/')
     }
 

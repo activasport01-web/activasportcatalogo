@@ -106,7 +106,11 @@ export default function TopHeader() {
     }
 
     const handleLogout = async () => {
-        await supabase.auth.signOut()
+        try {
+            await supabase.auth.signOut()
+        } catch (error) {
+            console.error('Error during signOut:', error)
+        }
         setUser(null)
         setUserMenuOpen(false)
     }
