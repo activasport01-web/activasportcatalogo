@@ -50,20 +50,14 @@ async function handler(request: NextRequest) {
 
     const method = request.method
     const hasBody = method !== 'GET' && method !== 'HEAD' && request.body
-
-    const fetchOptions: any = {
-        method,
-        headers: forwardHeaders,
-        body: hasBody ? request.body : undefined,
-    }
-
-    // Node.js fetch requiere duplex: 'half' al pasar un ReadableStream como body
-    if (hasBody) {
-        fetchOptions.duplex = 'half'
-    }
+    const body = hasBody ? await request.arrayBuffer() : undefined
 
     try {
-        const upstream = await fetch(target, fetchOptions)
+        const upstream = await fetch(target, {
+            method,
+            headers: forwardHeaders,
+            body: body ?? undefined,
+        })
 
         // Reenviar cabeceras de respuesta importantes
         const responseHeaders: Record<string, string> = {
@@ -76,8 +70,9 @@ async function handler(request: NextRequest) {
 
         // IMPORTANTE: Según el estándar HTTP, las respuestas 204, 205 y 304 no pueden tener cuerpo.
         const isBodyAllowed = ![204, 205, 304].includes(upstream.status);
+        const responseBody = isBodyAllowed ? await upstream.arrayBuffer() : null;
 
-        return new Response(isBodyAllowed ? upstream.body : null, {
+        return new Response(responseBody, {
             status: upstream.status,
             headers: responseHeaders,
         })
