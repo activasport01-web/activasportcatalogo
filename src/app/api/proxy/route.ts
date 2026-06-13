@@ -89,8 +89,8 @@ async function handler(request: NextRequest) {
             if (val) responseHeaders[h] = val
         }
 
-        // IMPORTANTE: Según el estándar HTTP, las respuestas 204, 205 y 304 no pueden tener cuerpo.
-        const isBodyAllowed = ![204, 205, 304].includes(upstream.status);
+        // IMPORTANTE: Según el estándar HTTP, las respuestas 204, 205, 304 y el método HEAD no pueden tener cuerpo.
+        const isBodyAllowed = method !== 'HEAD' && ![204, 205, 304].includes(upstream.status);
         
         let responseBody: any = null
         if (isBodyAllowed) {
