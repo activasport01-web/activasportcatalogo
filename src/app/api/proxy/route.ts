@@ -93,8 +93,9 @@ async function handler(request: NextRequest) {
         
         let responseBody: any = null
         if (isBodyAllowed) {
-            console.log(`[Proxy] Streaming response body...`)
-            responseBody = upstream.body
+            console.log(`[Proxy] Reading response body as ArrayBuffer...`)
+            const arrayBuffer = await upstream.arrayBuffer()
+            responseBody = Buffer.from(arrayBuffer)
         }
 
         return new Response(responseBody, {

@@ -4,6 +4,7 @@ import { supabase, safeUpload } from '@/lib/supabase'
 import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useAuth } from '@/context/AuthContext'
 import {
     ArrowLeft,
     Plus,
@@ -54,6 +55,7 @@ interface Producto {
 
 export default function ProductosAdmin() {
     const router = useRouter()
+    const { profile, loading: authLoading } = useAuth()
     const [productos, setProductos] = useState<Producto[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
@@ -258,10 +260,15 @@ export default function ProductosAdmin() {
     })
 
     useEffect(() => {
-        checkAuth()
-        loadProductos()
-        loadListas()
-    }, [])
+        if (!authLoading) {
+            if (!profile) {
+                window.location.replace('/admin/login')
+            } else {
+                loadProductos()
+                loadListas()
+            }
+        }
+    }, [authLoading, profile])
 
     useEffect(() => {
         const handleRuntimeError = (event: ErrorEvent) => {
@@ -317,17 +324,7 @@ export default function ProductosAdmin() {
         }
     }
 
-    const checkAuth = async () => {
-        try {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session) {
-                router.push('/admin/login')
-            }
-        } catch (err) {
-            console.error("Crash inesperado en checkAuth:", err)
-            router.push('/admin/login')
-        }
-    }
+
 
     const loadProductos = async () => {
         setLoading(true)
