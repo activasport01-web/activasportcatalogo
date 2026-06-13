@@ -86,13 +86,18 @@ async function handler(request: NextRequest) {
         }
     }
 
+    const fetchOptions: RequestInit = {
+        method,
+        headers: forwardHeaders,
+    }
+
+    if (method !== 'GET' && method !== 'HEAD') {
+        fetchOptions.body = body
+    }
+
     try {
         console.log(`[Proxy] Fetching upstream target: ${target}...`)
-        const upstream = await fetch(target, {
-            method,
-            headers: forwardHeaders,
-            body: body ?? undefined
-        } as any)
+        const upstream = await fetch(target, fetchOptions)
         
         console.log(`[Proxy] Upstream response received: Status ${upstream.status}`)
 
