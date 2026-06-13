@@ -68,6 +68,45 @@ export function proxyImageUrl(url: string | null | undefined): string {
     if (url.includes('.supabase.co')) {
         return `/api/img?url=${encodeURIComponent(url)}`
     }
-    // Otras URLs (externas, locales) pasan sin cambios
     return url
+}
+
+/**
+ * Sube un archivo a Supabase Storage forzando el uso del proxy.
+ * Esto soluciona problemas donde el cliente de Supabase Storage ignora el proxy
+ * o tiene problemas con el proveedor de internet.
+ */
+export async function safeUpload(bucket: string, path: string, file: File): Promise<{ error: any, data: any }> {
+    const isClient = typeof window !== 'undefined'
+    const targetUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${path}`
+    
+    try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData.session?.access_token
+        
+        const headers: Record<string, string> = {
+            'Content-Type': file.type,
+            'apikey': supabaseKey,
+        }
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`
+        }
+
+        const urlToFetch = isClient ? `/api/proxy?target=${encodeURIComponent(targetUrl)}` : targetUrl
+
+        const response = await fetch(urlToFetch, {
+            method: 'POST',
+            headers,
+            body: file
+        })
+
+        if (!response.ok) {
+            const errorText = await response.text()
+            return { error: new Error(errorText), data: null }
+        }
+
+        return { error: null, data: { path } }
+    } catch (err) {
+        return { error: err, data: null }
+    }
 }

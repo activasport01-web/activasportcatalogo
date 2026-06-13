@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, safeUpload } from '@/lib/supabase'
 import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -413,9 +413,11 @@ export default function ProductosAdmin() {
                     const cleanName = sanitizeFileName(compressedFile.name)
                     const fileName = `variant_${Date.now()}_${cleanName}`
 
-                    const { error: uploadError } = await supabase.storage
-                        .from('imagenes-zapatos')
-                        .upload(fileName, compressedFile)
+                    const { error: uploadError } = await safeUpload(
+                        'imagenes-zapatos',
+                        fileName,
+                        compressedFile as File
+                    )
 
                     if (uploadError) {
                         console.error('Error subiendo variante:', uploadError)
@@ -442,7 +444,11 @@ export default function ProductosAdmin() {
                         const cleanName = sanitizeFileName(compressedFile.name)
                         const fileName = `gallery_${Date.now()}_${cleanName}`
 
-                        const { error } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressedFile)
+                        const { error } = await safeUpload(
+                            'imagenes-zapatos', 
+                            fileName, 
+                            compressedFile as File
+                        )
                         if (error) {
                             console.error('Error subiendo gallery:', error)
                         } else {
