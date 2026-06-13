@@ -69,10 +69,8 @@ async function handler(request: NextRequest) {
     }
 
     if (method !== 'GET' && method !== 'HEAD') {
-        // En Next.js App Router, request.body es un ReadableStream.
-        // Pasarlo directamente a fetch permite hacer "streaming proxy" sin colgar la memoria.
-        fetchOptions.body = request.body
-        fetchOptions.duplex = 'half' // Requerido en Node.js fetch para enviar streams
+        // Leemos el body completo en lugar de usar stream para evitar cuelgues de duplex='half' en Next.js
+        fetchOptions.body = await request.clone().arrayBuffer()
     }
 
     try {
