@@ -86,6 +86,7 @@ export default function ProductosAdmin() {
     // Estado para modal de edición de variante
     const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null)
     const [showVariantModal, setShowVariantModal] = useState(false)
+    const [isDraggingVariant, setIsDraggingVariant] = useState(false)
 
     const [showSalesModal, setShowSalesModal] = useState(false)
     const [saleData, setSaleData] = useState({
@@ -1895,8 +1896,34 @@ export default function ProductosAdmin() {
                                 {/* Subir Imagen */}
                                 <div>
                                     <label className="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">Imagen del Zapato en este Color</label>
-                                    <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-4 text-center hover:border-orange-400 dark:hover:border-orange-500 transition-colors">
-                                        {colorVariants[editingVariantIndex].imageFile || colorVariants[editingVariantIndex].imagen ? (
+                                    <div 
+                                        onDragOver={(e) => {
+                                            e.preventDefault()
+                                            setIsDraggingVariant(true)
+                                        }}
+                                        onDragLeave={() => setIsDraggingVariant(false)}
+                                        onDrop={(e) => {
+                                            e.preventDefault()
+                                            setIsDraggingVariant(false)
+                                            const file = e.dataTransfer.files?.[0]
+                                            if (file && file.type.startsWith("image/")) {
+                                                const updated = [...colorVariants]
+                                                updated[editingVariantIndex].imageFile = file
+                                                setColorVariants(updated)
+                                            }
+                                        }}
+                                        className={`border-2 border-dashed rounded-lg p-4 text-center transition-all ${
+                                            isDraggingVariant 
+                                                ? "border-orange-500 bg-orange-500/10 scale-[1.02]" 
+                                                : "border-slate-300 dark:border-slate-600 hover:border-orange-400 dark:hover:border-orange-500 bg-white dark:bg-slate-800"
+                                        }`}
+                                    >
+                                        {isDraggingVariant ? (
+                                            <div className="py-8 text-orange-500">
+                                                <Upload className="mx-auto mb-2 animate-bounce" size={32} />
+                                                <p className="text-sm font-bold">¡Coloca la imagen aquí!</p>
+                                            </div>
+                                        ) : colorVariants[editingVariantIndex].imageFile || colorVariants[editingVariantIndex].imagen ? (
                                             <div className="space-y-3">
                                                 <img
                                                     src={

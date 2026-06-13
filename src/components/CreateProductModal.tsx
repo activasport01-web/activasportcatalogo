@@ -14,6 +14,7 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Modal
     const [loading, setLoading] = useState(false)
     const [imagePreview, setImagePreview] = useState<string | null>(null)
     const [imageFile, setImageFile] = useState<File | null>(null)
+    const [isDragging, setIsDragging] = useState(false)
 
     // Listas maestras desde la BD
     const [categorias, setCategorias] = useState<any[]>([])
@@ -277,8 +278,33 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Modal
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Imagen del Producto</label>
-                                <div className="border-2 border-dashed border-gray-300 dark:border-slate-700 h-48 rounded-xl flex items-center justify-center relative cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition overflow-hidden">
-                                    {imagePreview ? (
+                                <div 
+                                    onDragOver={(e) => {
+                                        e.preventDefault()
+                                        setIsDragging(true)
+                                    }}
+                                    onDragLeave={() => setIsDragging(false)}
+                                    onDrop={(e) => {
+                                        e.preventDefault()
+                                        setIsDragging(false)
+                                        const file = e.dataTransfer.files?.[0]
+                                        if (file && file.type.startsWith("image/")) {
+                                            setImageFile(file)
+                                            setImagePreview(URL.createObjectURL(file))
+                                        }
+                                    }}
+                                    className={`border-2 border-dashed h-48 rounded-xl flex items-center justify-center relative cursor-pointer transition-all overflow-hidden ${
+                                        isDragging 
+                                            ? "border-brand-orange bg-brand-orange/15 scale-[1.02]" 
+                                            : "border-gray-300 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800"
+                                    }`}
+                                >
+                                    {isDragging ? (
+                                        <div className="text-center text-brand-orange p-2 animate-pulse">
+                                            <Upload className="mx-auto mb-2 animate-bounce" />
+                                            <span className="text-xs font-bold">¡Coloca la imagen aquí!</span>
+                                        </div>
+                                    ) : imagePreview ? (
                                         <img src={imagePreview} className="w-full h-full object-contain" />
                                     ) : (
                                         <div className="text-center text-gray-400 p-2">
