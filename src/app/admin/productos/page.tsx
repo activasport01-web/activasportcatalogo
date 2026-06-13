@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase, safeUpload } from '@/lib/supabase'
-import { uploadImageAction } from '@/app/actions/uploadAction'
 import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -395,6 +394,20 @@ export default function ProductosAdmin() {
 
         setIsSubmitting(true)
         setSubmitStatus('Iniciando guardado...')
+        
+        console.log("==================================================")
+        console.log("[GUARDAR PRODUCTO] Formulario enviado.")
+        console.log("[Formulario] Nombre:", formData.nombre)
+        console.log("[Formulario] Código:", formData.codigo)
+        console.log("[Formulario] Caja:", formData.caja)
+        console.log("[Formulario] Marca ID:", formData.marca_id)
+        console.log("[Formulario] Categoría ID:", formData.categoria_id)
+        console.log("[Formulario] Subcategoría ID:", formData.subcategoria_id)
+        console.log("[Formulario] Género ID:", formData.genero_id)
+        console.log("[Formulario] Grupo Talla:", formData.grupo_talla)
+        console.log("[Formulario] Variantes de Color:", colorVariants.length)
+        console.log("[Formulario] Modo:", editingProduct ? `Edición (ID: ${editingProduct.id})` : "Creación de Nuevo Producto")
+
         try {
             // Subir imágenes de variantes de color de forma secuencial con progreso en la interfaz
             const variantsWithUrls = []
@@ -405,80 +418,79 @@ export default function ProductosAdmin() {
                 let imageUrl = variant.imagen
                 let galleryUrls: string[] = variant.imagenes || []
 
+                console.log(`[Variante ${i + 1}/${colorVariants.length}] Procesando variant label: "${variantLabel}"`)
+
                 // 1. Subir imagen principal si hay archivo nuevo
                 if (variant.imageFile) {
-                    setSubmitStatus(`Comprimiendo imagen de ${variantLabel}...`)
-                    const compressedFile = await compressImage(variant.imageFile)
+                    console.log(`  - Imagen principal nueva detectada: ${variant.imageFile.name} (${(variant.imageFile.size / 1024 / 1024).toFixed(2)} MB)`)
                     
-                    // VALIDACIÓN DE TAMAÑO MÁXIMO (Vercel limita a 4.5 MB el cuerpo de la petición)
-                    if (compressedFile.size > 4 * 1024 * 1024) {
-                        throw new Error(`La imagen de la variante "${variantLabel}" supera el límite de 4 MB. Por favor, selecciona una imagen de menor tamaño o resolución.`)
-                    }
+                    setSubmitStatus(`Preparando imagen de ${variantLabel}...`)
+                    const compressedFile = await compressImage(variant.imageFile)
                     
                     setSubmitStatus(`Subiendo imagen de ${variantLabel}...`)
                     const cleanName = sanitizeFileName(compressedFile.name)
                     const fileName = `variant_${Date.now()}_${cleanName}`
 
-                    const { data: sessionData } = await supabase.auth.getSession()
-                    const token = sessionData.session?.access_token
-
-                    const formData = new FormData()
-                    formData.append('file', compressedFile as File)
-                    const { error: uploadError, url: serverUrl } = await uploadImageAction(
+                    console.log(`  - Iniciando subida de imagen principal: ${fileName}`)
+                    
+                    const { error: uploadError, url: serverUrl } = await safeUpload(
                         'imagenes-zapatos',
                         fileName,
-                        formData,
-                        token
+                        compressedFile,
+                        (msg) => setSubmitStatus(`${msg} (${variantLabel})`)
                     )
 
                     if (uploadError) {
-                        console.error('Error subiendo variante:', uploadError)
-                        showNotification('Error al subir imagen: ' + uploadError, 'error')
-                    } else if (serverUrl) {
-                        imageUrl = serverUrl
+                        console.error(`  - ERROR subiendo imagen principal de ${variantLabel}:`, uploadError)
+                        throw new Error(`Error en imagen principal de "${variantLabel}": ${uploadError.message}`)
                     }
+
+                    if (serverUrl) {
+                        imageUrl = serverUrl
+                        console.log(`  - Imagen principal subida con éxito: ${imageUrl}`)
+                    }
+                } else {
+                    console.log(`  - Sin imagen principal nueva. Manteniendo URL: ${imageUrl}`)
                 }
 
                 // 2. Subir imágenes de galería extra
                 if (variant.extraFiles && variant.extraFiles.length > 0) {
                     const extraFiles = variant.extraFiles
                     const newGalleryUrls: string[] = []
+                    console.log(`  - Galería: se detectaron ${extraFiles.length} imágenes nuevas para subir.`)
 
                     for (let j = 0; j < extraFiles.length; j++) {
                         const file = extraFiles[j]
-                        setSubmitStatus(`Comprimiendo galería (${j + 1}/${extraFiles.length}) de ${variantLabel}...`)
+                        console.log(`    * Foto de galería ${j + 1}/${extraFiles.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`)
+                        
+                        setSubmitStatus(`Preparando galería (${j + 1}/${extraFiles.length}) de ${variantLabel}...`)
                         const compressedFile = await compressImage(file)
-
-                        // VALIDACIÓN DE TAMAÑO MÁXIMO (Vercel limita a 4.5 MB el cuerpo de la petición)
-                        if (compressedFile.size > 4 * 1024 * 1024) {
-                            throw new Error(`La imagen de galería (${j + 1}/${extraFiles.length}) de la variante "${variantLabel}" supera el límite de 4 MB. Por favor, selecciona una imagen de menor tamaño.`)
-                        }
 
                         setSubmitStatus(`Subiendo galería (${j + 1}/${extraFiles.length}) de ${variantLabel}...`)
                         const cleanName = sanitizeFileName(compressedFile.name)
                         const fileName = `gallery_${Date.now()}_${cleanName}`
 
-                        const { data: sessionData } = await supabase.auth.getSession()
-                        const token = sessionData.session?.access_token
-
-                        const formData = new FormData()
-                        formData.append('file', compressedFile as File)
-                        const { error, url: serverUrl } = await uploadImageAction(
+                        console.log(`    * Iniciando subida de galería ${j + 1}: ${fileName}`)
+                        const { error: uploadError, url: serverUrl } = await safeUpload(
                             'imagenes-zapatos', 
                             fileName, 
-                            formData,
-                            token
+                            compressedFile,
+                            (msg) => setSubmitStatus(`${msg} (Galería ${j + 1}/${extraFiles.length} de ${variantLabel})`)
                         )
-                        if (error) {
-                            console.error('Error subiendo gallery:', error)
-                        } else if (serverUrl) {
+                        
+                        if (uploadError) {
+                            console.error(`    * ERROR subiendo galería ${j + 1} de ${variantLabel}:`, uploadError)
+                            throw new Error(`Error en imagen de galería ${j + 1} de "${variantLabel}": ${uploadError.message}`)
+                        }
+
+                        if (serverUrl) {
                             newGalleryUrls.push(serverUrl)
+                            console.log(`    * Galería ${j + 1} subida con éxito: ${serverUrl}`)
                         }
                     }
 
                     galleryUrls = [...galleryUrls, ...newGalleryUrls]
                 }
-
 
                 variantsWithUrls.push({
                     color: variant.color,
@@ -490,6 +502,7 @@ export default function ProductosAdmin() {
             }
 
             setSubmitStatus('Guardando datos del producto...')
+            console.log("[GUARDAR] Preparando datos finales del producto para Supabase...")
 
             // Usar la primera variante como imagen principal
             const url_imagen = variantsWithUrls.length > 0 && variantsWithUrls[0].imagen
@@ -512,40 +525,49 @@ export default function ProductosAdmin() {
                 genero_id: formData.genero_id || null,
                 grupo_talla: formData.grupo_talla || 'Adulto',
                 tallas: formData.tallas ? formData.tallas.split(',').map(t => t.trim()).filter(t => t) : [],
-                // ACTUALIZADO: Guardar variantes completas si existen, sino array vacío
                 colores: variantsWithUrls.length > 0 ? variantsWithUrls : [],
                 etiquetas: formData.etiquetas || [],
                 url_imagen,
                 imagen_hover,
-                origen: formData.origen, // Se mantiene origen como texto si se usaba para otra cosa
+                origen: formData.origen, 
                 marca_id: formData.marca_id || null,
                 disponible: formData.disponible,
-                stock_bultos: formData.stock_bultos, // NUEVO: Guardar stock de bultos general (suma opcional)
-                precio_costo: formData.precio_costo, // NUEVO: Guardar costo
-                variantes_tallas: variantesTallas // NUEVO: Guardar array JSON
+                stock_bultos: formData.stock_bultos, 
+                precio_costo: formData.precio_costo, 
+                variantes_tallas: variantesTallas 
             }
+
+            console.log("[GUARDAR] Datos estructurados listos para enviar a la base de datos:", productData)
 
             let productId = editingProduct?.id
 
             if (editingProduct) {
-                // Actualizar
+                console.log(`[GUARDAR] Actualizando producto ID: ${editingProduct.id}...`)
                 const { error } = await supabase
                     .from('zapatos')
                     .update(productData)
                     .eq('id', editingProduct.id)
 
-                if (error) throw error
+                if (error) {
+                    console.error("[GUARDAR] Error en actualización Supabase zapatos:", error)
+                    throw error
+                }
+                console.log("[GUARDAR] ¡Actualización exitosa en la tabla zapatos!")
                 showNotification('Producto actualizado correctamente', 'success')
             } else {
-                // Crear
+                console.log("[GUARDAR] Insertando nuevo producto...")
                 const { data: newProduct, error } = await supabase
                     .from('zapatos')
                     .insert([productData])
                     .select()
                     .single()
 
-                if (error) throw error
+                if (error) {
+                    console.error("[GUARDAR] Error en inserción Supabase zapatos:", error)
+                    throw error
+                }
                 productId = newProduct.id
+                console.log(`[GUARDAR] ¡Inserción exitosa! ID del nuevo producto: ${productId}`)
                 showNotification('Producto creado correctamente', 'success')
             }
 
@@ -554,7 +576,8 @@ export default function ProductosAdmin() {
 
             // A) PRODUCTO NUEVO: Registrar entrada inicial
             if (productId && !editingProduct && formData.stock_bultos > 0) {
-                await supabase.from('movimientos_kardex').insert({
+                console.log(`[GUARDAR] Registrando entrada inicial en movimientos_kardex por ${formData.stock_bultos} bultos...`)
+                const { error: kardexError } = await supabase.from('movimientos_kardex').insert({
                     producto_id: productId,
                     tipo: 'ENTRADA',
                     cantidad: formData.stock_bultos,
@@ -562,6 +585,11 @@ export default function ProductosAdmin() {
                     precio_total: (formData.precio_costo || 0) * formData.stock_bultos,
                     usuario_id: (await supabase.auth.getUser()).data.user?.id
                 })
+                if (kardexError) {
+                    console.error("[GUARDAR] Error al insertar kardex inicial:", kardexError)
+                } else {
+                    console.log("[GUARDAR] Entrada inicial en movimientos_kardex registrada.")
+                }
             }
 
             // B) PRODUCTO EDITADO: Registrar diferencia de stock si hubo cambio manual
@@ -569,9 +597,11 @@ export default function ProductosAdmin() {
                 const oldStock = (editingProduct as any).stockTotal || (editingProduct as any).stock_bultos || 0
                 const newStock = formData.stock_bultos
                 const diff = newStock - oldStock
+                console.log(`[GUARDAR] Editando producto. Stock viejo: ${oldStock}, Stock nuevo: ${newStock}, Diferencia: ${diff}`)
 
                 if (diff !== 0) {
-                    await supabase.from('movimientos_kardex').insert({
+                    console.log(`[GUARDAR] Registrando movimiento de ajuste/entrada en movimientos_kardex por ${Math.abs(diff)} bultos...`)
+                    const { error: kardexError } = await supabase.from('movimientos_kardex').insert({
                         producto_id: productId,
                         tipo: diff > 0 ? 'ENTRADA' : 'AJUSTE', // Si sube es entrada, si baja es ajuste manual
                         cantidad: Math.abs(diff),
@@ -579,17 +609,26 @@ export default function ProductosAdmin() {
                         precio_total: diff > 0 ? (formData.precio_costo || 0) * Math.abs(diff) : 0,
                         usuario_id: (await supabase.auth.getUser()).data.user?.id
                     })
+                    if (kardexError) {
+                        console.error("[GUARDAR] Error al insertar kardex de ajuste:", kardexError)
+                    } else {
+                        console.log("[GUARDAR] Movimiento de ajuste en movimientos_kardex registrado.")
+                    }
                 }
             }
 
+            console.log("[GUARDAR] Proceso finalizado con éxito. Cerrando modal y recargando productos.")
             closeModal()
             loadProductos()
 
         } catch (err: any) {
-            console.error('Error inesperado:', err)
+            console.error('[GUARDAR] Error crítico detectado en handleSubmit:', err)
             showNotification('Error: ' + err.message, 'error')
         } finally {
             setIsSubmitting(false)
+            setSubmitStatus(null)
+            console.log("[GUARDAR] handleSubmit terminado y estado de carga liberado.")
+            console.log("==================================================")
         }
     }
 

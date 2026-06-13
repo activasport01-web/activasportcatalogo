@@ -76,37 +76,128 @@ export function proxyImageUrl(url: string | null | undefined): string {
  * Esto soluciona problemas donde el cliente de Supabase Storage ignora el proxy
  * o tiene problemas con el proveedor de internet.
  */
-export async function safeUpload(bucket: string, path: string, file: File): Promise<{ error: any, data: any }> {
+export async function safeUpload(
+    bucket: string,
+    path: string,
+    file: File,
+    onProgress?: (message: string) => void
+): Promise<{ error: any, url: string | null }> {
     const isClient = typeof window !== 'undefined'
-    const targetUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${path}`
-    
+    const directUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${path}`
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+
+    // Obtener token de sesión
+    let token: string | undefined
     try {
         const { data: sessionData } = await supabase.auth.getSession()
-        const token = sessionData.session?.access_token
-        
-        const headers: Record<string, string> = {
-            'Content-Type': file.type,
-            'apikey': supabaseKey,
-        }
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`
-        }
+        token = sessionData.session?.access_token
+    } catch (e) {
+        console.warn("[safeUpload] No se pudo obtener el token de sesión:", e)
+    }
 
-        const urlToFetch = isClient ? `/api/proxy?target=${encodeURIComponent(targetUrl)}` : targetUrl
+    const headers: Record<string, string> = {
+        'Content-Type': file.type,
+        'apikey': supabaseKey,
+    }
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+    }
 
-        const response = await fetch(urlToFetch, {
+    // Si no es el cliente (servidor), subir directo
+    if (!isClient) {
+        try {
+            const res = await fetch(directUrl, {
+                method: 'POST',
+                headers,
+                body: file
+            })
+            if (!res.ok) {
+                const text = await res.text()
+                return { error: new Error(text), url: null }
+            }
+            return { error: null, url: publicUrl }
+        } catch (err) {
+            return { error: err, url: null }
+        }
+    }
+
+    // 1. Intentar subida DIRECTA a Supabase (evita límite 4.5MB de Vercel y es más rápido)
+    console.log(`[safeUpload] 1. Intentando subida directa a Supabase para: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`)
+    if (onProgress) onProgress("Conectando directo a Supabase...")
+
+    try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => {
+            console.warn(`[safeUpload] Timeout (30s) en subida directa para ${file.name}. Cancelando...`)
+            controller.abort()
+        }, 30000) // 30s timeout para subida directa
+
+        const response = await fetch(directUrl, {
             method: 'POST',
             headers,
-            body: file
+            body: file,
+            signal: controller.signal
         })
+        clearTimeout(timeoutId)
+
+        if (response.ok) {
+            console.log(`[safeUpload] ¡Subida directa exitosa! URL: ${publicUrl}`)
+            return { error: null, url: publicUrl }
+        } else {
+            const errorText = await response.text()
+            console.warn(`[safeUpload] La subida directa falló con estado ${response.status}: ${errorText}. Intentando fallback por proxy...`)
+        }
+    } catch (err: any) {
+        const isAbort = err.name === 'AbortError'
+        console.warn(`[safeUpload] Subida directa falló o fue cancelada (${isAbort ? 'Timeout' : 'Error de red/bloqueo de ISP'}). Error:`, err)
+    }
+
+    // 2. FALLBACK: Subida a través del PROXY de Vercel (si falla la directa)
+    console.log(`[safeUpload] 2. Ejecutando fallback a través del proxy para: ${file.name}...`)
+    if (onProgress) onProgress("Usando proxy de respaldo...")
+
+    // Validar tamaño máximo para el proxy
+    if (file.size > 4.2 * 1024 * 1024) {
+        const errorMsg = `El archivo supera los 4.2 MB (${(file.size / 1024 / 1024).toFixed(2)} MB) y debe usar el proxy porque la conexión directa falló. Vercel limita las subidas por proxy a 4.5 MB. Por favor, selecciona una imagen más pequeña.`
+        console.error(`[safeUpload] ERROR: ${errorMsg}`)
+        return { 
+            error: new Error(errorMsg), 
+            url: null 
+        }
+    }
+
+    try {
+        const proxyUrl = `/api/proxy?target=${encodeURIComponent(directUrl)}`
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => {
+            console.error(`[safeUpload] Timeout (90s) agotado en proxy para ${file.name}.`)
+            controller.abort()
+        }, 90000) // 90s timeout para subida por proxy (redes lentas)
+
+        const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers,
+            body: file,
+            signal: controller.signal
+        })
+        clearTimeout(timeoutId)
 
         if (!response.ok) {
             const errorText = await response.text()
-            return { error: new Error(errorText), data: null }
+            console.error(`[safeUpload] La subida por proxy falló con estado ${response.status}:`, errorText)
+            let userFriendlyError = errorText
+            if (response.status === 413) {
+                userFriendlyError = "El servidor de Vercel rechazó la imagen por exceder el límite de tamaño de 4.5 MB."
+            }
+            return { error: new Error(userFriendlyError), url: null }
         }
 
-        return { error: null, data: { path } }
-    } catch (err) {
-        return { error: err, data: null }
+        console.log(`[safeUpload] ¡Subida por proxy exitosa! URL: ${publicUrl}`)
+        return { error: null, url: publicUrl }
+    } catch (err: any) {
+        const isAbort = err.name === 'AbortError'
+        const errMsg = isAbort ? 'Tiempo de espera agotado (90s) en el proxy.' : err.message
+        console.error(`[safeUpload] Error crítico en subida por proxy:`, err)
+        return { error: new Error(errMsg), url: null }
     }
 }
