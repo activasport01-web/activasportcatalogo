@@ -82,87 +82,13 @@ export async function safeUpload(
     file: File,
     onProgress?: (message: string) => void
 ): Promise<{ error: any, url: string | null }> {
-    console.log(`[safeUpload] FUNCIÓN INICIADA para el archivo: ${file.name} (Tamaño: ${(file.size / 1024 / 1024).toFixed(2)} MB)`)
+    console.log(`[safeUpload] Iniciando subida de: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`)
     
-    const isClient = typeof window !== 'undefined'
-    const directUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${path}`
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
+    if (onProgress) onProgress("Subiendo archivo...")
 
-    // Obtener token de sesión
-    let token: string | undefined
-    console.log("[safeUpload] Solicitando token de sesión a Supabase...")
-    try {
-        const { data: sessionData } = await supabase.auth.getSession()
-        token = sessionData.session?.access_token
-        console.log("[safeUpload] Sesión obtenida con éxito. Token presente:", !!token)
-    } catch (e) {
-        console.warn("[safeUpload] No se pudo obtener el token de sesión:", e)
-    }
-
-    const headers: Record<string, string> = {
-        'Content-Type': file.type,
-        'apikey': supabaseKey,
-    }
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-    }
-
-    // Si no es el cliente (servidor), subir directo
-    if (!isClient) {
-        try {
-            const res = await fetch(directUrl, {
-                method: 'POST',
-                headers,
-                body: file
-            })
-            if (!res.ok) {
-                const text = await res.text()
-                return { error: new Error(text), url: null }
-            }
-            return { error: null, url: publicUrl }
-        } catch (err) {
-            return { error: err, url: null }
-        }
-    }
-
-    // 1. Intentar subida DIRECTA a Supabase (evita límite 4.5MB de Vercel y es más rápido)
-    console.log(`[safeUpload] 1. Intentando subida directa a Supabase para: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`)
-    if (onProgress) onProgress("Conectando directo a Supabase...")
-
-    try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => {
-            console.warn(`[safeUpload] Timeout (30s) en subida directa para ${file.name}. Cancelando...`)
-            controller.abort()
-        }, 30000) // 30s timeout para subida directa
-
-        const response = await fetch(directUrl, {
-            method: 'POST',
-            headers,
-            body: file,
-            signal: controller.signal
-        })
-        clearTimeout(timeoutId)
-
-        if (response.ok) {
-            console.log(`[safeUpload] ¡Subida directa exitosa! URL: ${publicUrl}`)
-            return { error: null, url: publicUrl }
-        } else {
-            const errorText = await response.text()
-            console.warn(`[safeUpload] La subida directa falló con estado ${response.status}: ${errorText}. Intentando fallback por proxy...`)
-        }
-    } catch (err: any) {
-        const isAbort = err.name === 'AbortError'
-        console.warn(`[safeUpload] Subida directa falló o fue cancelada (${isAbort ? 'Timeout' : 'Error de red/bloqueo de ISP'}). Error:`, err)
-    }
-
-    // 2. FALLBACK: Subida a través del PROXY de Vercel (si falla la directa)
-    console.log(`[safeUpload] 2. Ejecutando fallback a través del proxy para: ${file.name}...`)
-    if (onProgress) onProgress("Usando proxy de respaldo...")
-
-    // Validar tamaño máximo para el proxy
+    // Validar tamaño máximo para el servidor (4.5 MB es el límite físico de Vercel)
     if (file.size > 4.2 * 1024 * 1024) {
-        const errorMsg = `El archivo supera los 4.2 MB (${(file.size / 1024 / 1024).toFixed(2)} MB) y debe usar el proxy porque la conexión directa falló. Vercel limita las subidas por proxy a 4.5 MB. Por favor, selecciona una imagen más pequeña.`
+        const errorMsg = `El archivo supera los 4.2 MB y Vercel limita las peticiones a un máximo de 4.5 MB. Por favor, selecciona una imagen más pequeña.`
         console.error(`[safeUpload] ERROR: ${errorMsg}`)
         return { 
             error: new Error(errorMsg), 
@@ -171,37 +97,40 @@ export async function safeUpload(
     }
 
     try {
-        const proxyUrl = `/api/proxy?target=${encodeURIComponent(directUrl)}`
         const controller = new AbortController()
         const timeoutId = setTimeout(() => {
-            console.error(`[safeUpload] Timeout (90s) agotado en proxy para ${file.name}.`)
+            console.error(`[safeUpload] Tiempo límite de subida agotado (90s).`)
             controller.abort()
-        }, 90000) // 90s timeout para subida por proxy (redes lentas)
+        }, 90000) // 90s timeout
 
-        const response = await fetch(proxyUrl, {
+        const uploadUrl = `/api/upload?bucket=${bucket}&path=${path}`
+        console.log(`[safeUpload] Enviando petición POST a ${uploadUrl}...`)
+
+        const response = await fetch(uploadUrl, {
             method: 'POST',
-            headers,
+            headers: {
+                'Content-Type': file.type
+            },
             body: file,
             signal: controller.signal
         })
         clearTimeout(timeoutId)
 
+        console.log(`[safeUpload] Respuesta recibida del servidor. Código de estado: ${response.status}`)
+
         if (!response.ok) {
-            const errorText = await response.text()
-            console.error(`[safeUpload] La subida por proxy falló con estado ${response.status}:`, errorText)
-            let userFriendlyError = errorText
-            if (response.status === 413) {
-                userFriendlyError = "El servidor de Vercel rechazó la imagen por exceder el límite de tamaño de 4.5 MB."
-            }
-            return { error: new Error(userFriendlyError), url: null }
+            const errData = await response.json().catch(() => ({ error: `Error HTTP ${response.status} en la subida.` }))
+            console.error(`[safeUpload] Error devuelto por el servidor de subidas:`, errData.error)
+            return { error: new Error(errData.error || `Error ${response.status}`), url: null }
         }
 
-        console.log(`[safeUpload] ¡Subida por proxy exitosa! URL: ${publicUrl}`)
-        return { error: null, url: publicUrl }
+        const data = await response.json()
+        console.log(`[safeUpload] ¡Subida exitosa! URL pública: ${data.url}`)
+        return { error: null, url: data.url }
     } catch (err: any) {
         const isAbort = err.name === 'AbortError'
-        const errMsg = isAbort ? 'Tiempo de espera agotado (90s) en el proxy.' : err.message
-        console.error(`[safeUpload] Error crítico en subida por proxy:`, err)
+        const errMsg = isAbort ? 'Tiempo de espera agotado (90s) durante la subida.' : err.message
+        console.error(`[safeUpload] Error crítico en la subida:`, err)
         return { error: new Error(errMsg), url: null }
     }
 }
