@@ -82,15 +82,19 @@ export async function safeUpload(
     file: File,
     onProgress?: (message: string) => void
 ): Promise<{ error: any, url: string | null }> {
+    console.log(`[safeUpload] FUNCIÓN INICIADA para el archivo: ${file.name} (Tamaño: ${(file.size / 1024 / 1024).toFixed(2)} MB)`)
+    
     const isClient = typeof window !== 'undefined'
     const directUrl = `${supabaseUrl}/storage/v1/object/${bucket}/${path}`
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`
 
     // Obtener token de sesión
     let token: string | undefined
+    console.log("[safeUpload] Solicitando token de sesión a Supabase...")
     try {
         const { data: sessionData } = await supabase.auth.getSession()
         token = sessionData.session?.access_token
+        console.log("[safeUpload] Sesión obtenida con éxito. Token presente:", !!token)
     } catch (e) {
         console.warn("[safeUpload] No se pudo obtener el token de sesión:", e)
     }

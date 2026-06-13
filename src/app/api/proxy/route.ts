@@ -70,7 +70,7 @@ async function handler(request: NextRequest) {
 
     if (method !== 'GET' && method !== 'HEAD') {
         // Leemos el body completo en lugar de usar stream para evitar cuelgues de duplex='half' en Next.js
-        fetchOptions.body = await request.clone().arrayBuffer()
+        fetchOptions.body = await request.arrayBuffer()
     }
 
     try {
