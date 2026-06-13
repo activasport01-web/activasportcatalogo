@@ -23,7 +23,11 @@ export async function uploadImageAction(bucket: string, path: string, formData: 
             'x-upsert': 'true' // Para sobreescribir si existe
         }
         
-        if (token) {
+        if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            // Si tenemos la llave maestra, la usamos en Authorization para ignorar completamente RLS
+            headers['Authorization'] = `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+        } else if (token) {
+            // Fallback al token del usuario si no hay llave maestra
             headers['Authorization'] = `Bearer ${token}`
         }
 
