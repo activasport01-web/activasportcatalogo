@@ -21,10 +21,9 @@ const proxiedFetch = async (
     const isClient = typeof window !== 'undefined'
     const urlStr = url.toString()
 
-    // Lado servidor o peticiones de Storage: conexión directa a Supabase.
-    // Esto evita cuelgues del body parser en las funciones serverless de Vercel
-    // y se salta el límite de tamaño de petición de Vercel (4.5MB).
-    if (!isClient || urlStr.includes('/storage/v1/')) {
+    // Lado servidor: conexión directa a Supabase.
+    // Lado cliente: siempre a través del proxy para evitar bloqueo de operadora.
+    if (!isClient) {
         return fetch(url, options)
     }
 
