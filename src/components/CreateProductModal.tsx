@@ -281,9 +281,9 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Modal
                                     {imagePreview ? (
                                         <img src={imagePreview} className="w-full h-full object-contain" />
                                     ) : (
-                                        <div className="text-center text-gray-400">
+                                        <div className="text-center text-gray-400 p-2">
                                             <Upload className="mx-auto mb-2" />
-                                            <span className="text-xs">Subir imagen</span>
+                                            <span className="text-xs font-semibold">Arrastra la imagen para subir o abrir carpeta</span>
                                         </div>
                                     )}
                                     <input type="file" required className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleImageChange} accept="image/*" />

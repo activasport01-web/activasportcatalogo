@@ -1927,7 +1927,7 @@ export default function ProductosAdmin() {
                                         ) : (
                                             <label className="cursor-pointer block">
                                                 <Upload className="mx-auto text-slate-400 mb-2" size={32} />
-                                                <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Haz clic para subir imagen</p>
+                                                <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Arrastra la imagen para subir o abrir carpeta</p>
                                                 <p className="text-xs text-slate-400 mt-1">JPG, PNG (máx. 5MB)</p>
                                                 <input
                                                     type="file"
