@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase, safeUpload } from '@/lib/supabase'
+import { uploadImageAction } from '@/app/actions/uploadAction'
 import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -413,20 +414,19 @@ export default function ProductosAdmin() {
                     const cleanName = sanitizeFileName(compressedFile.name)
                     const fileName = `variant_${Date.now()}_${cleanName}`
 
-                    const { error: uploadError } = await safeUpload(
+                    const formData = new FormData()
+                    formData.append('file', compressedFile as File)
+                    const { error: uploadError, url: serverUrl } = await uploadImageAction(
                         'imagenes-zapatos',
                         fileName,
-                        compressedFile as File
+                        formData
                     )
 
                     if (uploadError) {
                         console.error('Error subiendo variante:', uploadError)
-                        showNotification('Error al subir imagen: ' + uploadError.message, 'error')
-                    } else {
-                        const { data } = supabase.storage
-                            .from('imagenes-zapatos')
-                            .getPublicUrl(fileName)
-                        imageUrl = data.publicUrl
+                        showNotification('Error al subir imagen: ' + uploadError, 'error')
+                    } else if (serverUrl) {
+                        imageUrl = serverUrl
                     }
                 }
 
@@ -444,18 +444,17 @@ export default function ProductosAdmin() {
                         const cleanName = sanitizeFileName(compressedFile.name)
                         const fileName = `gallery_${Date.now()}_${cleanName}`
 
-                        const { error } = await safeUpload(
+                        const formData = new FormData()
+                        formData.append('file', compressedFile as File)
+                        const { error, url: serverUrl } = await uploadImageAction(
                             'imagenes-zapatos', 
                             fileName, 
-                            compressedFile as File
+                            formData
                         )
                         if (error) {
                             console.error('Error subiendo gallery:', error)
-                        } else {
-                            const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
-                            if (data.publicUrl) {
-                                newGalleryUrls.push(data.publicUrl)
-                            }
+                        } else if (serverUrl) {
+                            newGalleryUrls.push(serverUrl)
                         }
                     }
 
