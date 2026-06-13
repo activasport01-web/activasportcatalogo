@@ -36,10 +36,10 @@ export default function AdminDashboard() {
                 // Forzar redirección limpia si no hay perfil válido
                 window.location.replace('/admin/login')
             } else {
-                // Disparamos la carga de datos en segundo plano
-                loadAll()
-                // Quitamos la pantalla de carga inmediatamente para que sea fluido
-                setLoading(false)
+                // Disparamos la carga de datos y esperamos a que termine antes de ocultar el loader
+                loadAll().finally(() => {
+                    setLoading(false)
+                })
             }
         }
     }, [authLoading, profile])

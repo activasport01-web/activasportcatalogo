@@ -41,21 +41,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    let initialCheckDone = false
 
-    async function initializeAuth() {
-      // Timeout de seguridad: si Supabase tarda más de 20 segundos, forzamos la salida del estado de carga
-      const fallbackTimer = setTimeout(() => {
-        if (mounted) setLoading(false)
-      }, 20000)
+    // Timeout de seguridad: si Supabase tarda más de 20 segundos, forzamos la salida del estado de carga
+    const fallbackTimer = setTimeout(() => {
+      if (mounted) {
+        console.warn("Auth check timed out, forcing loading = false")
+        setLoading(false)
+      }
+    }, 20000)
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`[AuthContext] onAuthStateChange event: ${event}`, session?.user?.id || 'no user')
 
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        
-        if (error) {
-           console.error("Session error during initialization:", error)
-        }
-
         if (session?.user) {
           if (mounted) setUser(session.user)
           await loadProfile(session.user.id, mounted)
@@ -64,43 +62,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null)
             setProfile(null)
             setPermissions([])
+            // Borramos la cookie de sesión si realmente no hay un usuario activo
             document.cookie = 'admin_session=; path=/; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:01 GMT'
           }
         }
-      } catch (error) {
-        console.error('Error loading session:', error)
+      } catch (err) {
+        console.error("Error handling auth state change:", err)
       } finally {
-        clearTimeout(fallbackTimer)
-        initialCheckDone = true
-        if (mounted) setLoading(false)
-      }
-    }
-
-    initializeAuth()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Ignorar el evento inicial si ya se está cargando para evitar condiciones de carrera
-      if (event === 'INITIAL_SESSION') return
-
-      if (session?.user) {
-        if (mounted) setUser(session.user)
-        await loadProfile(session.user.id, mounted)
-      } else {
         if (mounted) {
-          setUser(null)
-          setProfile(null)
-          setPermissions([])
-          document.cookie = 'admin_session=; path=/; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:01 GMT'
+          clearTimeout(fallbackTimer)
+          setLoading(false)
         }
-      }
-      
-      if (mounted && initialCheckDone) {
-        setLoading(false)
       }
     })
 
     return () => {
       mounted = false
+      clearTimeout(fallbackTimer)
       subscription.unsubscribe()
     }
   }, [])

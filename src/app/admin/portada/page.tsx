@@ -5,6 +5,7 @@ import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Upload, Eye, EyeOff, Image as ImageIcon, Sparkles, Home, Save, Check, Plus, Trash2, Edit2, Video } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 interface Portada {
     id: number;
@@ -16,6 +17,7 @@ interface Portada {
 
 export default function PortadaAdmin() {
     const router = useRouter()
+    const { profile, loading: authLoading } = useAuth()
     const [loading, setLoading] = useState(true)
     const [portadas, setPortadas] = useState<Portada[]>([])
     const [view, setView] = useState<'list' | 'form'>('list')
@@ -30,16 +32,14 @@ export default function PortadaAdmin() {
     })
 
     useEffect(() => {
-        checkAuth()
-        loadPortadas()
-    }, [])
-
-    const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-            router.push('/admin/login')
+        if (!authLoading) {
+            if (!profile) {
+                router.push('/admin/login')
+            } else {
+                loadPortadas()
+            }
         }
-    }
+    }, [authLoading, profile])
 
     const loadPortadas = async () => {
         setLoading(true)

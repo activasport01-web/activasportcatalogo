@@ -17,6 +17,8 @@ import {
     Eye
 } from 'lucide-react'
 
+import { useAuth } from '@/context/AuthContext'
+
 type Promocion = {
     id: string
     titulo: string
@@ -31,6 +33,7 @@ type Promocion = {
 
 export default function AdminPromociones() {
     const router = useRouter()
+    const { profile, loading: authLoading } = useAuth()
     const [promociones, setPromociones] = useState<Promocion[]>([])
     const [loading, setLoading] = useState(true)
     const [editingId, setEditingId] = useState<string | null>(null)
@@ -50,14 +53,14 @@ export default function AdminPromociones() {
     const fileInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
-        checkAuth()
-        loadPromociones()
-    }, [])
-
-    const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) router.push('/admin/login')
-    }
+        if (!authLoading) {
+            if (!profile) {
+                router.push('/admin/login')
+            } else {
+                loadPromociones()
+            }
+        }
+    }, [authLoading, profile])
 
     const loadPromociones = async () => {
         setLoading(true)

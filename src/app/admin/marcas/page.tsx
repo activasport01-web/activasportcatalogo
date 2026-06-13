@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useAuth } from '@/context/AuthContext'
 import {
     ArrowLeft,
     Plus,
@@ -41,6 +42,7 @@ interface Marca {
 
 export default function MarcasAdmin() {
     const router = useRouter()
+    const { profile, loading: authLoading } = useAuth()
     const [marcas, setMarcas] = useState<Marca[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -56,14 +58,14 @@ export default function MarcasAdmin() {
     }
 
     useEffect(() => {
-        checkAuth()
-        loadMarcas()
-    }, [])
-
-    const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) router.push('/admin/login')
-    }
+        if (!authLoading) {
+            if (!profile) {
+                router.push('/admin/login')
+            } else {
+                loadMarcas()
+            }
+        }
+    }, [authLoading, profile])
 
     const loadMarcas = async () => {
         setLoading(true)

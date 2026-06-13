@@ -5,6 +5,7 @@ import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Plus, Edit, Trash2, X, Upload, Home, Search, Layers, Check } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 interface Subcategoria {
     id: string
@@ -17,6 +18,7 @@ interface Subcategoria {
 
 export default function SubcategoriasAdmin() {
     const router = useRouter()
+    const { profile, loading: authLoading } = useAuth()
     const [subcategorias, setSubcategorias] = useState<Subcategoria[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -33,16 +35,14 @@ export default function SubcategoriasAdmin() {
     })
 
     useEffect(() => {
-        checkAuth()
-        loadSubcategorias()
-    }, [])
-
-    const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-            router.push('/admin/login')
+        if (!authLoading) {
+            if (!profile) {
+                router.push('/admin/login')
+            } else {
+                loadSubcategorias()
+            }
         }
-    }
+    }, [authLoading, profile])
 
     const loadSubcategorias = async () => {
         setLoading(true)

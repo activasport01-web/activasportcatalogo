@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Plus, Edit, Trash2, X, Home, Search, Users } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 interface Genero {
     id: string
@@ -15,6 +16,7 @@ interface Genero {
 
 export default function GenerosAdmin() {
     const router = useRouter()
+    const { profile, loading: authLoading } = useAuth()
     const [generos, setGeneros] = useState<Genero[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -28,16 +30,14 @@ export default function GenerosAdmin() {
     })
 
     useEffect(() => {
-        checkAuth()
-        loadGeneros()
-    }, [])
-
-    const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-            router.push('/admin/login')
+        if (!authLoading) {
+            if (!profile) {
+                router.push('/admin/login')
+            } else {
+                loadGeneros()
+            }
         }
-    }
+    }, [authLoading, profile])
 
     const loadGeneros = async () => {
         setLoading(true)

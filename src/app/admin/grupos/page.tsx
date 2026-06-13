@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Plus, Edit, Trash2, X, Home, Search, Ruler } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 interface GrupoTalla {
     id: string
@@ -15,6 +16,7 @@ interface GrupoTalla {
 
 export default function GruposAdmin() {
     const router = useRouter()
+    const { profile, loading: authLoading } = useAuth()
     const [grupos, setGrupos] = useState<GrupoTalla[]>([])
     const [loading, setLoading] = useState(true)
     const [showModal, setShowModal] = useState(false)
@@ -29,16 +31,14 @@ export default function GruposAdmin() {
     })
 
     useEffect(() => {
-        checkAuth()
-        loadGrupos()
-    }, [])
-
-    const checkAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-            router.push('/admin/login')
+        if (!authLoading) {
+            if (!profile) {
+                router.push('/admin/login')
+            } else {
+                loadGrupos()
+            }
         }
-    }
+    }, [authLoading, profile])
 
     const loadGrupos = async () => {
         setLoading(true)
