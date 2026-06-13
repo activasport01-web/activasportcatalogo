@@ -410,6 +410,11 @@ export default function ProductosAdmin() {
                     setSubmitStatus(`Comprimiendo imagen de ${variantLabel}...`)
                     const compressedFile = await compressImage(variant.imageFile)
                     
+                    // VALIDACIÓN DE TAMAÑO MÁXIMO (Vercel limita a 4.5 MB el cuerpo de la petición)
+                    if (compressedFile.size > 4 * 1024 * 1024) {
+                        throw new Error(`La imagen de la variante "${variantLabel}" supera el límite de 4 MB. Por favor, selecciona una imagen de menor tamaño o resolución.`)
+                    }
+                    
                     setSubmitStatus(`Subiendo imagen de ${variantLabel}...`)
                     const cleanName = sanitizeFileName(compressedFile.name)
                     const fileName = `variant_${Date.now()}_${cleanName}`
@@ -444,6 +449,11 @@ export default function ProductosAdmin() {
                         setSubmitStatus(`Comprimiendo galería (${j + 1}/${extraFiles.length}) de ${variantLabel}...`)
                         const compressedFile = await compressImage(file)
 
+                        // VALIDACIÓN DE TAMAÑO MÁXIMO (Vercel limita a 4.5 MB el cuerpo de la petición)
+                        if (compressedFile.size > 4 * 1024 * 1024) {
+                            throw new Error(`La imagen de galería (${j + 1}/${extraFiles.length}) de la variante "${variantLabel}" supera el límite de 4 MB. Por favor, selecciona una imagen de menor tamaño.`)
+                        }
+
                         setSubmitStatus(`Subiendo galería (${j + 1}/${extraFiles.length}) de ${variantLabel}...`)
                         const cleanName = sanitizeFileName(compressedFile.name)
                         const fileName = `gallery_${Date.now()}_${cleanName}`
@@ -468,6 +478,7 @@ export default function ProductosAdmin() {
 
                     galleryUrls = [...galleryUrls, ...newGalleryUrls]
                 }
+
 
                 variantsWithUrls.push({
                     color: variant.color,
