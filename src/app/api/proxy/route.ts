@@ -39,11 +39,12 @@ async function handler(request: NextRequest) {
     }
 
     // Si es multipart/form-data, NO debemos pasar la cabecera Content-Type manualmente,
-    // ya que fetch la generará automáticamente con el boundary correcto.
-    const isMultipart = contentType.includes('multipart/form-data')
-    if (!isMultipart && contentType) {
+    // ya que fetch la generará automáticamente con el boundary correcto (si pasamos FormData).
+    // PERO como ahora pasaremos el stream crudo (request.body), SÍ debemos reenviar el Content-Type original
+    // que ya incluye el boundary generado por el navegador.
+    if (contentType) {
         forwardHeaders['Content-Type'] = contentType
-    } else if (!contentType) {
+    } else {
         forwardHeaders['Content-Type'] = 'application/json'
     }
 
@@ -62,37 +63,16 @@ async function handler(request: NextRequest) {
         if (value) forwardHeaders[header] = value
     }
 
-    let body: any = undefined
-
-    if (method !== 'GET' && method !== 'HEAD') {
-        console.log(`[Proxy] Reading body for ${method} ${target}...`)
-        try {
-            if (isMultipart) {
-                body = await request.formData()
-                console.log(`[Proxy] Body read successfully as FormData`)
-            } else {
-                body = await request.arrayBuffer()
-                console.log(`[Proxy] Body read successfully as ArrayBuffer (${body.byteLength} bytes)`)
-            }
-        } catch (err: any) {
-            console.error(`[Proxy] Error reading request body:`, err)
-            return new Response(JSON.stringify({ 
-                error: 'Error al leer cuerpo de petición', 
-                details: err?.message || String(err) 
-            }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' },
-            })
-        }
-    }
-
-    const fetchOptions: RequestInit = {
+    const fetchOptions: RequestInit & { duplex?: string } = {
         method,
         headers: forwardHeaders,
     }
 
     if (method !== 'GET' && method !== 'HEAD') {
-        fetchOptions.body = body
+        // En Next.js App Router, request.body es un ReadableStream.
+        // Pasarlo directamente a fetch permite hacer "streaming proxy" sin colgar la memoria.
+        fetchOptions.body = request.body
+        fetchOptions.duplex = 'half' // Requerido en Node.js fetch para enviar streams
     }
 
     try {
