@@ -3,14 +3,18 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: false }
-})
-
-export async function uploadImageAction(bucket: string, path: string, formData: FormData) {
+export async function uploadImageAction(bucket: string, path: string, formData: FormData, token?: string) {
     try {
+        // Inicializamos el cliente con el token del usuario para respetar las políticas RLS
+        const supabase = createClient(supabaseUrl, supabaseKey, {
+            auth: { persistSession: false },
+            global: {
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
+            }
+        })
+
         const file = formData.get('file') as File
         if (!file) {
             return { error: 'No file provided', url: null }

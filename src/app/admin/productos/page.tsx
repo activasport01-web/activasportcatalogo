@@ -414,12 +414,16 @@ export default function ProductosAdmin() {
                     const cleanName = sanitizeFileName(compressedFile.name)
                     const fileName = `variant_${Date.now()}_${cleanName}`
 
+                    const { data: sessionData } = await supabase.auth.getSession()
+                    const token = sessionData.session?.access_token
+
                     const formData = new FormData()
                     formData.append('file', compressedFile as File)
                     const { error: uploadError, url: serverUrl } = await uploadImageAction(
                         'imagenes-zapatos',
                         fileName,
-                        formData
+                        formData,
+                        token
                     )
 
                     if (uploadError) {
@@ -444,12 +448,16 @@ export default function ProductosAdmin() {
                         const cleanName = sanitizeFileName(compressedFile.name)
                         const fileName = `gallery_${Date.now()}_${cleanName}`
 
+                        const { data: sessionData } = await supabase.auth.getSession()
+                        const token = sessionData.session?.access_token
+
                         const formData = new FormData()
                         formData.append('file', compressedFile as File)
                         const { error, url: serverUrl } = await uploadImageAction(
                             'imagenes-zapatos', 
                             fileName, 
-                            formData
+                            formData,
+                            token
                         )
                         if (error) {
                             console.error('Error subiendo gallery:', error)
