@@ -62,6 +62,7 @@ export default function ProductosAdmin() {
     const [imageFile, setImageFile] = useState<File | null>(null)
     const [imageHoverFile, setImageHoverFile] = useState<File | null>(null)
     const [submitStatus, setSubmitStatus] = useState<string | null>(null)
+    const [debugError, setDebugError] = useState<string | null>(null)
 
     // Listas dinámicas
     const [marcasList, setMarcasList] = useState<any[]>([])
@@ -260,6 +261,29 @@ export default function ProductosAdmin() {
         loadProductos()
         loadListas()
     }, [])
+
+    useEffect(() => {
+        const handleRuntimeError = (event: ErrorEvent) => {
+            setDebugError("Error de ejecución: " + event.message + " en " + event.filename + ":" + event.lineno)
+        }
+        const handleRejection = (event: PromiseRejectionEvent) => {
+            setDebugError("Rechazo de Promesa: " + String(event.reason?.message || event.reason))
+        }
+        window.addEventListener('error', handleRuntimeError)
+        window.addEventListener('unhandledrejection', handleRejection)
+        
+        const timer = setTimeout(() => {
+            if (loading) {
+                setDebugError("La página tarda demasiado en cargar (más de 10s). Esto indica que las llamadas a la base de datos están colgadas o bloqueadas. Verifica si hay problemas de conexión móvil (ej: Entel) o si el servidor está caído.")
+            }
+        }, 10000)
+
+        return () => {
+            window.removeEventListener('error', handleRuntimeError)
+            window.removeEventListener('unhandledrejection', handleRejection)
+            clearTimeout(timer)
+        }
+    }, [loading])
 
     const loadListas = async () => {
         try {
@@ -769,10 +793,15 @@ export default function ProductosAdmin() {
         ((p as any).caja || '').toLowerCase().includes(searchTerm.toLowerCase())
     )
 
-    if (loading) {
+    if (loading || debugError) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+                {debugError && (
+                    <div className="max-w-md p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-xl text-center shadow-md animate-fade-in text-xs font-mono break-all whitespace-pre-wrap">
+                        {debugError}
+                    </div>
+                )}
             </div>
         )
     }
