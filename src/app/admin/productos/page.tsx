@@ -276,9 +276,9 @@ export default function ProductosAdmin() {
         
         const timer = setTimeout(() => {
             if (loading) {
-                setDebugError("La página tarda demasiado en cargar (más de 10s). Esto indica que las llamadas a la base de datos están colgadas o bloqueadas. Verifica si hay problemas de conexión móvil (ej: Entel) o si el servidor está caído.")
+                setDebugError("La página tarda demasiado en cargar (más de 30s). Esto indica que las llamadas a la base de datos están colgadas o bloqueadas. Verifica si hay problemas de conexión móvil (ej: Entel) o si el servidor está caído.")
             }
-        }, 10000)
+        }, 30000)
 
         return () => {
             window.removeEventListener('error', handleRuntimeError)
