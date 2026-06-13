@@ -195,7 +195,7 @@ export default function ProductosAdmin() {
                 precio_total: costoTotal,
                 detalle: `Compra registrada: ${usd} USD × TC ${tc} = ${costoTotal.toFixed(2)} Bs (${qty} bultos)`,
                 fecha: new Date().toISOString(),
-                usuario_id: (await supabase.auth.getUser()).data.user?.id
+                usuario_id: profile?.id
             })
 
             // 4. Actualizar el objeto local para que la UI refleje el cambio
@@ -580,7 +580,7 @@ export default function ProductosAdmin() {
                     cantidad: formData.stock_bultos,
                     detalle: 'Inventario Inicial (Creación)',
                     precio_total: (formData.precio_costo || 0) * formData.stock_bultos,
-                    usuario_id: (await supabase.auth.getUser()).data.user?.id
+                    usuario_id: profile?.id
                 })
                 if (kardexError) {
                     console.error("[GUARDAR] Error al insertar kardex inicial:", kardexError)
@@ -604,7 +604,7 @@ export default function ProductosAdmin() {
                         cantidad: Math.abs(diff),
                         detalle: diff > 0 ? 'Agregado desde Edición' : 'Ajuste manual de inventario',
                         precio_total: diff > 0 ? (formData.precio_costo || 0) * Math.abs(diff) : 0,
-                        usuario_id: (await supabase.auth.getUser()).data.user?.id
+                        usuario_id: profile?.id
                     })
                     if (kardexError) {
                         console.error("[GUARDAR] Error al insertar kardex de ajuste:", kardexError)
@@ -796,7 +796,7 @@ export default function ProductosAdmin() {
                 detalle: saleData.detalle
                     || `Venta — ${editingProduct.nombre}${(editingProduct as any).codigo ? ' [' + (editingProduct as any).codigo + ']' : (editingProduct as any).caja ? ' [' + (editingProduct as any).caja + ']' : ''}${nombre_variante}`,
                 fecha: new Date().toISOString(),
-                usuario_id: (await supabase.auth.getUser()).data.user?.id
+                usuario_id: profile?.id
             })
 
             if (kardexError) throw kardexError
