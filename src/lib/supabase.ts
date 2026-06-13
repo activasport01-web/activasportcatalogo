@@ -19,14 +19,17 @@ const proxiedFetch = async (
     options?: RequestInit
 ): Promise<Response> => {
     const isClient = typeof window !== 'undefined'
+    const urlStr = url.toString()
 
-    if (!isClient) {
-        // Lado servidor: conexión directa a Supabase (sin restricciones)
+    // Lado servidor o peticiones de Storage: conexión directa a Supabase.
+    // Esto evita cuelgues del body parser en las funciones serverless de Vercel
+    // y se salta el límite de tamaño de petición de Vercel (4.5MB).
+    if (!isClient || urlStr.includes('/storage/v1/')) {
         return fetch(url, options)
     }
 
     // Lado cliente: redirigir a través del proxy para evitar bloqueos de operadora
-    const targetUrl = encodeURIComponent(url.toString())
+    const targetUrl = encodeURIComponent(urlStr)
     const proxyUrl = `/api/proxy?target=${targetUrl}`
 
     // Agregar un timeout de 45 segundos para evitar cuelgues indefinidos en conexiones móviles lentas
