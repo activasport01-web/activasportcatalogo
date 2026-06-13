@@ -32,21 +32,15 @@ const proxiedFetch = async (
     const targetUrl = encodeURIComponent(urlStr)
     const proxyUrl = `/api/proxy?target=${targetUrl}`
 
-    // Agregar un timeout de 45 segundos para evitar cuelgues indefinidos en conexiones móviles lentas
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 45000)
-
     try {
         const response = await fetch(proxyUrl, {
             method: options?.method || 'GET',
             headers: options?.headers,
             body: options?.body,
-            signal: controller.signal
+            signal: options?.signal
         })
-        clearTimeout(timeoutId)
         return response
     } catch (err) {
-        clearTimeout(timeoutId)
         throw err
     }
 }

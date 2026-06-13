@@ -63,6 +63,7 @@ export default function ProductosAdmin() {
     const [imageHoverFile, setImageHoverFile] = useState<File | null>(null)
     const [submitStatus, setSubmitStatus] = useState<string | null>(null)
     const [debugError, setDebugError] = useState<string | null>(null)
+    const [isGlobalDragging, setIsGlobalDragging] = useState(false)
 
     // Listas dinámicas
     const [marcasList, setMarcasList] = useState<any[]>([])
@@ -1008,7 +1009,42 @@ export default function ProductosAdmin() {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-0 md:p-4 animate-fade-in">
+                <div 
+                    className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-0 md:p-4 animate-fade-in"
+                    onDragOver={(e) => {
+                        e.preventDefault()
+                        if (!showVariantModal && !showSalesModal) {
+                            setIsGlobalDragging(true)
+                        }
+                    }}
+                >
+                    {isGlobalDragging && (
+                        <div 
+                            className="absolute inset-0 z-[200] bg-orange-500/90 backdrop-blur-sm flex flex-col items-center justify-center m-0 md:m-4 md:rounded-2xl border-4 border-dashed border-white"
+                            onDragLeave={() => setIsGlobalDragging(false)}
+                            onDrop={(e) => {
+                                e.preventDefault()
+                                setIsGlobalDragging(false)
+                                const file = e.dataTransfer.files?.[0]
+                                if (file && file.type.startsWith("image/")) {
+                                    const updated = [...colorVariants]
+                                    updated.push({
+                                        color: '#000000',
+                                        nombre: updated.length === 0 ? 'Color Principal' : `Variante ${updated.length + 1}`,
+                                        imageFile: file,
+                                        imagen: '',
+                                        imagenes: []
+                                    })
+                                    setColorVariants(updated)
+                                }
+                            }}
+                            onDragOver={(e) => e.preventDefault()}
+                        >
+                            <Upload size={64} className="text-white mb-4 animate-bounce" />
+                            <h2 className="text-3xl font-black text-white text-center px-4 drop-shadow-md">¡Suelta la imagen aquí!</h2>
+                            <p className="text-white/80 mt-2 font-medium text-lg">Se agregará como una nueva variante de color</p>
+                        </div>
+                    )}
                     <div className="bg-white dark:bg-slate-900 w-full h-full md:h-auto md:max-h-[92vh] md:rounded-2xl shadow-2xl overflow-hidden flex flex-col border dark:border-slate-800">
                         {/* Header */}
                         <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-4 py-3 md:px-6 md:py-4 flex justify-between items-center border-b border-slate-600 dark:border-slate-800 shrink-0">
