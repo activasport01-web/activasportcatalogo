@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -30,19 +30,22 @@ export default function AdminDashboard() {
 
     const { profile, loading: authLoading, hasPermission, logout } = useAuth()
 
+    const dataLoadedRef = useRef(false)
+
     useEffect(() => {
-        if (!authLoading) {
-            if (!profile) {
-                // Forzar redirección limpia si no hay perfil válido
-                window.location.replace('/admin/login')
-            } else {
-                // Disparamos la carga de datos y esperamos a que termine antes de ocultar el loader
-                loadAll().finally(() => {
-                    setLoading(false)
-                })
-            }
-        }
-    }, [authLoading, profile])
+         if (!authLoading) {
+             if (!profile) {
+                 // Forzar redirección limpia si no hay perfil válido
+                 window.location.replace('/admin/login')
+             } else if (!dataLoadedRef.current) {
+                 dataLoadedRef.current = true
+                 // Disparamos la carga de datos y esperamos a que termine antes de ocultar el loader
+                 loadAll().finally(() => {
+                     setLoading(false)
+                 })
+             }
+         }
+     }, [authLoading, profile])
 
     const loadAll = async () => {
         try {

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export interface UserRole {
@@ -39,6 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [permissions, setPermissions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
+  const currentUserRef = useRef<string | null>(null)
+
   useEffect(() => {
     let mounted = true
 
@@ -55,9 +57,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       try {
         if (session?.user) {
+          if (currentUserRef.current === session.user.id) {
+            console.log(`[AuthContext] User ${session.user.id} already loaded, skipping profile fetch.`)
+            
+            // Si el perfil ya está cargado, aseguremonos de detener el loader y el timeout
+            if (mounted) {
+              clearTimeout(fallbackTimer)
+              setLoading(false)
+            }
+            return
+          }
+
+          currentUserRef.current = session.user.id
           if (mounted) setUser(session.user)
           await loadProfile(session.user.id, mounted)
         } else {
+          currentUserRef.current = null
           if (mounted) {
             setUser(null)
             setProfile(null)

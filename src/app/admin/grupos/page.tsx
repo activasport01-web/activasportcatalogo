@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -30,11 +30,14 @@ export default function GruposAdmin() {
         activa: true
     })
 
+    const dataLoadedRef = useRef(false)
+
     useEffect(() => {
         if (!authLoading) {
             if (!profile) {
                 router.push('/admin/login')
-            } else {
+            } else if (!dataLoadedRef.current) {
+                dataLoadedRef.current = true
                 loadGrupos()
             }
         }

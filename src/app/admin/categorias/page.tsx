@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
@@ -37,11 +37,14 @@ export default function CategoriasAdmin() {
         activa: true
     })
 
+    const dataLoadedRef = useRef(false)
+
     useEffect(() => {
         if (!authLoading) {
             if (!profile) {
                 router.push('/admin/login')
-            } else {
+            } else if (!dataLoadedRef.current) {
+                dataLoadedRef.current = true
                 loadCategorias()
             }
         }

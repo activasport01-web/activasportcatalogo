@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase, safeUpload } from '@/lib/supabase'
 import { compressImage } from '@/lib/imageCompression'
 import { useRouter } from 'next/navigation'
@@ -259,11 +259,14 @@ export default function ProductosAdmin() {
         stock_bultos: 0 // NUEVO: Stock de cajas cerradas
     })
 
+    const dataLoadedRef = useRef(false)
+
     useEffect(() => {
         if (!authLoading) {
             if (!profile) {
                 window.location.replace('/admin/login')
-            } else {
+            } else if (!dataLoadedRef.current) {
+                dataLoadedRef.current = true
                 loadProductos()
                 loadListas()
             }

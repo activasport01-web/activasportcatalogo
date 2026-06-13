@@ -52,11 +52,14 @@ export default function AdminPromociones() {
 
     const fileInputRef = useRef<HTMLInputElement>(null)
 
+    const dataLoadedRef = useRef(false)
+
     useEffect(() => {
         if (!authLoading) {
             if (!profile) {
                 router.push('/admin/login')
-            } else {
+            } else if (!dataLoadedRef.current) {
+                dataLoadedRef.current = true
                 loadPromociones()
             }
         }
