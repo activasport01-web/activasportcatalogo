@@ -856,7 +856,7 @@ export default function ProductosAdmin() {
 
     if (loading || debugError) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-4 transition-colors duration-300">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
                 {debugError && (
                     <div className="max-w-md p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 rounded-xl text-center shadow-md animate-fade-in text-xs font-mono break-all whitespace-pre-wrap">

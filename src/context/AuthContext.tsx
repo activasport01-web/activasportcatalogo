@@ -44,10 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let initialCheckDone = false
 
     async function initializeAuth() {
-      // Timeout de seguridad: si Supabase tarda más de 8 segundos, forzamos la salida del estado de carga
+      // Timeout de seguridad: si Supabase tarda más de 20 segundos, forzamos la salida del estado de carga
       const fallbackTimer = setTimeout(() => {
         if (mounted) setLoading(false)
-      }, 8000)
+      }, 20000)
 
       try {
         const { data: { session }, error } = await supabase.auth.getSession()

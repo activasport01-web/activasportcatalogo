@@ -160,10 +160,10 @@ export default function AdminDashboard() {
     }
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
             <div className="text-center">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-500 mx-auto"></div>
-                <p className="mt-4 font-bold tracking-wider">CARGANDO PANEL...</p>
+                <p className="mt-4 font-bold tracking-wider text-slate-600 dark:text-slate-400">CARGANDO PANEL...</p>
             </div>
         </div>
     )
