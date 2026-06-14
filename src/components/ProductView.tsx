@@ -172,8 +172,13 @@ export default function ProductView({ producto, productosRelacionados }: Product
         setCurrentImageIndex((prev) => (prev - 1 + carouselImages.length) % carouselImages.length)
     }
 
-    const handleWhatsAppClick = async () => {
-        await supabase.rpc('incrementar_consulta_zapato', { zapato_id: producto.id })
+    const handleWhatsAppClick = () => {
+        // Ejecutar en segundo plano sin await para evitar que el navegador bloquee el popup de window.open
+        (() => {
+            supabase.rpc('incrementar_consulta_zapato', { zapato_id: producto.id }).then(({ error }) => {
+                if (error) console.error("Error al incrementar consulta:", error)
+            })
+        })()
 
         // Intentar identificar el color seleccionado
         let colorNombre = 'Surtido / Foto Principal'
