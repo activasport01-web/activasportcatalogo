@@ -172,28 +172,19 @@ export default function ProductView({ producto, productosRelacionados }: Product
         setCurrentImageIndex((prev) => (prev - 1 + carouselImages.length) % carouselImages.length)
     }
 
-    const handleWhatsAppClick = () => {
-        // Ejecutar en segundo plano sin await para evitar que el navegador bloquee el popup de window.open
-        (() => {
-            supabase.rpc('incrementar_consulta_zapato', { zapato_id: producto.id }).then(({ error }) => {
-                if (error) console.error("Error al incrementar consulta:", error)
-            })
-        })()
+    // Pre-generar la URL nativa para TikTok (y quitar window.location.href muy largo)
+    let colorNombre = 'Surtido / Foto Principal'
+    if (coloresDisponibles.length > 0) {
+        const colorFound = coloresDisponibles.find((c: any) => getColorImage(c) === selectedImage)
+        if (colorFound) colorNombre = getColorName(colorFound)
+    }
 
-        // Intentar identificar el color seleccionado
-        let colorNombre = 'Surtido / Foto Principal'
-        if (coloresDisponibles.length > 0) {
-            const colorFound = coloresDisponibles.find((c: any) => getColorImage(c) === selectedImage)
-            if (colorFound) colorNombre = getColorName(colorFound)
-        }
+    let tallaSeleccionada = tipoCurva
+    if (hasVariantes && selectedVariantIndex >= 0) {
+        tallaSeleccionada = variantesTallas[selectedVariantIndex].rango
+    }
 
-        // Determinar Talla a Enviar
-        let tallaSeleccionada = tipoCurva
-        if (hasVariantes && selectedVariantIndex >= 0) {
-            tallaSeleccionada = variantesTallas[selectedVariantIndex].rango
-        }
-
-        const texto = `Hola Activa Sport, me interesa este modelo:
+    const whatsappTexto = `Hola Activa Sport, me interesa este modelo:
 📸 *Foto:* ${selectedImage}
 
 👟 *Modelo:* ${producto.nombre}
@@ -203,13 +194,9 @@ export default function ProductView({ producto, productosRelacionados }: Product
 📦 *Caja:* ${producto.caja || 'N/A'}
 📏 *Talla/Curva:* ${tallaSeleccionada}
 📦 *Cantidad paquete:* ${cantidadCajon} pares
-🎨 *Color Ref:* ${colorNombre}
+🎨 *Color Ref:* ${colorNombre}`
 
-🔗 *Link:* ${window.location.href}`
-
-        const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(texto)}`
-        window.open(url, '_blank', 'noopener,noreferrer')
-    }
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(whatsappTexto)}`
 
     // Removed totalItem calculation since price is no longer displayed or used for user-facing totals locally
     const handleAddToCart = () => {
@@ -635,13 +622,24 @@ export default function ProductView({ producto, productosRelacionados }: Product
 
                             {/* Botones de Acción */}
                             <div className="flex flex-col gap-3">
-                                <button
-                                    onClick={handleWhatsAppClick}
+                                <a
+                                    href={whatsappUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={() => {
+                                        // Mantenemos la estadística en segundo plano
+                                        supabase.rpc('incrementar_consulta_zapato', { zapato_id: producto.id }).then(({ error }) => {
+                                            if (error) console.error("Error al incrementar consulta:", error)
+                                        })
+                                    }}
                                     className="w-full py-4 text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-3 transition-all bg-green-600 hover:bg-green-700 hover:shadow-green-500/30 hover:translate-y-[-2px] animate-pulse-slow"
                                 >
                                     <MessageCircle size={24} />
                                     Hacer la consulta
-                                </button>
+                                </a>
+                                <p className="text-[11px] text-center text-slate-500 dark:text-slate-400 mt-[-4px] mb-2 px-2">
+                                    💡 Si no abre, toca los 3 puntitos (•••) arriba y selecciona 'Abrir en el navegador'.
+                                </p>
 
                                 <button
                                     id="add-btn"
