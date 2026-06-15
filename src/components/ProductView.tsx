@@ -207,8 +207,8 @@ export default function ProductView({ producto, productosRelacionados }: Product
 
 🔗 *Link:* ${window.location.href}`
 
-        const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(texto)}`
-        window.open(url, '_blank')
+        const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(texto)}`
+        window.open(url, '_blank', 'noopener,noreferrer')
     }
 
     // Removed totalItem calculation since price is no longer displayed or used for user-facing totals locally

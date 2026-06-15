@@ -45,8 +45,8 @@ export default function HeroSection({ slides }: HeroProps) {
 
     // WhatsApp
     const handleWhatsApp = () => {
-        const message = `Hola Activa Sport 👟\nVi "${activeSlide.title}" en su catálogo web.\n¿Me podrían dar más información?`
-        window.open(`https://wa.me/59173643433?text=${encodeURIComponent(message)}`, '_blank')
+        const message = 'Hola Activa Sport, me gustaría ver el catálogo de calzados y conocer más sobre ventas al por mayor.'
+        window.open(`https://api.whatsapp.com/send?phone=59173643433&text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
     }
 
     return (

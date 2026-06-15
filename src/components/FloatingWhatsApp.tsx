@@ -25,8 +25,8 @@ export default function FloatingWhatsApp() {
     const MESSAGE = 'Hola! Me gustaría hacer una consulta.'
 
     const handleClick = () => {
-        const url = `https://wa.me/${PHONE_NUMBER}?text=${encodeURIComponent(MESSAGE)}`
-        window.open(url, '_blank')
+        const url = `https://api.whatsapp.com/send?phone=${PHONE_NUMBER}&text=${encodeURIComponent(MESSAGE)}`
+        window.open(url, '_blank', 'noopener,noreferrer')
     }
 
     return (

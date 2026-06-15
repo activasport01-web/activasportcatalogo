@@ -87,15 +87,9 @@ export default function PromoCarousel() {
     }
 
     const handleConsultar = (promo: Promocion) => {
-        const message = `Hola Activa Sport, me interesa esta Oferta Especial:
-${promo.imagen_url ? `*Imagen:* ${promo.imagen_url}\n` : ''}
-🔥 *Promo:* ${promo.titulo}
-📝 *Detalle:* ${promo.descripcion}
-
-🔗 *Visto en:* ${window.location.href}`
-
-        const url = `https://wa.me/59163448209?text=${encodeURIComponent(message)}`
-        window.open(url, '_blank')
+        const message = `Hola Activa Sport, me interesa esta promoción: ${promo.titulo}`
+        const url = `https://api.whatsapp.com/send?phone=59163448209&text=${encodeURIComponent(message)}`
+        window.open(url, '_blank', 'noopener,noreferrer')
     }
 
     if (loading) return null

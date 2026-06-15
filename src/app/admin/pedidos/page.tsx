@@ -320,7 +320,7 @@ export default function AdminPedidosPage() {
                         {/* Footer Modal */}
                         <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
                             <a
-                                href={`https://wa.me/591${pedidoSeleccionado.cliente_telefono || ''}?text=Hola ${pedidoSeleccionado.cliente_nombre}, te escribo sobre tu pedido #${pedidoSeleccionado.id.slice(0, 6)}...`}
+                                href={`https://api.whatsapp.com/send?phone=591${pedidoSeleccionado.cliente_telefono || ''}&text=Hola ${pedidoSeleccionado.cliente_nombre}, te escribo sobre tu pedido #${pedidoSeleccionado.id.slice(0, 6)}...`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm flex items-center gap-2 transition-colors"

@@ -107,8 +107,8 @@ export default function CarritoPage() {
             mensaje += `✅ *Ya se registró mi pedido en su sistema. Quedo a la espera de coordinar envío y pago.*`
 
             // 6. Enviar y Limpiar
-            const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`
-            window.open(url, '_blank')
+            const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(mensaje)}`
+            window.open(url, '_blank', 'noopener,noreferrer')
 
             clearCart() // Limpiamos el carrito SOLO si todo salió bien
 
@@ -120,8 +120,8 @@ export default function CarritoPage() {
             const mensajeFallback = `Hola, quiero hacer un pedido manual (Error Sistema): \n\n` +
                 items.map(i => `- ${i.nombre} (${i.cantidad_pares} pares)`).join('\n')
 
-            const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(mensajeFallback)}`
-            window.open(url, '_blank')
+            const url = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(mensajeFallback)}`
+            window.open(url, '_blank', 'noopener,noreferrer')
         }
     }
 
