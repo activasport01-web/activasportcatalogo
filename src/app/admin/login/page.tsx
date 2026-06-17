@@ -55,27 +55,14 @@ function LoginForm() {
                 return
             }
 
-            // Verificar si tiene un perfil activo en el panel administrativo
-            const { data: profile, error: profileError } = await supabase
-                .from('usuarios')
-                .select('activo')
-                .eq('id', authData.user.id)
-                .single()
-
-            if (profileError || !profile || !profile.activo) {
-                await supabase.auth.signOut()
-                setErrorMsg('Acceso denegado. Su cuenta no tiene permisos administrativos o está inactiva.')
-                setLoading(false)
-                return
-            }
-
-            // Poner cookie de sesión para que el middleware pueda proteger /admin/*
-            // Dura 30 días (2592000 segundos) para que la sesión se mantenga activa
-            document.cookie = 'admin_session=1; path=/; SameSite=Strict; max-age=2592000'
-
-            // Si el middleware guardó a dónde iba el usuario, volver ahí
-            const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
-            window.location.href = redirectTo
+            // La verificación de cuenta activa, la carga del perfil y la cookie
+            // 'admin_session' las maneja AuthContext automáticamente al detectar
+            // el evento SIGNED_IN (evita una segunda consulta redundante a 'usuarios'
+            // que competía por el lock interno del cliente de Supabase y generaba
+            // demoras de varios segundos en el login).
+            // El useEffect de arriba redirige en cuanto 'profile' esté listo.
+            // Si la cuenta está inactiva, AuthContext cierra la sesión automáticamente.
+            setLoading(false)
         } catch (err: any) {
             console.error('Error inesperado en login:', err)
             setErrorMsg('Ocurrió un error inesperado de conexión. Por favor, intenta de nuevo.')
