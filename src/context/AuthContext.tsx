@@ -68,9 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return
           }
 
-          currentUserRef.current = session.user.id
           if (mounted) setUser(session.user)
-          await loadProfile(session.user.id, mounted)
+          const ok = await loadProfile(session.user.id, mounted)
+          // Solo marcamos como "ya cargado" si el perfil se obtuvo con éxito.
+          // Si falló (timeout, error de red, etc.), dejamos la ref vacía para
+          // que un próximo evento de auth (ej. SIGNED_IN tras un login manual)
+          // pueda reintentar la carga en vez de saltársela para siempre.
+          if (ok) currentUserRef.current = session.user.id
         } else {
           currentUserRef.current = null
           if (mounted) {
@@ -98,15 +102,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  async function loadProfile(userId: string, mounted: boolean) {
+  async function loadProfile(userId: string, mounted: boolean): Promise<boolean> {
     try {
       // 1. Fetch user profile and role
       const { data: profileData, error: profileError } = await supabase
         .from('usuarios')
         .select(`
-          id, 
-          nombre_completo, 
-          rol_id, 
+          id,
+          nombre_completo,
+          rol_id,
           activo,
           roles (
             nombre
@@ -121,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Si el usuario está desactivado, cerrar sesión
         if (!profileData.activo) {
           await logout()
-          return
+          return false
         }
 
         // Escribir cookie de sesión antes de actualizar el estado para evitar condiciones de carrera en redirecciones
@@ -141,13 +145,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const permsList = permsData
               .map(p => (p.permisos as any)?.codigo)
               .filter(Boolean)
-            
+
             if (mounted) setPermissions(permsList)
           }
         }
+        return true
       }
+      return false
     } catch (error) {
       console.error('Error loading user profile:', error)
+      return false
     }
   }
 

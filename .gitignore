@@ -43,3 +43,6 @@ next-env.d.ts
 # binarios locales (no deben subirse al repo)
 cloudflared.exe
 *.exe
+
+# configuración local de Claude Code (permisos/preferencias por máquina)
+.claude/

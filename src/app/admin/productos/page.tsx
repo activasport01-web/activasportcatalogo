@@ -978,6 +978,7 @@ export default function ProductosAdmin() {
                                         {producto.cat_obj?.nombre || producto.categoria || 'Genérico'}
                                     </span>
                                     <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                                        {producto.nombre}
                                     </h3>
                                     {/* Stock Indicator */}
                                     <div className="flex items-center gap-2 mt-1">

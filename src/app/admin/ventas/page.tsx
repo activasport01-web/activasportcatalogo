@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/context/AuthContext'
 import {
     ArrowLeft, Plus, Trash2, Search, Download, ShoppingCart,
     User, Package, X, CheckCircle2
@@ -30,6 +31,7 @@ interface Producto {
 }
 
 export default function VentasPage() {
+    const { profile } = useAuth()
     const [productos, setProductos] = useState<Producto[]>([])
     const [searchTerm, setSearchTerm] = useState('')
     const [showSearch, setShowSearch] = useState(false)
@@ -111,11 +113,21 @@ export default function VentasPage() {
 
         setSaving(true)
         try {
+            // Mapa en memoria para acumular descuentos cuando el mismo producto
+            // aparece en varias líneas de la misma nota (evita sobreescritura).
+            const stockMap: { [id: string]: { stock_bultos: number; variantes_tallas: any[] } } = {}
+            for (const p of productos) {
+                stockMap[p.id] = {
+                    stock_bultos: p.stock_bultos,
+                    variantes_tallas: p.variantes_tallas
+                        ? p.variantes_tallas.map(v => ({ ...v }))
+                        : []
+                }
+            }
+
             // 1. Guardar en movimientos_kardex + actualizar stock
             for (const linea of lineas) {
                 const precioTotal = linea.cantidad * linea.precio_unitario
-
-                // Texto del detalle (incluye talla si es que hay)
                 const tallaInfo = linea.talla_rango ? ` (Talla: ${linea.talla_rango})` : ''
 
                 // Registrar movimiento
@@ -126,21 +138,30 @@ export default function VentasPage() {
                     precio_total: precioTotal,
                     detalle: `Nota de venta — Cliente: ${cliente}${tallaInfo}`,
                     fecha: new Date().toISOString(),
+                    usuario_id: profile?.id ?? null,
                 })
 
-                // Actualizar stock
-                const prod = productos.find(p => p.id === linea.producto_id)
-                if (prod) {
-                    let nuevoStockTotal = Math.max(0, prod.stock_bultos - linea.cantidad)
-                    let actualizaciones: any = { stock_bultos: nuevoStockTotal }
+                // Actualizar stock usando el mapa en memoria
+                const stock = stockMap[linea.producto_id]
+                if (stock) {
+                    const actualizaciones: any = {}
 
-                    // Si la línea tiene un índice de variante, descontar de ahí también
-                    if (prod.variantes_tallas && linea.variante_idx !== undefined && prod.variantes_tallas[linea.variante_idx]) {
-                        const nuevasVariantes = [...prod.variantes_tallas]
-                        const variantStockNum = Number(nuevasVariantes[linea.variante_idx].stock_bultos) || 0
-                        nuevasVariantes[linea.variante_idx].stock_bultos = Math.max(0, variantStockNum - linea.cantidad)
-                        actualizaciones.variantes_tallas = nuevasVariantes
+                    if (
+                        stock.variantes_tallas.length > 0 &&
+                        linea.variante_idx !== undefined &&
+                        stock.variantes_tallas[linea.variante_idx]
+                    ) {
+                        const variantStock = Number(stock.variantes_tallas[linea.variante_idx].stock_bultos) || 0
+                        stock.variantes_tallas[linea.variante_idx].stock_bultos = Math.max(0, variantStock - linea.cantidad)
+                        // Recalcular global sumando todas las variantes actualizadas
+                        stock.stock_bultos = stock.variantes_tallas.reduce(
+                            (acc, v) => acc + (Number(v.stock_bultos) || 0), 0
+                        )
+                        actualizaciones.variantes_tallas = stock.variantes_tallas
+                    } else {
+                        stock.stock_bultos = Math.max(0, stock.stock_bultos - linea.cantidad)
                     }
+                    actualizaciones.stock_bultos = stock.stock_bultos
 
                     await supabase.from('zapatos')
                         .update(actualizaciones)

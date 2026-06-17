@@ -35,8 +35,8 @@ export default async function CatalogoPage() {
     // "Que se muestre de primera o que este predeterminado la marca activa"
     // Ordenamos: Primero los que tengan "Activa" en su marca, luego el resto.
     const sortedZapatos = zapatos ? [...zapatos].sort((a, b) => {
-        const marcaA = (a.marca || '').toLowerCase()
-        const marcaB = (b.marca || '').toLowerCase()
+        const marcaA = (a.marca_obj?.nombre || a.origen || '').toLowerCase()
+        const marcaB = (b.marca_obj?.nombre || b.origen || '').toLowerCase()
         const isActivaA = marcaA.includes('activa')
         const isActivaB = marcaB.includes('activa')
 

@@ -570,7 +570,7 @@ export default function ReportesPage() {
                                     ) : filteredMovimientos.length === 0 ? (
                                         <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400">No se encontraron movimientos en este periodo.</td></tr>
                                     ) : filteredMovimientos.map((mov) => {
-                                        const pid = mov.zapato_id || mov.producto_id
+                                        const pid = mov.producto_id
                                         const costoProm = pid ? (costosMap[pid] || 0) : 0
                                         const isVenta = mov.tipo === 'VENTA'
                                         const ganancia = isVenta && costoProm > 0

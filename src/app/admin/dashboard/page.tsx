@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
     LayoutDashboard, Package, Tags, Image, LogOut, TrendingUp,
     Eye, ArrowUpRight, Sparkles, Clock, CheckCircle2, BarChart3,
-    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, AlertTriangle, ShieldCheck
+    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, AlertTriangle, ShieldCheck, Boxes
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -400,6 +400,7 @@ export default function AdminDashboard() {
                             { href: '/admin/pedidos', icon: ShoppingCart, label: 'PEDIDOS', sub: 'Pedidos WhatsApp', color: 'bg-blue-500', shadow: 'shadow-blue-500/20', perm: 'gestionar_pedidos' },
                             { href: '/admin/reportes', icon: BarChart3, label: 'REPORTES', sub: 'Ventas y exportar PDF', color: 'bg-orange-500', shadow: 'shadow-orange-500/20', perm: 'ver_finanzas' },
                             { href: '/admin/productos', icon: Package, label: 'PRODUCTOS', sub: 'Inventario completo', color: 'bg-orange-500', shadow: 'shadow-orange-500/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/inventario', icon: Boxes, label: 'INVENTARIO', sub: 'Stock por sucursal', color: 'bg-cyan-600', shadow: 'shadow-cyan-600/20', perm: 'gestionar_catalogo' },
                             { href: '/admin/proveedores', icon: Warehouse, label: 'PROVEEDORES', sub: 'Contactos y compras', color: 'bg-teal-600', shadow: 'shadow-teal-600/20', perm: 'gestionar_catalogo' },
                             { href: '/admin/categorias', icon: Tags, label: 'CATEGORÍAS', sub: 'Organizar catálogo', color: 'bg-blue-600', shadow: 'shadow-blue-600/20', perm: 'gestionar_catalogo' },
                             { href: '/admin/subcategorias', icon: Layers, label: 'SUBCATEGORÍAS', sub: 'Tipos de planta', color: 'bg-indigo-600', shadow: 'shadow-indigo-600/20', perm: 'gestionar_catalogo' },

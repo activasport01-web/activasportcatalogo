@@ -105,10 +105,9 @@ async function handler(request: NextRequest) {
         })
     } catch (error: any) {
         console.error('[Proxy Supabase] Upstream Error:', error)
-        return new Response(JSON.stringify({ 
-            error: 'Error interno del proxy', 
-            details: error?.message || String(error),
-            stack: error?.stack 
+        return new Response(JSON.stringify({
+            error: 'Error interno del proxy',
+            details: process.env.NODE_ENV === 'development' ? (error?.message || String(error)) : 'Error de conexión',
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' },

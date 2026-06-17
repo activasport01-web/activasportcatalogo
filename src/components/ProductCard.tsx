@@ -51,6 +51,12 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
 
                     {/* Badges (Esquina Superior Izquierda) */}
                     <div className="absolute top-0 left-0 z-20 flex flex-col gap-1 p-1">
+                        {/* Badge de marca Activa (para verificar prioridad de orden) */}
+                        {(zapato.marca_obj?.nombre || zapato.origen || '').toLowerCase().includes('activa') && (
+                            <span className="bg-brand-orange text-white text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm">
+                                ★ ACTIVA
+                            </span>
+                        )}
                         {/* Badges de Estado */}
                         {zapato.etiquetas?.includes('ultimos_pares') && (
                             <span className="bg-yellow-400 text-black text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm animate-pulse border border-yellow-500/20">
