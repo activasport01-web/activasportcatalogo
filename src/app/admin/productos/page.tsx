@@ -682,6 +682,15 @@ export default function ProductosAdmin() {
                 setColorVariants([])
             }
 
+            // Recalcular el stock total real a partir de las variantes de talla,
+            // en vez de confiar en el valor (posiblemente desactualizado) de stock_bultos.
+            const variantesCargadas = producto.variantes_tallas && Array.isArray(producto.variantes_tallas)
+                ? producto.variantes_tallas
+                : null
+            const stockRecalculado = variantesCargadas
+                ? variantesCargadas.reduce((sum: number, v: any) => sum + (Number(v.stock_bultos) || 0), 0)
+                : ((producto as any).stock_bultos || 0)
+
             setFormData({
                 nombre: producto.nombre,
                 codigo: (producto as any).codigo || '',
@@ -702,12 +711,12 @@ export default function ProductosAdmin() {
                 marca_id: (producto as any).marca_id || '',
                 disponible: producto.disponible,
                 precio_costo: (producto as any).precio_costo || 0,
-                stock_bultos: (producto as any).stock_bultos || 0
+                stock_bultos: stockRecalculado
             })
 
             // NUEVO: Cargar variantes de tallas si existen
-            if (producto.variantes_tallas && Array.isArray(producto.variantes_tallas)) {
-                setVariantesTallas(producto.variantes_tallas)
+            if (variantesCargadas) {
+                setVariantesTallas(variantesCargadas)
             } else {
                 // Si es un producto viejo sin variantes, migramos sus datos básicos a la primera variante temporal
                 const oldTallas = producto.tallas?.join(', ') || ''

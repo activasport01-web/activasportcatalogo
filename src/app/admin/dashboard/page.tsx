@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
     LayoutDashboard, Package, Tags, Image, LogOut, TrendingUp,
     Eye, ArrowUpRight, Sparkles, Clock, CheckCircle2, BarChart3,
-    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, AlertTriangle, ShieldCheck, Boxes
+    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, ShieldCheck, Boxes
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -25,8 +25,6 @@ export default function AdminDashboard() {
     const [totalComprasSemana, setTotalComprasSemana] = useState(0)
     const [capitalInventario, setCapitalInventario] = useState(0)
     const [capitalPorCategoria, setCapitalPorCategoria] = useState<any[]>([])
-    const [stockBajo, setStockBajo] = useState<any[]>([])
-    const STOCK_MINIMO = 3 // Umbral: 3 bultos o menos = alerta
 
     const { profile, loading: authLoading, hasPermission, logout } = useAuth()
 
@@ -49,7 +47,7 @@ export default function AdminDashboard() {
 
     const loadAll = async () => {
         try {
-            await Promise.all([loadStats(), loadCharts(), loadCapital(), loadStockBajo()])
+            await Promise.all([loadStats(), loadCharts(), loadCapital()])
         } catch (error) {
             console.error("Error al cargar datos del panel:", error)
         }
@@ -149,14 +147,6 @@ export default function AdminDashboard() {
         setCapitalPorCategoria(sorted)
     }
 
-    const loadStockBajo = async () => {
-        const { data } = await supabase
-            .from('zapatos')
-            .select('id, nombre, cat_obj:categorias(nombre), stock_bultos, disponible')
-            .lte('stock_bultos', 3)
-            .order('stock_bultos', { ascending: true })
-        setStockBajo(data || [])
-    }
 
     const handleLogout = async () => {
         await logout()
@@ -422,56 +412,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Alertas de Stock Bajo */}
-                {stockBajo.length > 0 && (
-                    <div className="mb-10">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
-                                <AlertTriangle className="text-red-500" size={22} />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-black text-slate-800 dark:text-white">Alertas de Stock Bajo</h3>
-                                <p className="text-xs text-slate-500">{stockBajo.length} producto{stockBajo.length > 1 ? 's' : ''} con {STOCK_MINIMO} bultos o menos — necesitan reabastecerse</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {stockBajo.map((p) => (
-                                <Link key={p.id} href="/admin/productos" className="group">
-                                    <div className={`bg-white dark:bg-slate-900 rounded-2xl p-5 border-2 shadow-lg transition-all hover:-translate-y-1 ${p.stock_bultos === 0
-                                        ? 'border-red-500 shadow-red-100 dark:shadow-red-900/20'
-                                        : 'border-amber-400 shadow-amber-100 dark:shadow-amber-900/20'
-                                        }`}>
-                                        <div className="flex items-start justify-between mb-3">
-                                            <span className={`text-xs font-black uppercase px-2 py-1 rounded-full ${p.stock_bultos === 0
-                                                ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400'
-                                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                                                }`}>
-                                                {p.stock_bultos === 0 ? '🔴 Sin Stock' : '🟡 Stock Bajo'}
-                                            </span>
-                                            <ArrowUpRight size={16} className="text-slate-400 group-hover:text-orange-500 transition-colors" />
-                                        </div>
-                                        <p className="font-black text-slate-800 dark:text-white text-sm leading-tight mb-1 line-clamp-2">{p.nombre}</p>
-                                        <p className="text-xs text-slate-400 mb-3">{p.cat_obj?.nombre || p.categoria || ''}</p>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex-1 bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full transition-all ${p.stock_bultos === 0 ? 'bg-red-500' : 'bg-amber-400'
-                                                        }`}
-                                                    style={{ width: `${Math.min((p.stock_bultos / STOCK_MINIMO) * 100, 100)}%` }}
-                                                />
-                                            </div>
-                                            <span className={`text-sm font-black tabular-nums ${p.stock_bultos === 0 ? 'text-red-500' : 'text-amber-600 dark:text-amber-400'
-                                                }`}>
-                                                {p.stock_bultos}
-                                            </span>
-                                            <span className="text-xs text-slate-400">bultos</span>
-                                        </div>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     )
