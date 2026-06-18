@@ -85,16 +85,20 @@ export default async function Home() {
   }
 
   // 3. Filtrar productos para las tarjetas destacadas inferiores
+  // (precio siempre es 0 en este catálogo mayorista, así que no sirve para ordenar/elegir)
   const pNuevo = zapatos && zapatos.length > 0 ? zapatos[0] : null
 
-  const pPopular = zapatos && zapatos.length > 0 ? (
-    zapatos.find((z: any) => z.nombre.toLowerCase().includes('activa') || (z.marca_obj?.nombre || z.marca || '').toLowerCase().includes('activa'))
-    || zapatos[1]
-    || zapatos[0]
+  // Más Buscado: el de más vistas+consultas, distinto al de "Nuevo Ingreso"
+  const candidatosPopular = zapatos.filter((z: any) => z.id !== pNuevo?.id)
+  const pPopular = candidatosPopular.length > 0 ? (
+    [...candidatosPopular].sort((a: any, b: any) => ((b.vistas || 0) + (b.consultas || 0)) - ((a.vistas || 0) + (a.consultas || 0)))[0]
   ) : null
 
-  // Buscar el más barato
-  const pOferta = zapatos && zapatos.length > 0 ? [...zapatos].sort((a: any, b: any) => a.precio - b.precio)[0] : null
+  // Mejor Precio: un producto etiquetado como "oferta", distinto a los dos anteriores
+  const candidatosOferta = zapatos.filter((z: any) => z.id !== pNuevo?.id && z.id !== pPopular?.id)
+  const pOferta = candidatosOferta.length > 0 ? (
+    candidatosOferta.find((z: any) => z.etiquetas?.includes('oferta')) || candidatosOferta[0]
+  ) : null
 
   // Helper para obtener color principal
   const getColorName = (p: any) => {
