@@ -62,7 +62,7 @@ export default function InventarioPage() {
             .from('inventario')
             .select('id, producto_id, color, cantidad, ultima_actualizacion, usuario_id')
 
-        if (prods) setProductos(prods)
+        if (prods) setProductos(prods as any)
 
         // Agrupar inventario por producto_id
         const grouped: { [id: string]: Sucursal[] } = {}
@@ -305,7 +305,9 @@ export default function InventarioPage() {
                                     )}
 
                                     {hayDiferencia && (
-                                        <AlertTriangle size={16} className="text-amber-500 shrink-0" title="El total por sucursal no coincide con el stock global" />
+                                        <span title="El total por sucursal no coincide con el stock global">
+                                            <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                                        </span>
                                     )}
 
                                     {isExpanded ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
