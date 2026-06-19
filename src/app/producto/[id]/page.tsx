@@ -75,6 +75,11 @@ export default async function ProductoPage({ params }: Props) {
         notFound()
     }
 
+    // Incrementar el contador de vistas de forma atómica (no bloquea el render si falla)
+    supabase.rpc('incrementar_vista_zapato', { zapato_id: producto.id }).then(({ error }) => {
+        if (error) console.error('Error al incrementar vista:', error)
+    })
+
     // Fetch Productos Relacionados (Misma Categoría, excluyendo el actual)
     // Buscamos hasta 4 productos similares para mostrar abajo
     const { data: relacionados } = await supabase
