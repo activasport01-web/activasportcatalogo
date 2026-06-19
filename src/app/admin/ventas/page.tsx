@@ -36,6 +36,7 @@ export default function VentasPage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [showSearch, setShowSearch] = useState(false)
     const [cliente, setCliente] = useState('')
+    const [estadoPago, setEstadoPago] = useState<'pagado' | 'credito'>('pagado')
     const [lineas, setLineas] = useState<LineaVenta[]>([])
     const [saving, setSaving] = useState(false)
     const [success, setSuccess] = useState(false)
@@ -101,6 +102,7 @@ export default function VentasPage() {
 
     const limpiarFormulario = () => {
         setCliente('')
+        setEstadoPago('pagado')
         setLineas([])
         setSuccess(false)
     }
@@ -139,6 +141,7 @@ export default function VentasPage() {
                     detalle: `Nota de venta — Cliente: ${cliente}${tallaInfo}`,
                     fecha: new Date().toISOString(),
                     usuario_id: profile?.id ?? null,
+                    estado_pago: estadoPago,
                 })
 
                 // Actualizar stock usando el mapa en memoria
@@ -215,6 +218,12 @@ export default function VentasPage() {
         doc.setFontSize(9)
         doc.setFont('helvetica', 'normal')
         doc.text(`N° ${nroNota}`, 196, 20, { align: 'right' })
+        if (estadoPago === 'credito') {
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(255, 230, 200)
+            doc.text('💳 VENTA A CRÉDITO', 196, 28, { align: 'right' })
+            doc.setTextColor(255, 255, 255)
+        }
 
         // ── BLOQUE FECHA / HORA ─────────────────────────────────────────
         doc.setFillColor(255, 245, 235)     // fondo naranja muy claro
@@ -332,7 +341,10 @@ export default function VentasPage() {
                             <CheckCircle2 className="text-green-500" size={28} />
                             <div>
                                 <p className="font-black text-green-700 dark:text-green-400">¡Venta registrada y PDF descargado!</p>
-                                <p className="text-sm text-green-600 dark:text-green-500">El movimiento ya aparece en los Reportes.</p>
+                                <p className="text-sm text-green-600 dark:text-green-500">
+                                    El movimiento ya aparece en los Reportes
+                                    {estadoPago === 'credito' ? ' — marcado como A CRÉDITO.' : '.'}
+                                </p>
                             </div>
                         </div>
                         <button onClick={limpiarFormulario} className="px-4 py-2 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 transition-colors text-sm">
@@ -342,17 +354,47 @@ export default function VentasPage() {
                 )}
 
                 {/* Datos del cliente */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-md">
-                    <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">
-                        <User size={13} className="inline mr-1" />
-                        Nombre del Cliente *
-                    </label>
-                    <input
-                        value={cliente}
-                        onChange={e => setCliente(e.target.value)}
-                        placeholder="Ej: Margarita López"
-                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 text-sm font-bold transition-all"
-                    />
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-md space-y-4">
+                    <div>
+                        <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">
+                            <User size={13} className="inline mr-1" />
+                            Nombre del Cliente *
+                        </label>
+                        <input
+                            value={cliente}
+                            onChange={e => setCliente(e.target.value)}
+                            placeholder="Ej: Margarita López"
+                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 text-sm font-bold transition-all"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">
+                            Estado de Pago *
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setEstadoPago('pagado')}
+                                className={`py-3 rounded-xl font-bold text-sm border-2 transition-all ${estadoPago === 'pagado'
+                                    ? 'bg-green-500 border-green-500 text-white shadow-md'
+                                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500'
+                                    }`}
+                            >
+                                ✅ Pagado
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setEstadoPago('credito')}
+                                className={`py-3 rounded-xl font-bold text-sm border-2 transition-all ${estadoPago === 'credito'
+                                    ? 'bg-amber-500 border-amber-500 text-white shadow-md'
+                                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500'
+                                    }`}
+                            >
+                                💳 A Crédito
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Agregar Productos */}

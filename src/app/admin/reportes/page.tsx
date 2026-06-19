@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, FileText, Calendar, Download, Search, TrendingUp, TrendingDown, DollarSign, Zap, Package, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, FileText, Calendar, Download, Search, TrendingUp, TrendingDown, DollarSign, Zap, Package, ShoppingCart, CreditCard, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -34,7 +34,8 @@ export default function ReportesPage() {
         ventasPeriodo: 0,
         ingresosPeriodo: 0,
         comprasPeriodo: 0,
-        costoComprasPeriodo: 0
+        costoComprasPeriodo: 0,
+        porCobrar: 0
     })
     const [monthlyData, setMonthlyData] = useState<any[]>([])
     const [activeTab, setActiveTab] = useState<'movimientos' | 'inventario' | 'rentabilidad'>('movimientos')
@@ -118,6 +119,7 @@ export default function ReportesPage() {
         let costoComprasPeriodo = 0
         let costoRealVendido = 0
         let tieneAlgunCosto = false
+        let porCobrar = 0
 
         data.forEach(m => {
             const isVenta = m.tipo === 'VENTA'
@@ -129,8 +131,9 @@ export default function ReportesPage() {
             if (isVenta) {
                 ventasPeriodo += m.cantidad
                 ingresosPeriodo += precioTotal
+                if (m.estado_pago === 'credito') porCobrar += precioTotal
                 // Calcular costo real usando el mapa de costos por producto
-                const pid = m.zapato_id || m.producto_id
+                const pid = m.producto_id
                 if (pid && mapa[pid]) {
                     costoRealVendido += Number(m.cantidad) * mapa[pid]
                     tieneAlgunCosto = true
@@ -152,9 +155,25 @@ export default function ReportesPage() {
             ventasPeriodo,
             ingresosPeriodo,
             comprasPeriodo,
-            costoComprasPeriodo
+            costoComprasPeriodo,
+            porCobrar
         })
         setGananciaNetaPeriodo(tieneAlgunCosto ? ingresosPeriodo - costoRealVendido : null)
+    }
+
+    const marcarComoPagado = async (movId: string) => {
+        const { error } = await supabase
+            .from('movimientos_kardex')
+            .update({ estado_pago: 'pagado' })
+            .eq('id', movId)
+
+        if (!error) {
+            const actualizados = movimientos.map(m => m.id === movId ? { ...m, estado_pago: 'pagado' } : m)
+            setMovimientos(actualizados)
+            calculateStats(actualizados, costosMap)
+        } else {
+            alert('Error al actualizar el estado de pago.')
+        }
     }
 
     const applyFilters = () => {
@@ -449,7 +468,7 @@ export default function ReportesPage() {
             {/* ===== TAB: MOVIMIENTOS ===== */}
             {activeTab === 'movimientos' && (
                 <div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 mt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-8 mt-6">
                         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-800/50">
                             <div className="flex justify-between items-start mb-2">
                                 <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl text-green-600 dark:text-green-400"><TrendingUp size={24} /></div>
@@ -502,6 +521,22 @@ export default function ReportesPage() {
                                     <p className="text-xs text-slate-400">Registra compras en USD para ver la ganancia real</p>
                                 </>
                             )}
+                        </div>
+                        <div className={`p-6 rounded-2xl shadow-lg border ${stats.porCobrar > 0
+                            ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/40'
+                            : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/50'
+                            }`}>
+                            <div className="flex justify-between items-start mb-2">
+                                <div className={`p-3 rounded-xl ${stats.porCobrar > 0
+                                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                    }`}><CreditCard size={24} /></div>
+                                <span className="text-xs font-bold text-slate-400 uppercase">Por Cobrar</span>
+                            </div>
+                            <h3 className={`text-3xl font-black mb-1 ${stats.porCobrar > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
+                                {stats.porCobrar.toFixed(2)} <span className="text-sm font-normal text-slate-400">Bs</span>
+                            </h3>
+                            <p className="text-sm text-slate-500">Ventas a crédito en el periodo</p>
                         </div>
                     </div>
 
@@ -559,16 +594,17 @@ export default function ReportesPage() {
                                         <th className="px-6 py-4 text-center">Cantidad</th>
                                         <th className="px-6 py-4 text-right">Precio Total</th>
                                         <th className="px-6 py-4 text-right">Ganancia</th>
+                                        <th className="px-6 py-4 text-center">Pago</th>
                                         <th className="px-6 py-4">Detalle / Cliente</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {loading ? (
-                                        <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                                        <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400">
                                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>Cargando...
                                         </td></tr>
                                     ) : filteredMovimientos.length === 0 ? (
-                                        <tr><td colSpan={7} className="px-6 py-12 text-center text-slate-400">No se encontraron movimientos en este periodo.</td></tr>
+                                        <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400">No se encontraron movimientos en este periodo.</td></tr>
                                     ) : filteredMovimientos.map((mov) => {
                                         const pid = mov.producto_id
                                         const costoProm = pid ? (costosMap[pid] || 0) : 0
@@ -595,6 +631,23 @@ export default function ReportesPage() {
                                                         </span>
                                                     ) : (
                                                         <span className="text-slate-300 dark:text-slate-600 text-xs">Sin costo reg.</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    {!isVenta ? (
+                                                        <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
+                                                    ) : mov.estado_pago === 'credito' ? (
+                                                        <button
+                                                            onClick={() => marcarComoPagado(mov.id)}
+                                                            title="Marcar como pagado"
+                                                            className="flex items-center gap-1 mx-auto px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                                                        >
+                                                            💳 Crédito
+                                                        </button>
+                                                    ) : (
+                                                        <span className="flex items-center justify-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                            <CheckCircle size={11} /> Pagado
+                                                        </span>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-500 text-xs max-w-xs truncate" title={mov.detalle}>{mov.detalle || '-'}</td>
