@@ -90,8 +90,28 @@ export default async function ProductoPage({ params }: Props) {
         .neq('id', id) // Excluir el actual
         .limit(4)
 
+    // Datos estructurados (JSON-LD) para que Google entienda el producto.
+    // No se incluye "offers" con precio: este catálogo es mayorista por consulta
+    // y Google penaliza/marca como error un Offer sin precio real declarado.
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: producto.nombre,
+        description: producto.descripcion || `${producto.nombre} disponible para pedidos al por mayor en Activa Sport.`,
+        image: producto.url_imagen,
+        sku: producto.codigo || String(producto.id),
+        brand: {
+            '@type': 'Brand',
+            name: producto.marca_obj?.nombre || producto.origen || 'Activa Sport',
+        },
+    }
+
     return (
         <main className="bg-slate-50 dark:bg-slate-950 min-h-screen flex flex-col transition-colors duration-300">
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
 
             <div className="flex-grow pt-20 md:pt-28 pb-12">
                 <ProductView producto={producto} />
