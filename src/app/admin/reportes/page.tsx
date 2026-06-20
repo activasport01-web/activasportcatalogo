@@ -122,6 +122,8 @@ export default function ReportesPage() {
         let porCobrar = 0
 
         data.forEach(m => {
+            if (m.anulado) return // Las ventas anuladas no cuentan en los totales
+
             const isVenta = m.tipo === 'VENTA'
             const isEntrada = m.tipo === 'ENTRADA'
             const precioTotal = m.precio_total || 0
@@ -176,6 +178,67 @@ export default function ReportesPage() {
         }
     }
 
+    const [anulando, setAnulando] = useState<string | null>(null)
+
+    const anularVenta = async (mov: any) => {
+        if (!confirm(`¿Anular esta venta de ${mov.cantidad} bultos por ${mov.precio_total} Bs? Se devolverá el stock al producto.`)) return
+        setAnulando(mov.id)
+
+        try {
+            // 1. Traer el producto actual para devolver el stock correctamente
+            const { data: producto, error: prodError } = await supabase
+                .from('zapatos')
+                .select('stock_bultos, variantes_tallas')
+                .eq('id', mov.producto_id)
+                .single()
+
+            if (prodError || !producto) {
+                alert('No se encontró el producto (puede haber sido eliminado). Se marcará la venta como anulada, pero deberás ajustar el stock manualmente si corresponde.')
+            } else {
+                const variantes = producto.variantes_tallas ? [...producto.variantes_tallas] : []
+                // Intentar identificar la variante de talla a partir del detalle ("Talla: 38-43")
+                const match = mov.detalle?.match(/Talla:\s*([^)]+)\)/)
+                const rangoBuscado = match ? match[1].trim() : null
+
+                const actualizaciones: any = {}
+                if (rangoBuscado && variantes.length > 0) {
+                    const idx = variantes.findIndex((v: any) => v.rango === rangoBuscado)
+                    if (idx >= 0) {
+                        variantes[idx].stock_bultos = (Number(variantes[idx].stock_bultos) || 0) + Number(mov.cantidad)
+                        actualizaciones.variantes_tallas = variantes
+                        actualizaciones.stock_bultos = variantes.reduce((acc: number, v: any) => acc + (Number(v.stock_bultos) || 0), 0)
+                    }
+                }
+                if (actualizaciones.stock_bultos === undefined) {
+                    actualizaciones.stock_bultos = (producto.stock_bultos || 0) + Number(mov.cantidad)
+                }
+
+                const { error: stockError } = await supabase
+                    .from('zapatos')
+                    .update(actualizaciones)
+                    .eq('id', mov.producto_id)
+
+                if (stockError) throw stockError
+            }
+
+            // 2. Marcar el movimiento como anulado
+            const { error: anularError } = await supabase
+                .from('movimientos_kardex')
+                .update({ anulado: true })
+                .eq('id', mov.id)
+
+            if (anularError) throw anularError
+
+            const actualizados = movimientos.map(m => m.id === mov.id ? { ...m, anulado: true } : m)
+            setMovimientos(actualizados)
+            calculateStats(actualizados, costosMap)
+        } catch (err: any) {
+            console.error(err)
+            alert('Error al anular la venta: ' + (err?.message || 'Intenta de nuevo.'))
+        }
+        setAnulando(null)
+    }
+
     const applyFilters = () => {
         let filtered = movimientos
 
@@ -206,7 +269,7 @@ export default function ReportesPage() {
 
         const { data } = await supabase
             .from('movimientos_kardex')
-            .select('tipo, precio_total, fecha')
+            .select('tipo, precio_total, fecha, anulado')
             .gte('fecha', desde.toISOString())
 
         // Construir mapa por mes
@@ -219,6 +282,7 @@ export default function ReportesPage() {
         }
 
         data?.forEach((m: any) => {
+            if (m.anulado) return
             const d = new Date(m.fecha)
             const key = d.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' })
             if (!meses[key]) return
@@ -257,7 +321,7 @@ export default function ReportesPage() {
         filteredMovimientos.forEach(m => {
             const movData = [
                 new Date(m.fecha).toLocaleString(),
-                m.tipo,
+                m.anulado ? `${m.tipo} (ANULADA)` : m.tipo,
                 m.zapatos?.nombre || 'Producto Eliminado',
                 m.cantidad,
                 m.precio_total ? `${m.precio_total} Bs` : '-',
@@ -596,15 +660,16 @@ export default function ReportesPage() {
                                         <th className="px-6 py-4 text-right">Ganancia</th>
                                         <th className="px-6 py-4 text-center">Pago</th>
                                         <th className="px-6 py-4">Detalle / Cliente</th>
+                                        <th className="px-6 py-4 text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {loading ? (
-                                        <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                                        <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-400">
                                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-2"></div>Cargando...
                                         </td></tr>
                                     ) : filteredMovimientos.length === 0 ? (
-                                        <tr><td colSpan={8} className="px-6 py-12 text-center text-slate-400">No se encontraron movimientos en este periodo.</td></tr>
+                                        <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-400">No se encontraron movimientos en este periodo.</td></tr>
                                     ) : filteredMovimientos.map((mov) => {
                                         const pid = mov.producto_id
                                         const costoProm = pid ? (costosMap[pid] || 0) : 0
@@ -613,10 +678,11 @@ export default function ReportesPage() {
                                             ? (mov.precio_total || 0) - (Number(mov.cantidad) * costoProm)
                                             : null
                                         return (
-                                            <tr key={mov.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                            <tr key={mov.id} className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${mov.anulado ? 'opacity-50' : ''}`}>
                                                 <td className="px-6 py-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">{new Date(mov.fecha).toLocaleString()}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${mov.tipo === 'VENTA' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : mov.tipo === 'ENTRADA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>{mov.tipo}</span>
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${mov.anulado ? 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400 line-through' : mov.tipo === 'VENTA' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : mov.tipo === 'ENTRADA' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>{mov.tipo}</span>
+                                                    {mov.anulado && <span className="ml-1 text-[9px] font-bold text-red-500 uppercase">Anulada</span>}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="font-bold text-slate-800 dark:text-slate-200">{mov.zapatos?.nombre || 'Producto Desconocido'}</div>
@@ -625,7 +691,9 @@ export default function ReportesPage() {
                                                 <td className="px-6 py-4 text-center font-bold text-slate-700 dark:text-slate-300">{mov.cantidad}</td>
                                                 <td className="px-6 py-4 text-right font-mono font-bold text-slate-800 dark:text-slate-200">{mov.precio_total ? `${mov.precio_total} Bs` : '-'}</td>
                                                 <td className="px-6 py-4 text-right">
-                                                    {ganancia !== null ? (
+                                                    {mov.anulado ? (
+                                                        <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
+                                                    ) : ganancia !== null ? (
                                                         <span className={`font-black text-sm ${ganancia >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                                                             {ganancia >= 0 ? '+' : ''}{ganancia.toFixed(2)} Bs
                                                         </span>
@@ -634,7 +702,7 @@ export default function ReportesPage() {
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    {!isVenta ? (
+                                                    {!isVenta || mov.anulado ? (
                                                         <span className="text-slate-300 dark:text-slate-600 text-xs">—</span>
                                                     ) : mov.estado_pago === 'credito' ? (
                                                         <button
@@ -651,6 +719,18 @@ export default function ReportesPage() {
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-500 text-xs max-w-xs truncate" title={mov.detalle}>{mov.detalle || '-'}</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    {isVenta && !mov.anulado && (
+                                                        <button
+                                                            onClick={() => anularVenta(mov)}
+                                                            disabled={anulando === mov.id}
+                                                            title="Anular esta venta y devolver el stock"
+                                                            className="px-2 py-1 rounded-lg text-[10px] font-bold uppercase bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors disabled:opacity-50"
+                                                        >
+                                                            {anulando === mov.id ? '...' : 'Anular'}
+                                                        </button>
+                                                    )}
+                                                </td>
                                             </tr>
                                         )
                                     })}
