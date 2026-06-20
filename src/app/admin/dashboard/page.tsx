@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
     LayoutDashboard, Package, Tags, Image, LogOut, TrendingUp,
     Eye, ArrowUpRight, Sparkles, Clock, CheckCircle2, BarChart3,
-    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, ShieldCheck, Boxes, Truck
+    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, ShieldCheck, Boxes, Truck, Contact
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -388,6 +388,7 @@ export default function AdminDashboard() {
                         {[
                             { href: '/admin/ventas', icon: ShoppingCart, label: 'NUEVA VENTA', sub: 'Nota de venta + PDF', color: 'bg-green-600', shadow: 'shadow-green-600/20', perm: 'registrar_ventas' },
                             { href: '/admin/compras', icon: Truck, label: 'NUEVA COMPRA', sub: 'Orden de compra + PDF', color: 'bg-cyan-600', shadow: 'shadow-cyan-600/20', perm: 'gestionar_catalogo' },
+                            { href: '/admin/clientes', icon: Contact, label: 'CLIENTES', sub: 'Historial y saldo por cliente', color: 'bg-rose-600', shadow: 'shadow-rose-600/20', perm: 'registrar_ventas' },
                             { href: '/admin/pedidos', icon: ShoppingCart, label: 'PEDIDOS', sub: 'Pedidos WhatsApp', color: 'bg-blue-500', shadow: 'shadow-blue-500/20', perm: 'gestionar_pedidos' },
                             { href: '/admin/reportes', icon: BarChart3, label: 'REPORTES', sub: 'Ventas y exportar PDF', color: 'bg-orange-500', shadow: 'shadow-orange-500/20', perm: 'ver_finanzas' },
                             { href: '/admin/productos', icon: Package, label: 'PRODUCTOS', sub: 'Inventario completo', color: 'bg-orange-500', shadow: 'shadow-orange-500/20', perm: 'gestionar_catalogo' },

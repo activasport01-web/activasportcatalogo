@@ -30,18 +30,73 @@ interface Producto {
     variantes_tallas?: any[] // Para manejar múltiples tallas
 }
 
+interface Cliente {
+    id: string
+    nombre: string
+    telefono: string | null
+}
+
 export default function VentasPage() {
     const { profile } = useAuth()
     const [productos, setProductos] = useState<Producto[]>([])
     const [searchTerm, setSearchTerm] = useState('')
     const [showSearch, setShowSearch] = useState(false)
     const [cliente, setCliente] = useState('')
+    const [clienteId, setClienteId] = useState<string | null>(null)
+    const [clientesList, setClientesList] = useState<Cliente[]>([])
+    const [clienteSearchTerm, setClienteSearchTerm] = useState('')
+    const [showClienteSearch, setShowClienteSearch] = useState(false)
     const [estadoPago, setEstadoPago] = useState<'pagado' | 'credito'>('pagado')
     const [lineas, setLineas] = useState<LineaVenta[]>([])
     const [saving, setSaving] = useState(false)
     const [success, setSuccess] = useState(false)
 
-    useEffect(() => { loadProductos() }, [])
+    useEffect(() => {
+        loadProductos()
+        loadClientes()
+    }, [])
+
+    const loadClientes = async () => {
+        const { data } = await supabase
+            .from('clientes')
+            .select('id, nombre, telefono')
+            .eq('activo', true)
+            .order('nombre')
+        setClientesList(data || [])
+    }
+
+    const filteredClientes = clientesList.filter(c =>
+        c.nombre.toLowerCase().includes(clienteSearchTerm.toLowerCase())
+    )
+
+    const seleccionarCliente = (c: Cliente) => {
+        setCliente(c.nombre)
+        setClienteId(c.id)
+        setClienteSearchTerm('')
+        setShowClienteSearch(false)
+    }
+
+    const crearYSeleccionarCliente = async () => {
+        const nombre = clienteSearchTerm.trim()
+        if (!nombre) return
+        const { data, error } = await supabase
+            .from('clientes')
+            .insert({ nombre, usuario_id: profile?.id ?? null })
+            .select()
+            .single()
+
+        if (!error && data) {
+            setClientesList(prev => [...prev, data].sort((a, b) => a.nombre.localeCompare(b.nombre)))
+            seleccionarCliente(data)
+        } else {
+            alert('Error al crear cliente: ' + (error?.message || ''))
+        }
+    }
+
+    const quitarCliente = () => {
+        setCliente('')
+        setClienteId(null)
+    }
 
     const loadProductos = async () => {
         const { data } = await supabase
@@ -101,7 +156,7 @@ export default function VentasPage() {
     const total = lineas.reduce((sum, l) => sum + l.cantidad * l.precio_unitario, 0)
 
     const limpiarFormulario = () => {
-        setCliente('')
+        quitarCliente()
         setEstadoPago('pagado')
         setLineas([])
         setSuccess(false)
@@ -142,6 +197,7 @@ export default function VentasPage() {
                     fecha: new Date().toISOString(),
                     usuario_id: profile?.id ?? null,
                     estado_pago: estadoPago,
+                    cliente_id: clienteId,
                 })
 
                 // Actualizar stock usando el mapa en memoria
@@ -326,9 +382,14 @@ export default function VentasPage() {
                             <p className="text-slate-500 text-sm">Genera una nota de venta y descárgala en PDF</p>
                         </div>
                     </div>
-                    <Link href="/admin/reportes" className="text-sm text-orange-500 hover:underline font-bold hidden md:block">
-                        Ver Reportes →
-                    </Link>
+                    <div className="hidden md:flex items-center gap-4 text-sm font-bold">
+                        <Link href="/admin/clientes" className="text-slate-500 hover:underline">
+                            Clientes →
+                        </Link>
+                        <Link href="/admin/reportes" className="text-orange-500 hover:underline">
+                            Ver Reportes →
+                        </Link>
+                    </div>
                 </div>
             </div>
 
@@ -358,14 +419,49 @@ export default function VentasPage() {
                     <div>
                         <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">
                             <User size={13} className="inline mr-1" />
-                            Nombre del Cliente *
+                            Cliente *
                         </label>
-                        <input
-                            value={cliente}
-                            onChange={e => setCliente(e.target.value)}
-                            placeholder="Ej: Margarita López"
-                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 text-sm font-bold transition-all"
-                        />
+
+                        {cliente ? (
+                            <div className="flex items-center justify-between px-4 py-3 bg-orange-50 dark:bg-orange-500/10 border-2 border-orange-200 dark:border-orange-500/30 rounded-xl">
+                                <span className="text-sm font-bold text-slate-800 dark:text-white">{cliente}</span>
+                                <button onClick={quitarCliente} className="text-slate-400 hover:text-red-500 transition-colors">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <input
+                                    value={clienteSearchTerm}
+                                    onChange={e => { setClienteSearchTerm(e.target.value); setShowClienteSearch(true) }}
+                                    onFocus={() => setShowClienteSearch(true)}
+                                    placeholder="Buscar o escribir nombre de cliente..."
+                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-orange-400 text-sm font-bold transition-all"
+                                />
+                                {showClienteSearch && clienteSearchTerm && (
+                                    <div className="absolute z-10 mt-2 w-full border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-xl max-h-52 overflow-y-auto bg-white dark:bg-slate-900">
+                                        {filteredClientes.map(c => (
+                                            <button
+                                                key={c.id}
+                                                onClick={() => seleccionarCliente(c)}
+                                                className="w-full text-left px-4 py-2.5 hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800"
+                                            >
+                                                <p className="font-bold text-sm text-slate-800 dark:text-white">{c.nombre}</p>
+                                                {c.telefono && <p className="text-xs text-slate-400">{c.telefono}</p>}
+                                            </button>
+                                        ))}
+                                        {!clientesList.some(c => c.nombre.toLowerCase() === clienteSearchTerm.trim().toLowerCase()) && (
+                                            <button
+                                                onClick={crearYSeleccionarCliente}
+                                                className="w-full text-left px-4 py-2.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors text-green-600 dark:text-green-400 font-bold text-sm flex items-center gap-2"
+                                            >
+                                                <Plus size={14} /> Crear cliente nuevo: "{clienteSearchTerm.trim()}"
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div>
