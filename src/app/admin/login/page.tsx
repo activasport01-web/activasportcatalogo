@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
@@ -10,7 +10,6 @@ import { useAuth } from '@/context/AuthContext'
 
 // Componente interno separado porque useSearchParams() requiere Suspense en Next.js
 function LoginForm() {
-    const router = useRouter()
     const searchParams = useSearchParams()
     const { profile, loading: authLoading } = useAuth()
     
@@ -20,13 +19,16 @@ function LoginForm() {
     const [showPassword, setShowPassword] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-    // Redirección automática si ya tiene sesión activa (solo si no se está procesando un login manual)
+    // Redirección automática si ya tiene sesión activa al entrar a /admin/login directamente
+    // (ej. alguien con sesión vigente navega a la URL del login). Una navegación dura es más
+    // confiable que router.replace aquí: depende del estado de AuthContext (profile/authLoading)
+    // que puede tardar en asentarse justo después de procesar un evento de auth.
     useEffect(() => {
         if (!loading && !authLoading && profile && profile.activo) {
             const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
-            router.replace(redirectTo)
+            window.location.href = redirectTo
         }
-    }, [profile, authLoading, loading, router, searchParams])
+    }, [profile, authLoading, loading, searchParams])
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -55,16 +57,13 @@ function LoginForm() {
                 return
             }
 
-            // La verificación de cuenta activa y la carga del perfil las maneja
-            // AuthContext automáticamente al detectar el evento SIGNED_IN (evita
-            // una segunda consulta redundante a 'usuarios' que competía por el
-            // lock interno del cliente de Supabase y generaba demoras en el login).
-            // La sesión ya vive en cookies reales (createBrowserClient), por lo
-            // que el middleware puede verificarla sin que el login tenga que
-            // poner ninguna cookie manualmente.
-            // El useEffect de arriba redirige en cuanto 'profile' esté listo.
-            // Si la cuenta está inactiva, AuthContext cierra la sesión automáticamente.
-            setLoading(false)
+            // Navegación dura en vez de router.replace: la sesión ya quedó en cookies
+            // reales (createBrowserClient), así que el middleware la valida en el
+            // servidor sin depender de que el estado de React (profile/authLoading)
+            // del lado del cliente llegue a asentarse a tiempo. Esto evita quedarse
+            // "pegado" en el login esperando un re-render que no siempre llega.
+            const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
+            window.location.href = redirectTo
         } catch (err: any) {
             console.error('Error inesperado en login:', err)
             setErrorMsg('Ocurrió un error inesperado de conexión. Por favor, intenta de nuevo.')
