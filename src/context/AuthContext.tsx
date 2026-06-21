@@ -53,8 +53,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 20000)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`[AuthContext] onAuthStateChange event: ${event}`, session?.user?.id || 'no user')
-
       // IMPORTANTE: no hacer await de supabase.from(...) directamente aquí.
       // createBrowserClient usa un lock interno (navigator.locks) para
       // coordinar el refresco de sesión entre pestañas. Si una consulta a
@@ -66,8 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           if (session?.user) {
             if (currentUserRef.current === session.user.id) {
-              console.log(`[AuthContext] User ${session.user.id} already loaded, skipping profile fetch.`)
-
               // Si el perfil ya está cargado, aseguremonos de detener el loader y el timeout
               if (mounted) {
                 clearTimeout(fallbackTimer)
