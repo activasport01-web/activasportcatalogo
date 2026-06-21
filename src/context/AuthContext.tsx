@@ -52,45 +52,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }, 20000)
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log(`[AuthContext] onAuthStateChange event: ${event}`, session?.user?.id || 'no user')
 
-      try {
-        if (session?.user) {
-          if (currentUserRef.current === session.user.id) {
-            console.log(`[AuthContext] User ${session.user.id} already loaded, skipping profile fetch.`)
-            
-            // Si el perfil ya está cargado, aseguremonos de detener el loader y el timeout
-            if (mounted) {
-              clearTimeout(fallbackTimer)
-              setLoading(false)
-            }
-            return
-          }
+      // IMPORTANTE: no hacer await de supabase.from(...) directamente aquí.
+      // createBrowserClient usa un lock interno (navigator.locks) para
+      // coordinar el refresco de sesión entre pestañas. Si una consulta a
+      // .from() se ejecuta dentro de este mismo callback, compite por ese
+      // lock y se queda esperando para siempre (deadlock silencioso): el
+      // evento SIGNED_IN se ve en consola, pero loadProfile() nunca resuelve
+      // ni falla. setTimeout(..., 0) saca esta lógica del lock del callback.
+      setTimeout(async () => {
+        try {
+          if (session?.user) {
+            if (currentUserRef.current === session.user.id) {
+              console.log(`[AuthContext] User ${session.user.id} already loaded, skipping profile fetch.`)
 
-          if (mounted) setUser(session.user)
-          const ok = await loadProfile(session.user.id, mounted)
-          // Solo marcamos como "ya cargado" si el perfil se obtuvo con éxito.
-          // Si falló (timeout, error de red, etc.), dejamos la ref vacía para
-          // que un próximo evento de auth (ej. SIGNED_IN tras un login manual)
-          // pueda reintentar la carga en vez de saltársela para siempre.
-          if (ok) currentUserRef.current = session.user.id
-        } else {
-          currentUserRef.current = null
+              // Si el perfil ya está cargado, aseguremonos de detener el loader y el timeout
+              if (mounted) {
+                clearTimeout(fallbackTimer)
+                setLoading(false)
+              }
+              return
+            }
+
+            if (mounted) setUser(session.user)
+            const ok = await loadProfile(session.user.id, mounted)
+            // Solo marcamos como "ya cargado" si el perfil se obtuvo con éxito.
+            // Si falló (timeout, error de red, etc.), dejamos la ref vacía para
+            // que un próximo evento de auth (ej. SIGNED_IN tras un login manual)
+            // pueda reintentar la carga en vez de saltársela para siempre.
+            if (ok) currentUserRef.current = session.user.id
+          } else {
+            currentUserRef.current = null
+            if (mounted) {
+              setUser(null)
+              setProfile(null)
+              setPermissions([])
+            }
+          }
+        } catch (err) {
+          console.error("Error handling auth state change:", err)
+        } finally {
           if (mounted) {
-            setUser(null)
-            setProfile(null)
-            setPermissions([])
+            clearTimeout(fallbackTimer)
+            setLoading(false)
           }
         }
-      } catch (err) {
-        console.error("Error handling auth state change:", err)
-      } finally {
-        if (mounted) {
-          clearTimeout(fallbackTimer)
-          setLoading(false)
-        }
-      }
+      }, 0)
     })
 
     return () => {
