@@ -81,8 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null)
             setProfile(null)
             setPermissions([])
-            // Borramos la cookie de sesión si realmente no hay un usuario activo
-            document.cookie = 'admin_session=; path=/; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:01 GMT'
           }
         }
       } catch (err) {
@@ -128,8 +126,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return false
         }
 
-        // Escribir cookie de sesión antes de actualizar el estado para evitar condiciones de carrera en redirecciones
-        document.cookie = 'admin_session=1; path=/; SameSite=Strict; max-age=2592000'
         setProfile(profileData as any)
 
         // 2. Fetch permissions for the role
@@ -170,8 +166,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error during Supabase signOut:', error)
     }
-    // Borrar cookie de sesión admin manual si existe
-    document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
     // Forzar limpieza y recarga para limpiar memoria
     setUser(null)
     setProfile(null)

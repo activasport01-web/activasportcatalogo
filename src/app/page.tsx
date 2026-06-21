@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabase, proxyImageUrl } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabaseServer'
 import HeroSection from '@/components/HeroSection'
 import ProductCard from '@/components/ProductCard'
 import BrandsCarousel from '@/components/BrandsCarousel'

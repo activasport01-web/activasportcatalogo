@@ -1,4 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
+
+export { proxyImageUrl } from './supabaseUtils'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -44,32 +46,22 @@ const proxiedFetch = async (
     }
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-    },
+/**
+ * Cliente de Supabase para usar en componentes de CLIENTE ('use client').
+ * Usa createBrowserClient (@supabase/ssr) en vez de createClient: esto guarda
+ * la sesión en cookies reales del navegador (en vez de localStorage), lo que
+ * permite que el middleware del servidor pueda verificar la sesión real con
+ * supabase.auth.getUser() antes de dejar pasar a /admin/*.
+ *
+ * NO usar este cliente en componentes de servidor: createBrowserClient
+ * depende de `document`, que no existe ahí. Para Server Components públicos
+ * (catálogo, ficha de producto, etc.) usar '@/lib/supabaseServer' en su lugar.
+ */
+export const supabase = createBrowserClient(supabaseUrl, supabaseKey, {
     global: {
         fetch: proxiedFetch,
     },
 })
-
-/**
- * Convierte una URL de imagen de Supabase Storage a una URL del proxy local.
- * Usar esta función en todos los <img src={...}> que apunten a Supabase.
- *
- * Ejemplo:
- *   <img src={proxyImageUrl(producto.url_imagen)} />
- */
-export function proxyImageUrl(url: string | null | undefined): string {
-    if (!url) return ''
-    // Solo proxear imágenes de Supabase Storage
-    if (url.includes('.supabase.co')) {
-        return `/api/img?url=${encodeURIComponent(url)}`
-    }
-    return url
-}
 
 /**
  * Sube un archivo a Supabase Storage forzando el uso del proxy.

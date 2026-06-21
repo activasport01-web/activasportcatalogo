@@ -55,11 +55,13 @@ function LoginForm() {
                 return
             }
 
-            // La verificación de cuenta activa, la carga del perfil y la cookie
-            // 'admin_session' las maneja AuthContext automáticamente al detectar
-            // el evento SIGNED_IN (evita una segunda consulta redundante a 'usuarios'
-            // que competía por el lock interno del cliente de Supabase y generaba
-            // demoras de varios segundos en el login).
+            // La verificación de cuenta activa y la carga del perfil las maneja
+            // AuthContext automáticamente al detectar el evento SIGNED_IN (evita
+            // una segunda consulta redundante a 'usuarios' que competía por el
+            // lock interno del cliente de Supabase y generaba demoras en el login).
+            // La sesión ya vive en cookies reales (createBrowserClient), por lo
+            // que el middleware puede verificarla sin que el login tenga que
+            // poner ninguna cookie manualmente.
             // El useEffect de arriba redirige en cuanto 'profile' esté listo.
             // Si la cuenta está inactiva, AuthContext cierra la sesión automáticamente.
             setLoading(false)

@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseServer'
 
 const BASE_URL = 'https://activasportbo.com'
 

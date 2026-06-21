@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabaseServer'
 import { Suspense } from 'react'
 
 import CatalogView from '@/components/CatalogView'

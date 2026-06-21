@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { supabase, proxyImageUrl } from '@/lib/supabase'
+import { supabase, proxyImageUrl } from '@/lib/supabaseServer'
 
 import { notFound } from 'next/navigation'
 import ProductView from '@/components/ProductView'
