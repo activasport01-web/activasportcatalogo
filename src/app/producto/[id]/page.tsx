@@ -110,7 +110,10 @@ export default async function ProductoPage({ params }: Props) {
         <main className="bg-slate-50 dark:bg-slate-950 min-h-screen flex flex-col transition-colors duration-300">
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                // JSON.stringify no escapa "</script>"; sin esto, un nombre o descripción
+                // que contenga esa secuencia cerraría el tag antes de tiempo e inyectaría
+                // HTML/JS arbitrario en la página (XSS almacenado vía datos del producto).
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
             />
 
             <div className="flex-grow pt-20 md:pt-28 pb-12">
