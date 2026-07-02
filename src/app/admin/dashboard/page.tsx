@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
     LayoutDashboard, Package, Tags, Image, LogOut, TrendingUp,
     Eye, ArrowUpRight, Sparkles, Clock, CheckCircle2, BarChart3,
-    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, ShieldCheck, Boxes, Truck, Contact
+    Layers, Users, Ruler, DollarSign, ShoppingCart, Warehouse, ShieldCheck, Boxes, Truck, Contact, Shield, Key
 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -401,6 +401,9 @@ export default function AdminDashboard() {
                             { href: '/admin/grupos', icon: Ruler, label: 'TALLAS', sub: 'Grupos de talla', color: 'bg-purple-600', shadow: 'shadow-purple-600/20', perm: 'gestionar_catalogo' },
                             { href: '/admin/promociones', icon: Sparkles, label: 'PROMOCIONES', sub: 'Ofertas y campañas', color: 'bg-red-500', shadow: 'shadow-red-500/20', perm: 'gestionar_configuracion' },
                             { href: '/admin/portada', icon: Image, label: 'PORTADA WEB', sub: 'Banner principal', color: 'bg-purple-600', shadow: 'shadow-purple-600/20', perm: 'gestionar_configuracion' },
+                            { href: '/admin/usuarios', icon: Users, label: 'USUARIOS', sub: 'Accesos y cuentas', color: 'bg-violet-600', shadow: 'shadow-violet-600/20', perm: 'gestionar_configuracion' },
+                            { href: '/admin/roles', icon: Shield, label: 'ROLES', sub: 'Niveles de acceso', color: 'bg-violet-600', shadow: 'shadow-violet-600/20', perm: 'gestionar_configuracion' },
+                            { href: '/admin/permisos', icon: Key, label: 'PERMISOS', sub: 'Asignar permisos a roles', color: 'bg-violet-600', shadow: 'shadow-violet-600/20', perm: 'gestionar_configuracion' },
                         ].filter(action => hasPermission(action.perm)).map(({ href, icon: Icon, label, sub, color, shadow }) => (
                             <Link key={href} href={href} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
                                 <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center text-white shadow-lg ${shadow} shrink-0`}><Icon size={18} /></div>
