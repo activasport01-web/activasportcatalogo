@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import Link from 'next/link'
-import { ArrowLeft, Search, Pencil, X, Save, Users, UserCheck, UserX, ShieldCheck, Info } from 'lucide-react'
+import { ArrowLeft, Search, Pencil, X, Save, Users, UserCheck, UserX, ShieldCheck, Info, Plus, Eye, EyeOff, Trash2 } from 'lucide-react'
 
 interface UsuarioAdmin {
     id: string
@@ -27,11 +27,22 @@ export default function UsuariosPage() {
     const [loading, setLoading] = useState(true)
     const [loadError, setLoadError] = useState<string | null>(null)
     const [search, setSearch] = useState('')
+    // Modal editar
     const [showModal, setShowModal] = useState(false)
     const [editing, setEditing] = useState<UsuarioAdmin | null>(null)
     const [form, setForm] = useState({ nombre_completo: '', rol_id: '', activo: true })
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState<string | null>(null)
+
+    // Modal crear
+    const [showCreateModal, setShowCreateModal] = useState(false)
+    const [createForm, setCreateForm] = useState({ email: '', password: '', confirmar: '', nombre_completo: '', rol_id: '' })
+    const [showPassword, setShowPassword] = useState(false)
+    const [creating, setCreating] = useState(false)
+    const [createError, setCreateError] = useState<string | null>(null)
+
+    // Eliminar
+    const [deleting, setDeleting] = useState<string | null>(null)
 
     useEffect(() => { loadAll() }, [])
 
@@ -80,6 +91,48 @@ export default function UsuariosPage() {
         loadAll()
     }
 
+    const openCreate = () => {
+        setCreateForm({ email: '', password: '', confirmar: '', nombre_completo: '', rol_id: '' })
+        setCreateError(null)
+        setShowPassword(false)
+        setShowCreateModal(true)
+    }
+
+    const handleCreate = async () => {
+        if (!createForm.email.trim()) { setCreateError('El correo es obligatorio'); return }
+        if (!createForm.password) { setCreateError('La contraseña es obligatoria'); return }
+        if (createForm.password.length < 6) { setCreateError('La contraseña debe tener al menos 6 caracteres'); return }
+        if (createForm.password !== createForm.confirmar) { setCreateError('Las contraseñas no coinciden'); return }
+
+        setCreating(true)
+        setCreateError(null)
+        const res = await fetch('/api/admin/usuarios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: createForm.email,
+                password: createForm.password,
+                nombre_completo: createForm.nombre_completo,
+                rol_id: createForm.rol_id || null,
+            }),
+        })
+        const data = await res.json()
+        if (!res.ok) { setCreateError(data.error || 'Error al crear el usuario'); setCreating(false); return }
+        setCreating(false)
+        setShowCreateModal(false)
+        loadAll()
+    }
+
+    const handleDelete = async (u: UsuarioAdmin) => {
+        if (!confirm(`¿Eliminar permanentemente la cuenta de ${u.email}?\n\nEsta acción no se puede deshacer.`)) return
+        setDeleting(u.id)
+        const res = await fetch(`/api/admin/usuarios?id=${u.id}`, { method: 'DELETE' })
+        const data = await res.json()
+        if (!res.ok) alert(data.error || 'Error al eliminar')
+        setDeleting(null)
+        loadAll()
+    }
+
     const initials = (name: string | null) => {
         if (!name) return '?'
         return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -110,10 +163,13 @@ export default function UsuariosPage() {
                             <p className="text-xs text-slate-400">Administra accesos al panel administrativo</p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs px-3 py-2 rounded-lg">
-                        <Info size={13} className="flex-shrink-0" />
-                        <span>Para crear usuarios, usa el <strong>Dashboard de Supabase</strong></span>
-                    </div>
+                    <button
+                        onClick={openCreate}
+                        className="flex items-center gap-2 bg-brand-orange hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-orange-500/20"
+                    >
+                        <Plus size={16} />
+                        Nuevo Usuario
+                    </button>
                 </div>
             </div>
 
@@ -233,13 +289,28 @@ export default function UsuariosPage() {
                                                 {new Date(u.fecha_creacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                                             </td>
                                             <td className="px-5 py-3.5">
-                                                <button
-                                                    onClick={() => openEdit(u)}
-                                                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-                                                    title="Editar"
-                                                >
-                                                    <Pencil size={14} />
-                                                </button>
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => openEdit(u)}
+                                                        className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+                                                        title="Editar"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    {u.id !== profile?.id && (
+                                                        <button
+                                                            onClick={() => handleDelete(u)}
+                                                            disabled={!!deleting}
+                                                            className="p-2 rounded-lg hover:bg-red-500/15 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40"
+                                                            title="Eliminar permanentemente"
+                                                        >
+                                                            {deleting === u.id
+                                                                ? <div className="w-3.5 h-3.5 border border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                                                                : <Trash2 size={14} />
+                                                            }
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -249,6 +320,112 @@ export default function UsuariosPage() {
                     )}
                 </div>
             </div>
+
+            {/* Modal Crear Usuario */}
+            {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+                            <div>
+                                <h2 className="font-bold text-white">Nuevo Usuario</h2>
+                                <p className="text-xs text-slate-400 mt-0.5">La cuenta se activa inmediatamente, sin email de confirmación</p>
+                            </div>
+                            <button onClick={() => setShowCreateModal(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            {createError && (
+                                <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
+                                    <Info size={14} className="flex-shrink-0 mt-0.5" />
+                                    {createError}
+                                </div>
+                            )}
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Correo Electrónico *</label>
+                                <input
+                                    type="email"
+                                    value={createForm.email}
+                                    onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                    placeholder="usuario@ejemplo.com"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contraseña *</label>
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={createForm.password}
+                                            onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 pr-9 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                            placeholder="Mín. 6 caracteres"
+                                        />
+                                        <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Confirmar *</label>
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={createForm.confirmar}
+                                        onChange={e => setCreateForm(f => ({ ...f, confirmar: e.target.value }))}
+                                        className={`w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors ${createForm.confirmar && createForm.password !== createForm.confirmar ? 'border-red-500/50' : 'border-slate-700'}`}
+                                        placeholder="Repetir contraseña"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre Completo</label>
+                                <input
+                                    type="text"
+                                    value={createForm.nombre_completo}
+                                    onChange={e => setCreateForm(f => ({ ...f, nombre_completo: e.target.value }))}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                    placeholder="Nombre completo del usuario"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Rol</label>
+                                <select
+                                    value={createForm.rol_id}
+                                    onChange={e => setCreateForm(f => ({ ...f, rol_id: e.target.value }))}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                >
+                                    <option value="">Sin rol asignado</option>
+                                    {roles.map(r => (
+                                        <option key={r.id} value={r.id}>{r.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 p-5 border-t border-slate-800">
+                            <button onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors">
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleCreate}
+                                disabled={creating}
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-brand-orange hover:bg-orange-600 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition-colors"
+                            >
+                                {creating
+                                    ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    : <Plus size={15} />
+                                }
+                                Crear Usuario
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal Editar */}
             {showModal && editing && (
@@ -322,9 +499,9 @@ export default function UsuariosPage() {
                                         if (editing.id !== profile?.id) setForm(f => ({ ...f, activo: !f.activo }))
                                     }}
                                     disabled={editing.id === profile?.id}
-                                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${form.activo ? 'bg-emerald-500' : 'bg-slate-600'} disabled:opacity-40 disabled:cursor-not-allowed`}
+                                    className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 overflow-hidden ${form.activo ? 'bg-emerald-500' : 'bg-slate-600'} disabled:opacity-40 disabled:cursor-not-allowed`}
                                 >
-                                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${form.activo ? 'translate-x-6' : 'translate-x-0'}`} />
                                 </button>
                             </div>
                             {editing.id === profile?.id && (

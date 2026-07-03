@@ -346,20 +346,19 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* GRAPHS ROW 2: Top productos + Acciones */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-                    {/* Top Productos por Stock */}
-                    <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800">
+                {/* GRAPHS ROW 2: Top productos */}
+                <div className="mb-8">
+                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800">
                         <h3 className="text-lg font-bold text-black dark:text-white flex items-center gap-2 mb-6">
                             <Package className="text-orange-500" size={20} />
                             Top Productos — Mayor Stock
                         </h3>
                         {topProductos.length === 0 ? (
-                            <div className="h-[280px] flex items-center justify-center text-slate-400 text-sm">
+                            <div className="h-[220px] flex items-center justify-center text-slate-400 text-sm">
                                 Sin productos con stock registrado.
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height={280}>
+                            <ResponsiveContainer width="100%" height={220}>
                                 <BarChart layout="vertical" data={topProductos} margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                                     <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
@@ -377,44 +376,128 @@ export default function AdminDashboard() {
                             </ResponsiveContainer>
                         )}
                     </div>
+                </div>
 
-                    {/* Acciones Rápidas */}
-                    <div className="bg-black text-white rounded-2xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-start gap-3">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-orange-500 rounded-full blur-[100px] opacity-20 -mr-16 -mt-16 pointer-events-none"></div>
-                        <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
-                            <Sparkles className="text-orange-500" size={20} />
-                            Acciones Rápidas
-                        </h3>
-                        {[
-                            { href: '/admin/ventas', icon: ShoppingCart, label: 'NUEVA VENTA', sub: 'Nota de venta + PDF', color: 'bg-green-600', shadow: 'shadow-green-600/20', perm: 'registrar_ventas' },
-                            { href: '/admin/compras', icon: Truck, label: 'NUEVA COMPRA', sub: 'Orden de compra + PDF', color: 'bg-cyan-600', shadow: 'shadow-cyan-600/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/clientes', icon: Contact, label: 'CLIENTES', sub: 'Historial y saldo por cliente', color: 'bg-rose-600', shadow: 'shadow-rose-600/20', perm: 'registrar_ventas' },
-                            { href: '/admin/pedidos', icon: ShoppingCart, label: 'PEDIDOS', sub: 'Pedidos WhatsApp', color: 'bg-blue-500', shadow: 'shadow-blue-500/20', perm: 'gestionar_pedidos' },
-                            { href: '/admin/reportes', icon: BarChart3, label: 'REPORTES', sub: 'Ventas y exportar PDF', color: 'bg-orange-500', shadow: 'shadow-orange-500/20', perm: 'ver_finanzas' },
-                            { href: '/admin/productos', icon: Package, label: 'PRODUCTOS', sub: 'Inventario completo', color: 'bg-orange-500', shadow: 'shadow-orange-500/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/inventario', icon: Boxes, label: 'INVENTARIO', sub: 'Stock por sucursal', color: 'bg-cyan-600', shadow: 'shadow-cyan-600/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/proveedores', icon: Warehouse, label: 'PROVEEDORES', sub: 'Contactos y compras', color: 'bg-teal-600', shadow: 'shadow-teal-600/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/categorias', icon: Tags, label: 'CATEGORÍAS', sub: 'Organizar catálogo', color: 'bg-blue-600', shadow: 'shadow-blue-600/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/subcategorias', icon: Layers, label: 'SUBCATEGORÍAS', sub: 'Tipos de planta', color: 'bg-indigo-600', shadow: 'shadow-indigo-600/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/marcas', icon: CheckCircle2, label: 'MARCAS', sub: 'Gestión de marcas', color: 'bg-green-600', shadow: 'shadow-green-600/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/generos', icon: Users, label: 'GÉNEROS', sub: 'Hombre / Mujer', color: 'bg-pink-600', shadow: 'shadow-pink-600/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/grupos', icon: Ruler, label: 'TALLAS', sub: 'Grupos de talla', color: 'bg-purple-600', shadow: 'shadow-purple-600/20', perm: 'gestionar_catalogo' },
-                            { href: '/admin/promociones', icon: Sparkles, label: 'PROMOCIONES', sub: 'Ofertas y campañas', color: 'bg-red-500', shadow: 'shadow-red-500/20', perm: 'gestionar_configuracion' },
-                            { href: '/admin/portada', icon: Image, label: 'PORTADA WEB', sub: 'Banner principal', color: 'bg-purple-600', shadow: 'shadow-purple-600/20', perm: 'gestionar_configuracion' },
-                            { href: '/admin/usuarios', icon: Users, label: 'USUARIOS', sub: 'Accesos y cuentas', color: 'bg-violet-600', shadow: 'shadow-violet-600/20', perm: 'gestionar_configuracion' },
-                            { href: '/admin/roles', icon: Shield, label: 'ROLES', sub: 'Niveles de acceso', color: 'bg-violet-600', shadow: 'shadow-violet-600/20', perm: 'gestionar_configuracion' },
-                            { href: '/admin/permisos', icon: Key, label: 'PERMISOS', sub: 'Asignar permisos a roles', color: 'bg-violet-600', shadow: 'shadow-violet-600/20', perm: 'gestionar_configuracion' },
-                        ].filter(action => hasPermission(action.perm)).map(({ href, icon: Icon, label, sub, color, shadow }) => (
-                            <Link key={href} href={href} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group">
-                                <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center text-white shadow-lg ${shadow} shrink-0`}><Icon size={18} /></div>
-                                <div>
-                                    <h4 className="font-bold text-sm">{label}</h4>
-                                    <p className="text-xs text-gray-400 group-hover:text-white transition-colors">{sub}</p>
-                                </div>
-                                <ArrowUpRight className="ml-auto text-gray-600 group-hover:text-white transition-colors" size={16} />
-                            </Link>
-                        ))}
-                    </div>
+                {/* ACCESO RÁPIDO — agrupado por categoría en grid */}
+                <div className="mb-10">
+                    <h3 className="text-lg font-bold text-black dark:text-white flex items-center gap-2 mb-6">
+                        <Sparkles className="text-orange-500" size={20} />
+                        Acceso Rápido
+                    </h3>
+
+                    {/* Grupo: Operaciones diarias — tarjetas destacadas más grandes */}
+                    {[
+                        { href: '/admin/ventas',    icon: ShoppingCart, label: 'Nueva Venta',  sub: 'Nota de venta + PDF',        color: 'bg-green-600',  shadow: 'shadow-green-500/30',  perm: 'registrar_ventas' },
+                        { href: '/admin/compras',   icon: Truck,        label: 'Nueva Compra', sub: 'Orden de compra + PDF',       color: 'bg-cyan-600',   shadow: 'shadow-cyan-500/30',   perm: 'gestionar_catalogo' },
+                        { href: '/admin/clientes',  icon: Contact,      label: 'Clientes',     sub: 'Historial y saldo',          color: 'bg-rose-600',   shadow: 'shadow-rose-500/30',   perm: 'registrar_ventas' },
+                        { href: '/admin/reportes',  icon: BarChart3,    label: 'Reportes',     sub: 'Ventas y exportar PDF',      color: 'bg-orange-500', shadow: 'shadow-orange-500/30', perm: 'ver_finanzas' },
+                        { href: '/admin/pedidos',   icon: Clock,        label: 'Pedidos',      sub: 'Pedidos por WhatsApp',       color: 'bg-blue-500',   shadow: 'shadow-blue-500/30',   perm: 'gestionar_pedidos' },
+                    ].filter(a => hasPermission(a.perm)).length > 0 && (
+                        <div className="mb-6">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-3 flex items-center gap-2">
+                                <span className="inline-block w-5 h-px bg-slate-300 dark:bg-slate-700" />
+                                Operaciones
+                                <span className="inline-block flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                {[
+                                    { href: '/admin/ventas',    icon: ShoppingCart, label: 'Nueva Venta',  sub: 'Nota de venta + PDF',        color: 'bg-green-600',  shadow: 'shadow-green-500/25',  ring: 'hover:ring-green-500/30',  perm: 'registrar_ventas' },
+                                    { href: '/admin/compras',   icon: Truck,        label: 'Nueva Compra', sub: 'Orden de compra + PDF',       color: 'bg-cyan-600',   shadow: 'shadow-cyan-500/25',   ring: 'hover:ring-cyan-500/30',   perm: 'gestionar_catalogo' },
+                                    { href: '/admin/clientes',  icon: Contact,      label: 'Clientes',     sub: 'Historial y saldo',          color: 'bg-rose-600',   shadow: 'shadow-rose-500/25',   ring: 'hover:ring-rose-500/30',   perm: 'registrar_ventas' },
+                                    { href: '/admin/reportes',  icon: BarChart3,    label: 'Reportes',     sub: 'Ventas y exportar PDF',      color: 'bg-orange-500', shadow: 'shadow-orange-500/25', ring: 'hover:ring-orange-500/30', perm: 'ver_finanzas' },
+                                    { href: '/admin/pedidos',   icon: Clock,        label: 'Pedidos',      sub: 'Pedidos WhatsApp',           color: 'bg-blue-500',   shadow: 'shadow-blue-500/25',   ring: 'hover:ring-blue-500/30',   perm: 'gestionar_pedidos' },
+                                ].filter(a => hasPermission(a.perm)).map(({ href, icon: Icon, label, sub, color, shadow, ring }) => (
+                                    <Link key={href} href={href} className={`group flex flex-col items-center text-center gap-3 p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:ring-2 ${ring} hover:-translate-y-1 transition-all shadow-sm hover:shadow-xl`}>
+                                        <div className={`w-12 h-12 rounded-2xl ${color} flex items-center justify-center text-white shadow-lg ${shadow}`}>
+                                            <Icon size={22} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-sm text-black dark:text-white leading-tight">{label}</p>
+                                            <p className="text-[11px] text-slate-400 group-hover:text-slate-500 dark:group-hover:text-slate-300 mt-0.5 leading-tight">{sub}</p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Grupo: Catálogo */}
+                    {[
+                        { href: '/admin/productos',    perm: 'gestionar_catalogo' },
+                        { href: '/admin/inventario',   perm: 'gestionar_catalogo' },
+                        { href: '/admin/proveedores',  perm: 'gestionar_catalogo' },
+                        { href: '/admin/categorias',   perm: 'gestionar_catalogo' },
+                        { href: '/admin/subcategorias',perm: 'gestionar_catalogo' },
+                        { href: '/admin/marcas',       perm: 'gestionar_catalogo' },
+                        { href: '/admin/generos',      perm: 'gestionar_catalogo' },
+                        { href: '/admin/grupos',       perm: 'gestionar_catalogo' },
+                    ].filter(a => hasPermission(a.perm)).length > 0 && (
+                        <div className="mb-6">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-3 flex items-center gap-2">
+                                <span className="inline-block w-5 h-px bg-slate-300 dark:bg-slate-700" />
+                                Catálogo
+                                <span className="inline-block flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+                                {[
+                                    { href: '/admin/productos',     icon: Package,      label: 'Productos',     sub: 'Inventario',        color: 'bg-orange-500', shadow: 'shadow-orange-500/25', ring: 'hover:ring-orange-500/30', perm: 'gestionar_catalogo' },
+                                    { href: '/admin/inventario',    icon: Boxes,        label: 'Inventario',    sub: 'Por sucursal',      color: 'bg-cyan-600',   shadow: 'shadow-cyan-500/25',   ring: 'hover:ring-cyan-500/30',   perm: 'gestionar_catalogo' },
+                                    { href: '/admin/proveedores',   icon: Warehouse,    label: 'Proveedores',   sub: 'Contactos',         color: 'bg-teal-600',   shadow: 'shadow-teal-500/25',   ring: 'hover:ring-teal-500/30',   perm: 'gestionar_catalogo' },
+                                    { href: '/admin/categorias',    icon: Tags,         label: 'Categorías',    sub: 'Organizar',         color: 'bg-blue-600',   shadow: 'shadow-blue-500/25',   ring: 'hover:ring-blue-500/30',   perm: 'gestionar_catalogo' },
+                                    { href: '/admin/subcategorias', icon: Layers,       label: 'Subcategorías', sub: 'Tipos de planta',   color: 'bg-indigo-600', shadow: 'shadow-indigo-500/25', ring: 'hover:ring-indigo-500/30', perm: 'gestionar_catalogo' },
+                                    { href: '/admin/marcas',        icon: CheckCircle2, label: 'Marcas',        sub: 'Fabricantes',       color: 'bg-green-600',  shadow: 'shadow-green-500/25',  ring: 'hover:ring-green-500/30',  perm: 'gestionar_catalogo' },
+                                    { href: '/admin/generos',       icon: Users,        label: 'Géneros',       sub: 'H / M / Niño',      color: 'bg-pink-600',   shadow: 'shadow-pink-500/25',   ring: 'hover:ring-pink-500/30',   perm: 'gestionar_catalogo' },
+                                    { href: '/admin/grupos',        icon: Ruler,        label: 'Tallas',        sub: 'Grupos de talla',   color: 'bg-purple-600', shadow: 'shadow-purple-500/25', ring: 'hover:ring-purple-500/30', perm: 'gestionar_catalogo' },
+                                ].filter(a => hasPermission(a.perm)).map(({ href, icon: Icon, label, sub, color, shadow, ring }) => (
+                                    <Link key={href} href={href} className={`group flex flex-col items-center text-center gap-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:ring-2 ${ring} hover:-translate-y-0.5 transition-all shadow-sm hover:shadow-md`}>
+                                        <div className={`w-9 h-9 rounded-xl ${color} flex items-center justify-center text-white shadow-md ${shadow}`}>
+                                            <Icon size={17} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-xs text-black dark:text-white leading-tight">{label}</p>
+                                            <p className="text-[10px] text-slate-400 mt-0.5 leading-tight hidden sm:block">{sub}</p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Grupo: Configuración */}
+                    {[
+                        { href: '/admin/promociones', perm: 'gestionar_configuracion' },
+                        { href: '/admin/portada',     perm: 'gestionar_configuracion' },
+                        { href: '/admin/usuarios',    perm: 'gestionar_configuracion' },
+                        { href: '/admin/roles',       perm: 'gestionar_configuracion' },
+                        { href: '/admin/permisos',    perm: 'gestionar_configuracion' },
+                    ].filter(a => hasPermission(a.perm)).length > 0 && (
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-3 flex items-center gap-2">
+                                <span className="inline-block w-5 h-px bg-slate-300 dark:bg-slate-700" />
+                                Configuración
+                                <span className="inline-block flex-1 h-px bg-slate-100 dark:bg-slate-800" />
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                                {[
+                                    { href: '/admin/promociones', icon: Sparkles, label: 'Promociones', sub: 'Ofertas y campañas',     color: 'bg-red-500',    shadow: 'shadow-red-500/25',    ring: 'hover:ring-red-500/30',    perm: 'gestionar_configuracion' },
+                                    { href: '/admin/portada',     icon: Image,    label: 'Portada Web', sub: 'Banner principal',       color: 'bg-purple-600', shadow: 'shadow-purple-500/25', ring: 'hover:ring-purple-500/30', perm: 'gestionar_configuracion' },
+                                    { href: '/admin/usuarios',    icon: Users,    label: 'Usuarios',    sub: 'Accesos y cuentas',      color: 'bg-violet-600', shadow: 'shadow-violet-500/25', ring: 'hover:ring-violet-500/30', perm: 'gestionar_configuracion' },
+                                    { href: '/admin/roles',       icon: Shield,   label: 'Roles',       sub: 'Niveles de acceso',      color: 'bg-violet-600', shadow: 'shadow-violet-500/25', ring: 'hover:ring-violet-500/30', perm: 'gestionar_configuracion' },
+                                    { href: '/admin/permisos',    icon: Key,      label: 'Permisos',    sub: 'Asignar a roles',        color: 'bg-violet-600', shadow: 'shadow-violet-500/25', ring: 'hover:ring-violet-500/30', perm: 'gestionar_configuracion' },
+                                ].filter(a => hasPermission(a.perm)).map(({ href, icon: Icon, label, sub, color, shadow, ring }) => (
+                                    <Link key={href} href={href} className={`group flex flex-col items-center text-center gap-2 p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:ring-2 ${ring} hover:-translate-y-0.5 transition-all shadow-sm hover:shadow-md`}>
+                                        <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center text-white shadow-md ${shadow}`}>
+                                            <Icon size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="font-bold text-xs text-black dark:text-white leading-tight">{label}</p>
+                                            <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">{sub}</p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
             </div>

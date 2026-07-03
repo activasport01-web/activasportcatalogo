@@ -285,12 +285,12 @@ export default function PermisosPage() {
                                                 <button
                                                     onClick={() => togglePermiso(p.id)}
                                                     disabled={isToggling}
-                                                    className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 ${
+                                                    className={`w-11 h-6 rounded-full overflow-hidden transition-colors relative flex-shrink-0 ${
                                                         tiene ? 'bg-emerald-500' : 'bg-slate-700'
                                                     } ${isToggling ? 'opacity-50' : ''}`}
                                                     title={tiene ? 'Quitar permiso' : 'Asignar permiso'}
                                                 >
-                                                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${tiene ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${tiene ? 'translate-x-[18px]' : 'translate-x-0'}`} />
                                                 </button>
                                             </div>
                                         </div>
