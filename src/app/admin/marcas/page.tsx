@@ -1,351 +1,302 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/imageCompression'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useAuth } from '@/context/AuthContext'
-import {
-    ArrowLeft,
-    Plus,
-    Edit,
-    Trash2,
-    CheckCircle,
-    AlertCircle,
-    X,
-    Search,
-    Tag
-} from 'lucide-react'
+import { ArrowLeft, Plus, Search, Pencil, Trash2, X, Save, Tag, Upload } from 'lucide-react'
 
 interface Marca {
     id: string
     nombre: string
     logo_url: string | null
     active: boolean
-    created_at: string
 }
 
-/*
-    -- INSTRUCCIONES SQL PARA CREAR LA TABLA EN SUPABASE --
-    
-    create table marcas (
-      id uuid default gen_random_uuid() primary key,
-      nombre text not null unique,
-      active boolean default true,
-      created_at timestamp with time zone default timezone('utc'::text, now()) not null
-    );
+const emptyForm = { nombre: '', active: true }
 
-    -- Insertar marcas iniciales si se desea
-    insert into marcas (nombre) values 
-    ('Activa'), ('Graser'), ('Bolka'), ('Golero'), ('Buss'), ('Fast Run'), ('Gasper');
-*/
-
-export default function MarcasAdmin() {
-    const router = useRouter()
-    const { profile, loading: authLoading } = useAuth()
+export default function MarcasPage() {
     const [marcas, setMarcas] = useState<Marca[]>([])
     const [loading, setLoading] = useState(true)
+    const [loadError, setLoadError] = useState<string | null>(null)
+    const [search, setSearch] = useState('')
     const [showModal, setShowModal] = useState(false)
-    const [editingMarca, setEditingMarca] = useState<Marca | null>(null)
-    const [formData, setFormData] = useState({ nombre: '', active: true })
+    const [editing, setEditing] = useState<Marca | null>(null)
+    const [form, setForm] = useState(emptyForm)
     const [logoFile, setLogoFile] = useState<File | null>(null)
+    const [saving, setSaving] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+    const [deleting, setDeleting] = useState<string | null>(null)
 
-    // Notificaciones
-    const [notification, setNotification] = useState({ message: '', type: 'success', show: false })
-    const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-        setNotification({ message, type, show: true })
-        setTimeout(() => setNotification(n => ({ ...n, show: false })), 3000)
-    }
+    useEffect(() => { loadAll() }, [])
 
-    const dataLoadedRef = useRef(false)
-
-    useEffect(() => {
-        if (!authLoading) {
-            if (!profile) {
-                router.push('/admin/login')
-            } else if (!dataLoadedRef.current) {
-                dataLoadedRef.current = true
-                loadMarcas()
-            }
-        }
-    }, [authLoading, profile])
-
-    const loadMarcas = async () => {
+    const loadAll = async () => {
         setLoading(true)
-        const { data, error } = await supabase
+        setLoadError(null)
+        const { data, error: err } = await supabase
             .from('marcas')
-            .select('*')
-            .order('nombre', { ascending: true })
-
-        if (!error && data) {
-            setMarcas(data)
-        } else {
-            // Fallback si la tabla no existe (para no romper la UI mientras el usuario crea la tabla)
-            console.error(error)
-        }
+            .select('id, nombre, logo_url, active')
+            .order('nombre')
+        if (err) { setLoadError(err.message); setLoading(false); return }
+        setMarcas((data as Marca[]) || [])
         setLoading(false)
     }
 
-    const sanitizeFileName = (fileName: string) => {
-        return fileName
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z0-9._-]/g, '_')
-            .toLowerCase()
-    }
+    const filtered = marcas.filter(m =>
+        m.nombre.toLowerCase().includes(search.toLowerCase())
+    )
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!formData.nombre.trim()) return
-
-        try {
-            let logoUrl = editingMarca?.logo_url || null
-
-            // Subir logo si hay archivo nuevo
-            if (logoFile) {
-                const compressedFile = await compressImage(logoFile)
-                const cleanName = sanitizeFileName(compressedFile.name)
-                const fileName = `marca_${Date.now()}_${cleanName}`
-
-                const { error: uploadError } = await supabase.storage
-                    .from('imagenes-zapatos')
-                    .upload(fileName, compressedFile)
-
-                if (uploadError) throw uploadError
-
-                const { data } = supabase.storage
-                    .from('imagenes-zapatos')
-                    .getPublicUrl(fileName)
-
-                logoUrl = data.publicUrl
-            }
-
-            const marcaData = {
-                nombre: formData.nombre,
-                logo_url: logoUrl,
-                active: formData.active
-            }
-
-            if (editingMarca) {
-                const { error } = await supabase
-                    .from('marcas')
-                    .update(marcaData)
-                    .eq('id', editingMarca.id)
-                if (error) throw error
-                showNotification('Marca actualizada')
-            } else {
-                const { error } = await supabase
-                    .from('marcas')
-                    .insert([marcaData])
-                if (error) throw error
-                showNotification('Marca creada')
-            }
-            closeModal()
-            loadMarcas()
-        } catch (error: any) {
-            showNotification('Error al guardar: ' + error.message, 'error')
-        }
-    }
-
-    const handleDelete = async (id: string) => {
-        if (!confirm('¿Eliminar esta marca?')) return
-        const { error } = await supabase.from('marcas').delete().eq('id', id)
-        if (error) showNotification('Error al eliminar', 'error')
-        else {
-            showNotification('Marca eliminada')
-            loadMarcas()
-        }
-    }
-
-    const openModal = (marca?: Marca) => {
-        if (marca) {
-            setEditingMarca(marca)
-            setFormData({ nombre: marca.nombre, active: marca.active })
-        } else {
-            setEditingMarca(null)
-            setFormData({ nombre: '', active: true })
-        }
+    const openCreate = () => {
+        setEditing(null)
+        setForm(emptyForm)
         setLogoFile(null)
+        setError(null)
         setShowModal(true)
     }
 
-    const closeModal = () => {
+    const openEdit = (m: Marca) => {
+        setEditing(m)
+        setForm({ nombre: m.nombre, active: m.active })
+        setLogoFile(null)
+        setError(null)
+        setShowModal(true)
+    }
+
+    const handleSave = async () => {
+        if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return }
+        setSaving(true)
+        setError(null)
+
+        let logo_url = editing?.logo_url ?? null
+
+        if (logoFile) {
+            try {
+                const compressed = await compressImage(logoFile)
+                const cleanName = compressed.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_').toLowerCase()
+                const fileName = `marca_${Date.now()}_${cleanName}`
+                const { error: upErr } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressed)
+                if (upErr) throw upErr
+                const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
+                logo_url = data.publicUrl
+            } catch (e: any) {
+                setError('Error al subir logo: ' + e.message)
+                setSaving(false)
+                return
+            }
+        }
+
+        const payload = { nombre: form.nombre.trim(), logo_url, active: form.active }
+        const { error: err } = editing
+            ? await supabase.from('marcas').update(payload).eq('id', editing.id)
+            : await supabase.from('marcas').insert([payload])
+        if (err) { setError(err.message); setSaving(false); return }
+        setSaving(false)
         setShowModal(false)
-        setEditingMarca(null)
+        loadAll()
+    }
+
+    const handleDelete = async (id: string, nombre: string) => {
+        if (!confirm(`¿Eliminar la marca "${nombre}"?`)) return
+        setDeleting(id)
+        const { error: err } = await supabase.from('marcas').delete().eq('id', id)
+        if (err) alert(err.message)
+        setDeleting(null)
+        loadAll()
+    }
+
+    const toggleActive = async (m: Marca) => {
+        await supabase.from('marcas').update({ active: !m.active }).eq('id', m.id)
+        loadAll()
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+        <div className="min-h-screen bg-slate-950 text-white">
             {/* Header */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-slate-950 border-b border-slate-700 dark:border-slate-800 shadow-lg text-white transition-colors">
-                <div className="max-w-4xl mx-auto px-6 py-8">
-                    <div className="flex justify-between items-center gap-6">
-                        <div className="flex items-center gap-4">
-                            <Link href="/admin/dashboard" className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors backdrop-blur-sm">
-                                <ArrowLeft size={20} className="text-orange-400" />
-                            </Link>
-                            <div>
-                                <h1 className="text-3xl font-bold flex items-center gap-3">
-                                    Gestión de Marcas
-                                </h1>
-                                <p className="text-slate-400 mt-1 flex items-center gap-2 text-sm">
-                                    Administra las marcas disponibles
-                                </p>
-                            </div>
+            <div className="bg-slate-900 border-b border-slate-800 px-4 py-4 sticky top-0 z-10">
+                <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <Link href="/admin/dashboard" className="p-2 rounded-lg hover:bg-slate-800 transition-colors">
+                            <ArrowLeft size={20} className="text-slate-400" />
+                        </Link>
+                        <div>
+                            <h1 className="text-xl font-bold text-white">Gestión de Marcas</h1>
+                            <p className="text-xs text-slate-400">Marcas de calzado disponibles</p>
                         </div>
-                        <button
-                            onClick={() => openModal()}
-                            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl transition-all font-bold shadow-lg"
-                        >
-                            <Plus size={20} />
-                            Nueva Marca
-                        </button>
                     </div>
+                    <button
+                        onClick={openCreate}
+                        className="flex items-center gap-2 bg-brand-orange hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-orange-500/20"
+                    >
+                        <Plus size={16} />
+                        Nueva Marca
+                    </button>
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto px-6 py-10">
-                {/* Alerta SQL si está vacío */}
-                {marcas.length === 0 && !loading && (
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 flex items-start gap-4">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full text-blue-600 dark:text-blue-400 shrink-0">
-                            <AlertCircle size={20} />
-                        </div>
-                        <div>
-                            <h4 className="font-bold text-blue-800 dark:text-blue-300">¿No ves marcas?</h4>
-                            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-                                Asegúrate de haber creado la tabla <code>marcas</code> en tu base de datos Supabase.
-                                <br />
-                                Ejecuta el script SQL que se encuentra en los comentarios de este archivo.
-                            </p>
-                        </div>
+            <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+                {loadError && (
+                    <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm">
+                        Error al cargar: {loadError}
                     </div>
                 )}
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {marcas.map((marca) => (
-                            <div key={marca.id} className="group bg-white dark:bg-slate-800/50 rounded-2xl p-6 border-2 border-slate-200 dark:border-slate-800 hover:border-orange-500 dark:hover:border-orange-500 transition-all shadow-sm hover:shadow-lg">
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3">
+                    {[
+                        { label: 'Total marcas', value: marcas.length },
+                        { label: 'Activas', value: marcas.filter(m => m.active).length },
+                    ].map(s => (
+                        <div key={s.label} className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+                            <p className="text-2xl font-bold text-white">{s.value}</p>
+                            <p className="text-xs text-slate-400 mt-1">{s.label}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Search */}
+                <div className="relative">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                        type="text"
+                        placeholder="Buscar marcas..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-orange transition-colors"
+                    />
+                </div>
+
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <div className="w-8 h-8 border-2 border-brand-orange/30 border-t-brand-orange rounded-full animate-spin" />
+                    </div>
+                ) : filtered.length === 0 ? (
+                    <div className="text-center py-20">
+                        <Tag size={44} className="mx-auto mb-3 text-slate-700" />
+                        <p className="text-slate-500">No se encontraron marcas</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {filtered.map(m => (
+                            <div
+                                key={m.id}
+                                className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-3 hover:border-slate-700 transition-colors group"
+                            >
                                 {/* Logo */}
-                                <div className="aspect-square bg-slate-50 dark:bg-slate-800 rounded-xl mb-4 flex items-center justify-center overflow-hidden">
-                                    {marca.logo_url ? (
-                                        <img
-                                            src={marca.logo_url}
-                                            alt={marca.nombre}
-                                            className="w-full h-full object-contain p-4"
-                                        />
+                                <div className="aspect-square bg-slate-800 rounded-xl flex items-center justify-center overflow-hidden">
+                                    {m.logo_url ? (
+                                        <img src={m.logo_url} alt={m.nombre} className="w-full h-full object-contain p-3" />
                                     ) : (
-                                        <div className="text-6xl font-black text-slate-200 dark:text-slate-700">
-                                            {marca.nombre.charAt(0)}
-                                        </div>
+                                        <span className="text-4xl font-black text-slate-700">{m.nombre.charAt(0)}</span>
                                     )}
                                 </div>
 
                                 {/* Info */}
-                                <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100 mb-2">{marca.nombre}</h3>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${marca.active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
-                                        {marca.active ? 'Activa' : 'Inactiva'}
-                                    </span>
+                                <div>
+                                    <p className="font-bold text-white text-sm">{m.nombre}</p>
+                                    <div className="flex items-center justify-between mt-2">
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${m.active ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                                            {m.active ? 'Activa' : 'Inactiva'}
+                                        </span>
+                                        {/* Toggle inline */}
+                                        <button
+                                            onClick={() => toggleActive(m)}
+                                            className={`w-9 h-5 rounded-full overflow-hidden transition-colors relative flex-shrink-0 ${m.active ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                                            title={m.active ? 'Desactivar' : 'Activar'}
+                                        >
+                                            <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${m.active ? 'translate-x-[14px]' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Actions */}
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 pt-2 border-t border-slate-800">
                                     <button
-                                        onClick={() => openModal(marca)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg font-semibold text-slate-700 dark:text-slate-300 transition-all"
+                                        onClick={() => openEdit(m)}
+                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 text-xs font-semibold transition-colors"
                                     >
-                                        <Edit size={16} />
-                                        Editar
+                                        <Pencil size={13} /> Editar
                                     </button>
                                     <button
-                                        onClick={() => handleDelete(marca.id)}
-                                        className="px-4 py-2 bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/40 rounded-lg text-red-700 dark:text-red-400 transition-all"
+                                        onClick={() => handleDelete(m.id, m.nombre)}
+                                        disabled={!!deleting}
+                                        className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors disabled:opacity-30"
                                     >
-                                        <Trash2 size={16} />
+                                        {deleting === m.id
+                                            ? <div className="w-3.5 h-3.5 border border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                                            : <Trash2 size={13} />
+                                        }
                                     </button>
                                 </div>
                             </div>
                         ))}
-                        {marcas.length === 0 && loading && (
-                            <div className="col-span-full py-10 text-center text-slate-400">
-                                Cargando...
-                            </div>
-                        )}
                     </div>
-                </div>
+                )}
             </div>
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border dark:border-slate-800">
-                        <div className="bg-slate-800 dark:bg-slate-950 px-6 py-4 flex justify-between items-center text-white border-b border-slate-700 dark:border-slate-800">
-                            <h3 className="font-bold text-lg">{editingMarca ? 'Editar Marca' : 'Nueva Marca'}</h3>
-                            <button onClick={closeModal} className="text-slate-400 hover:text-white"><X size={20} /></button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+                            <h2 className="font-bold text-white">{editing ? 'Editar Marca' : 'Nueva Marca'}</h2>
+                            <button onClick={() => setShowModal(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 transition-colors">
+                                <X size={18} />
+                            </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-2">Nombre de la Marca</label>
+                        <div className="p-5 space-y-4">
+                            {error && (
+                                <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm">{error}</div>
+                            )}
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre de la Marca *</label>
                                 <input
                                     type="text"
-                                    value={formData.nombre}
-                                    onChange={e => setFormData({ ...formData, nombre: e.target.value })}
-                                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:border-orange-500 outline-none transition-all font-bold text-slate-800 dark:text-slate-100 placeholder-slate-400"
-                                    placeholder="Ej: ACTIVA"
+                                    value={form.nombre}
+                                    onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                    placeholder="ej. ACTIVA, Graser, Golero..."
                                     autoFocus
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-2">Logo de la Marca</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
-                                    className="w-full px-3 py-2.5 text-sm border-2 border-slate-200 dark:border-slate-700 rounded-lg file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-orange-50 dark:file:bg-orange-900/30 file:text-orange-700 dark:file:text-orange-400 hover:file:bg-orange-100 dark:hover:file:bg-orange-900/50 cursor-pointer text-slate-500 dark:text-slate-400"
-                                />
-                                {editingMarca?.logo_url && !logoFile && (
-                                    <p className="text-xs text-slate-500 mt-1">Logo actual cargado</p>
-                                )}
-                            </div>
-                            <div>
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.active}
-                                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                                        className="w-5 h-5 rounded border-2 border-slate-300 dark:border-slate-600 checked:bg-orange-500 checked:border-orange-500"
-                                    />
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Marca Activa</span>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Logo</label>
+                                <label className="flex items-center gap-3 p-3 bg-slate-800 border border-slate-700 rounded-xl cursor-pointer hover:border-brand-orange transition-colors">
+                                    <Upload size={16} className="text-slate-400 flex-shrink-0" />
+                                    <span className="text-sm text-slate-400 truncate">
+                                        {logoFile ? logoFile.name : editing?.logo_url ? 'Logo actual (clic para cambiar)' : 'Seleccionar imagen...'}
+                                    </span>
+                                    <input type="file" accept="image/*" className="hidden" onChange={e => setLogoFile(e.target.files?.[0] || null)} />
                                 </label>
                             </div>
-                            <div className="flex gap-3 pt-2">
+                            <div className="flex items-center gap-3">
                                 <button
                                     type="button"
-                                    onClick={closeModal}
-                                    className="flex-1 py-3 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                    onClick={() => setForm(f => ({ ...f, active: !f.active }))}
+                                    className={`w-11 h-6 rounded-full overflow-hidden transition-colors relative flex-shrink-0 ${form.active ? 'bg-emerald-500' : 'bg-slate-700'}`}
                                 >
-                                    Cancelar
+                                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${form.active ? 'translate-x-[18px]' : 'translate-x-0'}`} />
                                 </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 shadow-lg shadow-orange-500/20 transition-all"
-                                >
-                                    Guardar
-                                </button>
+                                <span className="text-sm text-slate-300">{form.active ? 'Marca activa' : 'Marca inactiva'}</span>
                             </div>
-                        </form>
+                        </div>
+                        <div className="flex gap-3 p-5 border-t border-slate-800">
+                            <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors">
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-brand-orange hover:bg-orange-600 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition-colors"
+                            >
+                                {saving
+                                    ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    : <Save size={15} />
+                                }
+                                {editing ? 'Guardar cambios' : 'Crear Marca'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
-
-            {/* Notification */}
-            <div className={`fixed bottom-8 right-8 z-50 transition-all duration-300 transform ${notification.show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0 pointer-events-none'}`}>
-                <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl text-white font-bold ${notification.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-                    {notification.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-                    {notification.message}
-                </div>
-            </div>
         </div>
     )
 }
