@@ -249,6 +249,7 @@ export default function ProductosAdmin() {
         genero: '', // Ahora vacío por defecto para obligar selección o usar fallback
         genero_id: '',
         grupo_talla: '',
+        grupo_talla_id: '',
         tallas: '',
         colores: '',
         etiquetas: [] as string[],
@@ -395,18 +396,6 @@ export default function ProductosAdmin() {
         setIsSubmitting(true)
         setSubmitStatus('Iniciando guardado...')
         
-        console.log("==================================================")
-        console.log("[GUARDAR PRODUCTO] Formulario enviado.")
-        console.log("[Formulario] Nombre:", formData.nombre)
-        console.log("[Formulario] Código:", formData.codigo)
-        console.log("[Formulario] Caja:", formData.caja)
-        console.log("[Formulario] Marca ID:", formData.marca_id)
-        console.log("[Formulario] Categoría ID:", formData.categoria_id)
-        console.log("[Formulario] Subcategoría ID:", formData.subcategoria_id)
-        console.log("[Formulario] Género ID:", formData.genero_id)
-        console.log("[Formulario] Grupo Talla:", formData.grupo_talla)
-        console.log("[Formulario] Variantes de Color:", colorVariants.length)
-        console.log("[Formulario] Modo:", editingProduct ? `Edición (ID: ${editingProduct.id})` : "Creación de Nuevo Producto")
 
         try {
             // Subir imágenes de variantes de color de forma secuencial con progreso en la interfaz
@@ -524,6 +513,7 @@ export default function ProductosAdmin() {
                 subcategoria_id: formData.subcategoria_id || null,
                 genero_id: formData.genero_id || null,
                 grupo_talla: formData.grupo_talla || 'Adulto',
+                grupo_talla_id: (formData as any).grupo_talla_id || null,
                 tallas: formData.tallas ? formData.tallas.split(',').map(t => t.trim()).filter(t => t) : [],
                 colores: variantsWithUrls.length > 0 ? variantsWithUrls : [],
                 etiquetas: formData.etiquetas || [],
@@ -704,6 +694,7 @@ export default function ProductosAdmin() {
                 genero: (producto as any).genero || 'Unisex',
                 genero_id: (producto as any).genero_id || '',
                 grupo_talla: (producto as any).grupo_talla || 'Adulto',
+                grupo_talla_id: (producto as any).grupo_talla_id || '',
                 tallas: producto.tallas?.join(', ') || '',
                 colores: '',
                 etiquetas: producto.etiquetas || [],
@@ -757,6 +748,7 @@ export default function ProductosAdmin() {
                 genero: 'Unisex',
                 genero_id: '',
                 grupo_talla: 'Adulto',
+                grupo_talla_id: '',
                 tallas: '',
                 colores: '',
                 etiquetas: [],
@@ -1394,13 +1386,16 @@ export default function ProductosAdmin() {
                                                 <div>
                                                     <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5">Grupo</label>
                                                     <select
-                                                        value={formData.grupo_talla}
-                                                        onChange={(e) => setFormData({ ...formData, grupo_talla: e.target.value } as any)}
+                                                        value={(formData as any).grupo_talla_id}
+                                                        onChange={(e) => {
+                                                            const g = gruposList.find((g: any) => g.id === e.target.value)
+                                                            setFormData({ ...formData, grupo_talla_id: e.target.value, grupo_talla: g?.nombre || '' } as any)
+                                                        }}
                                                         className="w-full px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white dark:bg-slate-800 transition-all"
                                                     >
                                                         <option value="">Seleccionar...</option>
                                                         {gruposList.map((g: any) => (
-                                                            <option key={g.nombre} value={g.nombre}>{g.nombre}</option>
+                                                            <option key={g.id} value={g.id}>{g.nombre}</option>
                                                         ))}
                                                     </select>
                                                 </div>
