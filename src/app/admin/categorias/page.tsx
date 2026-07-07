@@ -2,11 +2,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { compressImage } from '@/lib/imageCompression'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Plus, Edit, Trash2, X, Upload, Home, LayoutGrid, Check, Search, AlertCircle } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext'
+import {
+    ArrowLeft, Plus, Edit, Trash2, X, Upload, Check,
+    Search, Layers, Save, Pencil
+} from 'lucide-react'
 
+/* ─── Tipos ─────────────────────────────────────────────── */
 interface Categoria {
     id: string
     nombre: string
@@ -18,601 +20,618 @@ interface Categoria {
     activa: boolean
 }
 
-export default function CategoriasAdmin() {
-    const router = useRouter()
-    const { profile, loading: authLoading } = useAuth()
+interface Subcategoria {
+    id: string
+    nombre: string
+    categoria_id: string | null
+    orden: number
+    activa: boolean
+}
+
+/* ─── Helpers ────────────────────────────────────────────── */
+const generateSlug = (nombre: string) =>
+    nombre.toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+
+const emptyCatForm = { nombre: '', slug: '', descripcion: '', emoji: '👟', orden: 0, activa: true }
+const emptySubForm = { nombre: '', categoria_id: '', orden: 1, activa: true }
+
+/* ─── Componente ─────────────────────────────────────────── */
+export default function CategoriasPage() {
+    const [tab, setTab] = useState<'categorias' | 'subcategorias'>('categorias')
+
+    /* ── Estado Categorías ── */
     const [categorias, setCategorias] = useState<Categoria[]>([])
-    const [loading, setLoading] = useState(true)
-    const [showModal, setShowModal] = useState(false)
-    const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null)
+    const [loadingCat, setLoadingCat] = useState(true)
+    const [searchCat, setSearchCat] = useState('')
+    const [showCatModal, setShowCatModal] = useState(false)
+    const [editingCat, setEditingCat] = useState<Categoria | null>(null)
+    const [catForm, setCatForm] = useState(emptyCatForm)
     const [imageFile, setImageFile] = useState<File | null>(null)
-    const [searchTerm, setSearchTerm] = useState('')
 
-    const [formData, setFormData] = useState({
-        nombre: '',
-        slug: '',
-        descripcion: '',
-        emoji: '👟',
-        orden: 0,
-        activa: true
-    })
+    /* ── Estado Subcategorías ── */
+    const [subcategorias, setSubcategorias] = useState<Subcategoria[]>([])
+    const [loadingSub, setLoadingSub] = useState(true)
+    const [searchSub, setSearchSub] = useState('')
+    const [showSubModal, setShowSubModal] = useState(false)
+    const [editingSub, setEditingSub] = useState<Subcategoria | null>(null)
+    const [subForm, setSubForm] = useState(emptySubForm)
+    const [savingSub, setSavingSub] = useState(false)
+    const [subError, setSubError] = useState<string | null>(null)
+    const [deletingSub, setDeletingSub] = useState<string | null>(null)
 
-    const dataLoadedRef = useRef(false)
+    const loadedRef = useRef(false)
 
     useEffect(() => {
-        if (!authLoading) {
-            if (!profile) {
-                router.push('/admin/login')
-            } else if (!dataLoadedRef.current) {
-                dataLoadedRef.current = true
-                loadCategorias()
-            }
-        }
-    }, [authLoading, profile])
+        if (loadedRef.current) return
+        loadedRef.current = true
+        loadCategorias()
+        loadSubcategorias()
+    }, [])
 
+    /* ─── Cargar datos ─────────────────────────────────────── */
     const loadCategorias = async () => {
-        setLoading(true)
-
-        // Primero intentamos cargar de la tabla categorias
-        const { data, error } = await supabase
-            .from('categorias')
-            .select('*')
-            .order('orden', { ascending: true })
-
-        if (data && data.length > 0) {
-            setCategorias(data)
-        } else {
-            // Si no existe la tabla, mostramos categorías por defecto
-            const categoriasDefault: Categoria[] = [
-                {
-                    id: '1',
-                    nombre: 'Adulto',
-                    slug: 'adulto',
-                    descripcion: 'Estilo y comodidad',
-                    emoji: '👞',
-                    imagen_url: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop',
-                    orden: 1,
-                    activa: true
-                },
-                {
-                    id: '2',
-                    nombre: 'Niño',
-                    slug: 'nino',
-                    descripcion: 'Diversión y confort',
-                    emoji: '👟',
-                    imagen_url: 'https://images.unsplash.com/photo-1514989940723-e8e51635b782?w=400&h=300&fit=crop',
-                    orden: 2,
-                    activa: true
-                },
-                {
-                    id: '3',
-                    nombre: 'Deportivo',
-                    slug: 'deportivo',
-                    descripcion: 'Rendimiento máximo',
-                    emoji: '⚽',
-                    imagen_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop',
-                    orden: 3,
-                    activa: true
-                },
-                {
-                    id: '4',
-                    nombre: 'Botas',
-                    slug: 'botas',
-                    descripcion: 'Resistencia y estilo',
-                    emoji: '🥾',
-                    imagen_url: 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=400&h=300&fit=crop',
-                    orden: 4,
-                    activa: true
-                },
-                {
-                    id: '5',
-                    nombre: 'Sandalias',
-                    slug: 'sandalias',
-                    descripcion: 'Frescura y libertad',
-                    emoji: '🩴',
-                    imagen_url: 'https://images.unsplash.com/photo-1603487742131-4160ec999306?w=400&h=300&fit=crop',
-                    orden: 5,
-                    activa: true
-                },
-                {
-                    id: '6',
-                    nombre: 'Formales',
-                    slug: 'formales',
-                    descripcion: 'Elegancia profesional',
-                    emoji: '👔',
-                    imagen_url: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=400&h=300&fit=crop',
-                    orden: 6,
-                    activa: true
-                }
-            ]
-            setCategorias(categoriasDefault)
-        }
-
-        setLoading(false)
+        setLoadingCat(true)
+        const { data } = await supabase.from('categorias').select('*').order('orden')
+        if (data) setCategorias(data as Categoria[])
+        setLoadingCat(false)
     }
 
-    const createTable = async () => {
-        // Script SQL para crear la tabla (ejecutar en Supabase SQL Editor)
-        alert('Para usar esta función, ejecuta este SQL en Supabase:\n\nCREATE TABLE categorias (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  nombre TEXT NOT NULL,\n  slug TEXT UNIQUE NOT NULL,\n  descripcion TEXT,\n  emoji TEXT,\n  imagen_url TEXT,\n  orden INTEGER DEFAULT 0,\n  activa BOOLEAN DEFAULT true,\n  fecha_creacion TIMESTAMP DEFAULT NOW()\n);')
+    const loadSubcategorias = async () => {
+        setLoadingSub(true)
+        const { data } = await supabase
+            .from('subcategorias')
+            .select('id, nombre, categoria_id, orden, activa')
+            .order('orden')
+        if (data) setSubcategorias(data as Subcategoria[])
+        setLoadingSub(false)
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    /* ─── CRUD Categorías ──────────────────────────────────── */
+    const openCatModal = (cat?: Categoria) => {
+        setEditingCat(cat || null)
+        setCatForm(cat
+            ? { nombre: cat.nombre, slug: cat.slug, descripcion: cat.descripcion, emoji: cat.emoji, orden: cat.orden, activa: cat.activa }
+            : { ...emptyCatForm, orden: categorias.length + 1 }
+        )
+        setImageFile(null)
+        setShowCatModal(true)
+    }
+
+    const handleCatSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        let imagen_url = editingCat?.imagen_url || ''
 
-        let imagen_url = editingCategoria?.imagen_url || ''
-
-        // Subir imagen
         if (imageFile) {
-            const compressedFile = await compressImage(imageFile)
-            const fileExt = compressedFile.name.split('.').pop()
-            const fileName = `categoria_${Date.now()}_${compressedFile.name}`
-            const { error: uploadError } = await supabase.storage
-                .from('imagenes-zapatos')
-                .upload(fileName, compressedFile)
-
-            if (!uploadError) {
-                const { data } = supabase.storage
-                    .from('imagenes-zapatos')
-                    .getPublicUrl(fileName)
+            const compressed = await compressImage(imageFile)
+            const fileName = `categoria_${Date.now()}_${compressed.name}`
+            const { error: upErr } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressed)
+            if (!upErr) {
+                const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
                 imagen_url = data.publicUrl
             }
         }
 
-        const categoriaData = {
-            nombre: formData.nombre,
-            slug: formData.slug,
-            descripcion: formData.descripcion,
-            emoji: formData.emoji,
-            imagen_url,
-            orden: formData.orden,
-            activa: formData.activa
-        }
+        const payload = { nombre: catForm.nombre, slug: catForm.slug, descripcion: catForm.descripcion, emoji: catForm.emoji, imagen_url, orden: catForm.orden, activa: catForm.activa }
 
-        if (editingCategoria) {
-            // Actualizar
-            const { error } = await supabase
-                .from('categorias')
-                .update(categoriaData)
-                .eq('id', editingCategoria.id)
-
-            if (error) {
-                alert('Error: ' + error.message)
-            } else {
-
-                closeModal()
-                loadCategorias()
-            }
+        if (editingCat) {
+            const { error } = await supabase.from('categorias').update(payload).eq('id', editingCat.id)
+            if (error) { alert('Error: ' + error.message); return }
         } else {
-            // Crear
-            const { error } = await supabase
-                .from('categorias')
-                .insert([categoriaData])
-
-            if (error) {
-                alert('Error: ' + error.message + '\n\nSi la tabla no existe, haz clic en "Crear Tabla"')
-            } else {
-
-                closeModal()
-                loadCategorias()
-            }
+            const { error } = await supabase.from('categorias').insert([payload])
+            if (error) { alert('Error: ' + error.message); return }
         }
+        setShowCatModal(false)
+        loadCategorias()
+        loadSubcategorias() // refrescar lista para dropdown
     }
 
-    const handleDelete = async (id: string) => {
-        if (confirm('¿Eliminar esta categoría?')) {
-            const { error } = await supabase
-                .from('categorias')
-                .delete()
-                .eq('id', id)
+    const handleCatDelete = async (id: string) => {
+        if (!confirm('¿Eliminar esta categoría? Las subcategorías vinculadas quedarán sin categoría.')) return
+        await supabase.from('categorias').delete().eq('id', id)
+        loadCategorias()
+    }
 
-            if (!error) {
+    const toggleCatActiva = async (cat: Categoria) => {
+        await supabase.from('categorias').update({ activa: !cat.activa }).eq('id', cat.id)
+        loadCategorias()
+    }
 
-                loadCategorias()
-            }
+    /* ─── CRUD Subcategorías ───────────────────────────────── */
+    const openSubModal = (sub?: Subcategoria) => {
+        setEditingSub(sub || null)
+        setSubForm(sub
+            ? { nombre: sub.nombre, categoria_id: sub.categoria_id || '', orden: sub.orden, activa: sub.activa }
+            : { ...emptySubForm, orden: subcategorias.length + 1 }
+        )
+        setSubError(null)
+        setShowSubModal(true)
+    }
+
+    const handleSubSave = async () => {
+        if (!subForm.nombre.trim()) { setSubError('El nombre es obligatorio'); return }
+        setSavingSub(true)
+        setSubError(null)
+        const payload = {
+            nombre: subForm.nombre.trim(),
+            categoria_id: subForm.categoria_id || null,
+            orden: subForm.orden,
+            activa: subForm.activa,
         }
+        const { error } = editingSub
+            ? await supabase.from('subcategorias').update(payload).eq('id', editingSub.id)
+            : await supabase.from('subcategorias').insert([payload])
+        if (error) { setSubError(error.message); setSavingSub(false); return }
+        setSavingSub(false)
+        setShowSubModal(false)
+        loadSubcategorias()
     }
 
-    const toggleActiva = async (categoria: Categoria) => {
-        const { error } = await supabase
-            .from('categorias')
-            .update({ activa: !categoria.activa })
-            .eq('id', categoria.id)
-
-        if (!error) {
-            loadCategorias()
-        }
+    const handleSubDelete = async (id: string, nombre: string) => {
+        if (!confirm(`¿Eliminar la subcategoría "${nombre}"?`)) return
+        setDeletingSub(id)
+        await supabase.from('subcategorias').delete().eq('id', id)
+        setDeletingSub(null)
+        loadSubcategorias()
     }
 
-    const openModal = (categoria?: Categoria) => {
-        if (categoria) {
-            setEditingCategoria(categoria)
-            setFormData({
-                nombre: categoria.nombre,
-                slug: categoria.slug,
-                descripcion: categoria.descripcion,
-                emoji: categoria.emoji,
-                orden: categoria.orden,
-                activa: categoria.activa
-            })
-        } else {
-            setEditingCategoria(null)
-            setFormData({
-                nombre: '',
-                slug: '',
-                descripcion: '',
-                emoji: '👟',
-                orden: categorias.length + 1,
-                activa: true
-            })
-        }
-        setImageFile(null)
-        setShowModal(true)
-    }
+    /* ─── Filtros ──────────────────────────────────────────── */
+    const catNombre = (id: string | null) => categorias.find(c => c.id === id)?.nombre ?? '—'
 
-    const closeModal = () => {
-        setShowModal(false)
-        setEditingCategoria(null)
-        setImageFile(null)
-    }
-
-    const generateSlug = (nombre: string) => {
-        return nombre
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/(^-|-$)/g, '')
-    }
-
-    const filteredCategorias = categorias.filter(c =>
-        c.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.descripcion.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredCats = categorias.filter(c =>
+        c.nombre.toLowerCase().includes(searchCat.toLowerCase()) ||
+        (c.descripcion || '').toLowerCase().includes(searchCat.toLowerCase())
     )
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-500 mx-auto"></div>
-                    <p className="mt-4 text-slate-600 font-medium">Cargando categorías...</p>
-                </div>
-            </div>
-        )
-    }
+    const filteredSubs = subcategorias.filter(s =>
+        s.nombre.toLowerCase().includes(searchSub.toLowerCase()) ||
+        catNombre(s.categoria_id).toLowerCase().includes(searchSub.toLowerCase())
+    )
 
+    /* ─── Render ───────────────────────────────────────────── */
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
-            {/* Header Moderno con Gradiente */}
-            <div className="bg-gradient-to-r from-slate-800 to-slate-900 dark:from-slate-900 dark:to-slate-950 border-b border-slate-700 dark:border-slate-800 shadow-lg text-white transition-colors">
-                <div className="max-w-7xl mx-auto px-6 py-8">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div className="flex items-start gap-4">
-                            <Link
-                                href="/admin/dashboard"
-                                className="mt-1 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors backdrop-blur-sm"
-                            >
-                                <ArrowLeft size={20} className="text-orange-400" />
-                            </Link>
-                            <div>
-                                <h1 className="text-3xl font-bold flex items-center gap-3">
-                                    Gestión de Categorías
-                                    <span className="text-xs bg-orange-500/20 text-orange-400 px-3 py-1 rounded-full border border-orange-500/30">
-                                        {categorias.length} total
-                                    </span>
-                                </h1>
-                                <p className="text-slate-400 mt-2 flex items-center gap-2">
-                                    <Home size={14} /> / Admin / Categorías
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex gap-3 w-full md:w-auto">
-                            {/* <button
-                                onClick={createTable}
-                                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-medium transition-colors"
-                            >
-                                Crear Tabla
-                            </button> */}
-                            <button
-                                onClick={() => openModal()}
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl transition-all font-bold shadow-lg hover:shadow-orange-500/25 group"
-                            >
-                                <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-                                Nueva Categoría
-                            </button>
+        <div className="min-h-screen bg-slate-950 text-white">
+
+            {/* ── Header ── */}
+            <div className="bg-slate-900 border-b border-slate-800 px-4 py-4 sticky top-0 z-10">
+                <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <Link href="/admin/dashboard" className="p-2 rounded-lg hover:bg-slate-800 transition-colors">
+                            <ArrowLeft size={20} className="text-slate-400" />
+                        </Link>
+                        <div>
+                            <h1 className="text-xl font-bold text-white">Categorías y Subcategorías</h1>
+                            <p className="text-xs text-slate-400">
+                                {categorias.length} categorías · {subcategorias.length} subcategorías
+                            </p>
                         </div>
                     </div>
-
-                    {/* Barra de Búsqueda Integrada */}
-                    <div className="mt-8 max-w-2xl px-1">
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                            <input
-                                type="text"
-                                placeholder="Buscar categorías por nombre..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/10 rounded-xl focus:bg-white/20 focus:border-orange-500/50 outline-none text-white placeholder-slate-400 transition-all backdrop-blur-md"
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Grid de Categorías */}
-            <div className="max-w-7xl mx-auto px-6 py-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {filteredCategorias.map((categoria, index) => (
-                        <div
-                            key={categoria.id}
-                            className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hover:shadow-xl hover:border-orange-200 dark:hover:border-orange-500/30 transition-all duration-300 group flex flex-col h-full animate-slide-up"
-                            style={{ animationDelay: `${index * 100}ms` }}
+                    {tab === 'categorias' ? (
+                        <button
+                            onClick={() => openCatModal()}
+                            className="flex items-center gap-2 bg-brand-orange hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-orange-500/20"
                         >
-                            {/* Imagen de Portada */}
-                            <div className="aspect-[16/9] bg-slate-100 dark:bg-slate-800 relative overflow-hidden group-hover:opacity-95 transition-opacity">
-                                <img
-                                    src={categoria.imagen_url || '/placeholder-category.jpg'}
-                                    alt={categoria.nombre}
-                                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
-
-                                {/* Badge de Estado */}
-                                <div className="absolute top-4 right-4">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md flex items-center gap-1.5 shadow-sm ${categoria.activa
-                                        ? 'bg-green-500/90 text-white border-white/20'
-                                        : 'bg-slate-500/90 text-white border-white/20'
-                                        }`}>
-                                        <div className={`w-2 h-2 rounded-full ${categoria.activa ? 'bg-white animate-pulse' : 'bg-slate-300'}`}></div>
-                                        {categoria.activa ? 'ACTIVA' : 'INACTIVA'}
-                                    </span>
-                                </div>
-
-                                {/* Emoji Flotante */}
-                                <div className="absolute -bottom-6 right-6 w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-lg border-4 border-slate-50 dark:border-slate-700 flex items-center justify-center text-3xl transform group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 z-10">
-                                    {categoria.emoji}
-                                </div>
-                            </div>
-
-                            <div className="p-6 pt-8 flex-1 flex flex-col">
-                                <div className="mb-4">
-                                    <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100 mb-1 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                                        {categoria.nombre}
-                                    </h3>
-                                    <p className="text-slate-400 text-xs font-mono font-medium tracking-wide">
-                                        /{categoria.slug}
-                                    </p>
-                                </div>
-
-                                <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 flex-1 line-clamp-2">
-                                    {categoria.descripcion || 'Sin descripción disponible'}
-                                </p>
-
-                                <div className="flex items-center justify-between pt-6 border-t border-slate-100">
-                                    <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
-                                            {categoria.orden}
-                                        </div>
-                                        Orden
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => openModal(categoria)}
-                                            className="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
-                                            title="Editar"
-                                        >
-                                            <Edit size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => toggleActiva(categoria)}
-                                            className={`w-9 h-9 flex items-center justify-center rounded-lg transition-colors ${categoria.activa
-                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                                }`}
-                                            title={categoria.activa ? 'Desactivar' : 'Activar'}
-                                        >
-                                            <Check size={16} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(categoria.id)}
-                                            className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-
-                    {/* Empty State */}
-                    {filteredCategorias.length === 0 && (
-                        <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-20">
-                            <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <Search className="text-slate-300 dark:text-slate-600" size={40} />
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-2">No se encontraron categorías</h3>
-                            <p className="text-slate-500 dark:text-slate-400">Intenta con otros términos de búsqueda o crea una nueva.</p>
-                        </div>
+                            <Plus size={16} /> Nueva Categoría
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => openSubModal()}
+                            className="flex items-center gap-2 bg-brand-orange hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-orange-500/20"
+                        >
+                            <Plus size={16} /> Nueva Subcategoría
+                        </button>
                     )}
                 </div>
+
+                {/* ── Tabs ── */}
+                <div className="max-w-7xl mx-auto mt-4 flex gap-1 bg-slate-800/50 rounded-xl p-1 w-fit">
+                    <button
+                        onClick={() => setTab('categorias')}
+                        className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'categorias' ? 'bg-brand-orange text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        Categorías
+                        <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${tab === 'categorias' ? 'bg-white/20' : 'bg-slate-700'}`}>
+                            {categorias.length}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setTab('subcategorias')}
+                        className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'subcategorias' ? 'bg-brand-orange text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        Subcategorías
+                        <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${tab === 'subcategorias' ? 'bg-white/20' : 'bg-slate-700'}`}>
+                            {subcategorias.length}
+                        </span>
+                    </button>
+                </div>
             </div>
 
-            {/* Modal Profesional */}
-            {showModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden animate-slide-up border dark:border-slate-800">
-                        {/* Modal Header */}
-                        <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-8 py-6 flex justify-between items-center border-b dark:border-slate-800">
-                            <div>
-                                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                                    {editingCategoria ? <Edit size={24} className="text-orange-400" /> : <Plus size={24} className="text-orange-400" />}
-                                    {editingCategoria ? 'Editar Categoría' : 'Nueva Categoría'}
-                                </h2>
-                                <p className="text-slate-300 text-sm mt-1">
-                                    {editingCategoria ? 'Modifica los detalles de la categoría existente.' : 'Agrega una nueva categoría al catálogo.'}
-                                </p>
-                            </div>
-                            <button
-                                onClick={closeModal}
-                                className="w-10 h-10 rounded-full bg-white/10 text-white hover:bg-red-500/80 flex items-center justify-center transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
+            {/* ══════════════════════════════════════════════════
+                TAB: CATEGORÍAS
+            ══════════════════════════════════════════════════ */}
+            {tab === 'categorias' && (
+                <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+                    {/* Search */}
+                    <div className="relative max-w-xl">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                            type="text"
+                            placeholder="Buscar categorías..."
+                            value={searchCat}
+                            onChange={e => setSearchCat(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-orange transition-colors"
+                        />
+                    </div>
+
+                    {loadingCat ? (
+                        <div className="flex items-center justify-center py-20">
+                            <div className="w-8 h-8 border-2 border-brand-orange/30 border-t-brand-orange rounded-full animate-spin" />
                         </div>
+                    ) : filteredCats.length === 0 ? (
+                        <div className="text-center py-20">
+                            <p className="text-slate-500">No se encontraron categorías</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredCats.map(cat => (
+                                <div key={cat.id} className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden hover:border-slate-700 hover:shadow-xl hover:shadow-black/30 transition-all duration-300 group flex flex-col">
+                                    {/* Imagen */}
+                                    <div className="aspect-[16/9] bg-slate-800 relative overflow-hidden">
+                                        {cat.imagen_url ? (
+                                            <img src={cat.imagen_url} alt={cat.nombre} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-5xl">{cat.emoji || '📦'}</div>
+                                        )}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
 
-                        <form onSubmit={handleSubmit} className="p-8">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {/* Columna Izquierda: Info Básica */}
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                                            Nombre de Categoría <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formData.nombre}
-                                            onChange={(e) => {
-                                                setFormData({ ...formData, nombre: e.target.value, slug: generateSlug(e.target.value) })
-                                            }}
-                                            placeholder="Ej. Deportivos Mujer"
-                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-slate-900 dark:text-slate-100 font-medium placeholder-slate-400"
-                                        />
-                                    </div>
+                                        {/* Badge estado */}
+                                        <div className="absolute top-3 right-3">
+                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 backdrop-blur-md ${cat.activa ? 'bg-emerald-500/90 text-white' : 'bg-slate-600/90 text-slate-200'}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${cat.activa ? 'bg-white animate-pulse' : 'bg-slate-400'}`} />
+                                                {cat.activa ? 'Activa' : 'Inactiva'}
+                                            </span>
+                                        </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold text-slate-700 flex items-center justify-between">
-                                            Slug (URL)
-                                            <span className="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Automático</span>
-                                        </label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono">/</span>
-                                            <input
-                                                type="text"
-                                                required
-                                                value={formData.slug}
-                                                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                                                className="w-full pl-8 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 outline-none text-slate-600 dark:text-slate-400 font-mono text-sm"
-                                            />
+                                        {/* Emoji flotante */}
+                                        <div className="absolute -bottom-5 right-5 w-12 h-12 bg-slate-900 border-2 border-slate-800 rounded-xl flex items-center justify-center text-2xl shadow-lg z-10 group-hover:scale-110 transition-transform">
+                                            {cat.emoji || '📦'}
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-bold text-slate-700">Emoji</label>
-                                            <input
-                                                type="text"
-                                                value={formData.emoji}
-                                                onChange={(e) => setFormData({ ...formData, emoji: e.target.value })}
-                                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 outline-none text-2xl text-center"
-                                                placeholder="👟"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-bold text-slate-700">Orden</label>
-                                            <input
-                                                type="number"
-                                                value={formData.orden}
-                                                onChange={(e) => setFormData({ ...formData, orden: parseInt(e.target.value) })}
-                                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 outline-none font-mono text-center text-slate-900 dark:text-slate-100"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                                    <div className="p-5 pt-8 flex-1 flex flex-col">
+                                        <h3 className="font-bold text-lg text-white mb-0.5 group-hover:text-brand-orange transition-colors">{cat.nombre}</h3>
+                                        <p className="text-xs text-slate-500 font-mono mb-2">/{cat.slug}</p>
+                                        <p className="text-sm text-slate-400 flex-1 line-clamp-2">{cat.descripcion || 'Sin descripción'}</p>
 
-                                {/* Columna Derecha: Multimedia y Descripción */}
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold text-slate-700">Descripción</label>
-                                        <textarea
-                                            value={formData.descripcion}
-                                            onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                                            rows={2}
-                                            placeholder="Breve descripción de la categoría..."
-                                            className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all resize-none text-slate-900 dark:text-slate-100 placeholder-slate-400"
-                                        />
-                                    </div>
+                                        {/* Subcategorías count */}
+                                        <div className="mt-3 text-xs text-slate-500 flex items-center gap-1">
+                                            <Layers size={12} />
+                                            {subcategorias.filter(s => s.categoria_id === cat.id).length} subcategorías
+                                        </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold text-slate-700 mb-1 flex justify-between">
-                                            Imagen de Portada
-                                            {editingCategoria && (
-                                                <span className="text-xs text-orange-600 font-normal">Actualizar si deseas cambiar</span>
-                                            )}
-                                        </label>
-                                        <div className={`relative border-2 border-dashed rounded-xl p-4 text-center transition-colors ${imageFile ? 'border-orange-500 bg-orange-50' : 'border-slate-300 hover:border-orange-400 hover:bg-slate-50'}`}>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                            />
-                                            <div className="flex flex-col items-center justify-center py-2">
-                                                {imageFile ? (
-                                                    <>
-                                                        <Check size={32} className="text-orange-500 mb-2" />
-                                                        <p className="text-sm font-medium text-orange-700 truncate max-w-[200px]">{imageFile.name}</p>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Upload size={32} className="text-slate-400 mb-2" />
-                                                        <p className="text-sm text-slate-500">
-                                                            <span className="font-semibold text-orange-500">Clic para subir</span> o arrastra
-                                                        </p>
-                                                        <p className="text-xs text-slate-400 mt-1">PNG, JPG (Max. 2MB)</p>
-                                                    </>
-                                                )}
+                                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
+                                            <span className="text-xs text-slate-600">Orden: {cat.orden}</span>
+                                            <div className="flex gap-1.5">
+                                                <button onClick={() => openCatModal(cat)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors" title="Editar">
+                                                    <Edit size={15} />
+                                                </button>
+                                                <button onClick={() => toggleCatActiva(cat)} className={`p-2 rounded-lg transition-colors ${cat.activa ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-slate-500 hover:bg-slate-800'}`} title={cat.activa ? 'Desactivar' : 'Activar'}>
+                                                    <Check size={15} />
+                                                </button>
+                                                <button onClick={() => handleCatDelete(cat.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors" title="Eliminar">
+                                                    <Trash2 size={15} />
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
-                                    <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                                        <div className="relative inline-block w-12 h-6 transition duration-200 ease-in-out">
-                                            <input
-                                                type="checkbox"
-                                                id="activa"
-                                                checked={formData.activa}
-                                                onChange={(e) => setFormData({ ...formData, activa: e.target.checked })}
-                                                className="peer absolute opacity-0 w-0 h-0"
-                                            />
-                                            <label
-                                                htmlFor="activa"
-                                                className={`block w-12 h-6 rounded-full cursor-pointer transition-colors duration-300 ${formData.activa ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'
-                                                    }`}
-                                            ></label>
-                                            <div className={`absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${formData.activa ? 'translate-x-6' : 'translate-x-0'
-                                                }`}></div>
-                                        </div>
-                                        <label htmlFor="activa" className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none">
-                                            Categoría Visible
-                                            <p className="text-xs font-normal text-slate-500 dark:text-slate-400">
-                                                Determina si la categoría aparecerá en la tienda
-                                            </p>
+            {/* ══════════════════════════════════════════════════
+                TAB: SUBCATEGORÍAS
+            ══════════════════════════════════════════════════ */}
+            {tab === 'subcategorias' && (
+                <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                        {[
+                            { label: 'Total', value: subcategorias.length },
+                            { label: 'Activas', value: subcategorias.filter(s => s.activa).length },
+                            { label: 'Sin categoría', value: subcategorias.filter(s => !s.categoria_id).length },
+                        ].map(s => (
+                            <div key={s.label} className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
+                                <p className="text-2xl font-bold text-white">{s.value}</p>
+                                <p className="text-xs text-slate-400 mt-1">{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                        <input
+                            type="text"
+                            placeholder="Buscar subcategorías o categoría..."
+                            value={searchSub}
+                            onChange={e => setSearchSub(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-orange transition-colors"
+                        />
+                    </div>
+
+                    {loadingSub ? (
+                        <div className="flex items-center justify-center py-20">
+                            <div className="w-8 h-8 border-2 border-brand-orange/30 border-t-brand-orange rounded-full animate-spin" />
+                        </div>
+                    ) : filteredSubs.length === 0 ? (
+                        <div className="text-center py-20">
+                            <Layers size={44} className="mx-auto mb-3 text-slate-700" />
+                            <p className="text-slate-500">No se encontraron subcategorías</p>
+                        </div>
+                    ) : (
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-slate-800">
+                                        <th className="text-left px-4 py-3 text-slate-400 font-semibold">#</th>
+                                        <th className="text-left px-4 py-3 text-slate-400 font-semibold">Subcategoría</th>
+                                        <th className="text-left px-4 py-3 text-slate-400 font-semibold hidden sm:table-cell">Categoría</th>
+                                        <th className="text-center px-4 py-3 text-slate-400 font-semibold">Estado</th>
+                                        <th className="px-4 py-3" />
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredSubs.map(s => (
+                                        <tr key={s.id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors group">
+                                            <td className="px-4 py-3 text-slate-500 font-mono text-xs">{s.orden}</td>
+                                            <td className="px-4 py-3 font-semibold text-white">{s.nombre}</td>
+                                            <td className="px-4 py-3 hidden sm:table-cell">
+                                                <span className="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded-md">
+                                                    {catNombre(s.categoria_id)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${s.activa ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                                                    {s.activa ? 'Activa' : 'Inactiva'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => openSubModal(s)} className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleSubDelete(s.id, s.nombre)}
+                                                        disabled={!!deletingSub}
+                                                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-30"
+                                                    >
+                                                        {deletingSub === s.id
+                                                            ? <div className="w-3.5 h-3.5 border border-red-400/30 border-t-red-400 rounded-full animate-spin" />
+                                                            : <Trash2 size={14} />
+                                                        }
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════
+                MODAL: CATEGORÍA
+            ══════════════════════════════════════════════════ */}
+            {showCatModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowCatModal(false)}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-6 py-5 flex justify-between items-center border-b border-slate-800">
+                            <div>
+                                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                                    {editingCat ? <Edit size={18} className="text-brand-orange" /> : <Plus size={18} className="text-brand-orange" />}
+                                    {editingCat ? 'Editar Categoría' : 'Nueva Categoría'}
+                                </h2>
+                                <p className="text-slate-400 text-xs mt-0.5">
+                                    {editingCat ? 'Modifica los detalles de la categoría.' : 'Agrega una nueva categoría al catálogo.'}
+                                </p>
+                            </div>
+                            <button onClick={() => setShowCatModal(false)} className="w-9 h-9 rounded-full bg-white/10 text-white hover:bg-red-500/80 flex items-center justify-center transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleCatSubmit} className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Izquierda */}
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre *</label>
+                                        <input
+                                            type="text" required
+                                            value={catForm.nombre}
+                                            onChange={e => setCatForm({ ...catForm, nombre: e.target.value, slug: generateSlug(e.target.value) })}
+                                            placeholder="ej. Deportivos, Casual..."
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex justify-between">
+                                            Slug (URL) <span className="text-slate-600 font-normal normal-case">Automático</span>
                                         </label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-mono">/</span>
+                                            <input
+                                                type="text" required
+                                                value={catForm.slug}
+                                                onChange={e => setCatForm({ ...catForm, slug: e.target.value })}
+                                                className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2.5 text-slate-400 text-sm font-mono focus:outline-none focus:border-brand-orange transition-colors"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Emoji</label>
+                                            <input
+                                                type="text"
+                                                value={catForm.emoji}
+                                                onChange={e => setCatForm({ ...catForm, emoji: e.target.value })}
+                                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-2xl text-center focus:outline-none focus:border-brand-orange transition-colors"
+                                                placeholder="👟"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Orden</label>
+                                            <input
+                                                type="number"
+                                                value={catForm.orden}
+                                                onChange={e => setCatForm({ ...catForm, orden: parseInt(e.target.value) })}
+                                                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm font-mono text-center focus:outline-none focus:border-brand-orange transition-colors"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Derecha */}
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Descripción</label>
+                                        <textarea
+                                            value={catForm.descripcion}
+                                            onChange={e => setCatForm({ ...catForm, descripcion: e.target.value })}
+                                            rows={2}
+                                            placeholder="Breve descripción..."
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors resize-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex justify-between">
+                                            Imagen de Portada
+                                            {editingCat && <span className="text-slate-600 font-normal normal-case">Opcional para cambiar</span>}
+                                        </label>
+                                        <label className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors ${imageFile ? 'border-brand-orange bg-orange-500/5' : 'border-slate-700 hover:border-slate-600'}`}>
+                                            {imageFile
+                                                ? <><Check size={28} className="text-brand-orange mb-1" /><p className="text-sm text-brand-orange font-medium truncate max-w-[180px]">{imageFile.name}</p></>
+                                                : <><Upload size={28} className="text-slate-500 mb-1" /><p className="text-xs text-slate-500"><span className="text-brand-orange font-semibold">Clic para subir</span> o arrastra</p><p className="text-xs text-slate-600 mt-0.5">PNG, JPG (máx. 2MB)</p></>
+                                            }
+                                            <input type="file" accept="image/*" className="hidden" onChange={e => setImageFile(e.target.files?.[0] || null)} />
+                                        </label>
+                                    </div>
+                                    <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl border border-slate-700">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCatForm(f => ({ ...f, activa: !f.activa }))}
+                                            className={`w-11 h-6 rounded-full overflow-hidden transition-colors relative flex-shrink-0 ${catForm.activa ? 'bg-emerald-500' : 'bg-slate-600'}`}
+                                        >
+                                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${catForm.activa ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                                        </button>
+                                        <span className="text-sm text-slate-300">{catForm.activa ? 'Categoría visible en la tienda' : 'Categoría oculta'}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Footer Modal */}
-                            <div className="flex gap-4 pt-8 mt-8 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="px-6 py-3.5 border-2 border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all"
-                                >
+                            <div className="flex gap-3 mt-6 pt-5 border-t border-slate-800">
+                                <button type="button" onClick={() => setShowCatModal(false)} className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors">
                                     Cancelar
                                 </button>
-                                <button
-                                    type="submit"
-                                    className="flex-1 px-6 py-3.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-bold shadow-lg hover:shadow-orange-500/30 transition-all flex items-center justify-center gap-2"
-                                >
-                                    {editingCategoria ? <Edit size={18} /> : <Plus size={18} />}
-                                    {editingCategoria ? 'Guardar Cambios' : 'Crear Categoría'}
+                                <button type="submit" className="flex-1 px-5 py-2.5 bg-brand-orange hover:bg-orange-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors">
+                                    {editingCat ? <><Edit size={15} /> Guardar cambios</> : <><Plus size={15} /> Crear Categoría</>}
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ══════════════════════════════════════════════════
+                MODAL: SUBCATEGORÍA
+            ══════════════════════════════════════════════════ */}
+            {showSubModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowSubModal(false)}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+                            <h2 className="font-bold text-white">{editingSub ? 'Editar Subcategoría' : 'Nueva Subcategoría'}</h2>
+                            <button onClick={() => setShowSubModal(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            {subError && (
+                                <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm">{subError}</div>
+                            )}
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre *</label>
+                                <input
+                                    type="text"
+                                    value={subForm.nombre}
+                                    onChange={e => setSubForm(f => ({ ...f, nombre: e.target.value }))}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                    placeholder="ej. Turf, Salonera, Running..."
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Categoría Principal</label>
+                                <select
+                                    value={subForm.categoria_id}
+                                    onChange={e => setSubForm(f => ({ ...f, categoria_id: e.target.value }))}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                >
+                                    <option value="">— Sin categoría —</option>
+                                    {categorias.map(c => (
+                                        <option key={c.id} value={c.id}>{c.emoji} {c.nombre}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Orden</label>
+                                    <input
+                                        type="number"
+                                        value={subForm.orden}
+                                        onChange={e => setSubForm(f => ({ ...f, orden: parseInt(e.target.value) || 0 }))}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Estado</label>
+                                    <div className="flex items-center gap-3 pt-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSubForm(f => ({ ...f, activa: !f.activa }))}
+                                            className={`w-11 h-6 rounded-full overflow-hidden transition-colors relative flex-shrink-0 ${subForm.activa ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                                        >
+                                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${subForm.activa ? 'translate-x-[18px]' : 'translate-x-0'}`} />
+                                        </button>
+                                        <span className="text-sm text-slate-300">{subForm.activa ? 'Activa' : 'Inactiva'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex gap-3 p-5 border-t border-slate-800">
+                            <button onClick={() => setShowSubModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors">
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSubSave}
+                                disabled={savingSub}
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-brand-orange hover:bg-orange-600 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition-colors"
+                            >
+                                {savingSub
+                                    ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    : <Save size={15} />
+                                }
+                                {editingSub ? 'Guardar cambios' : 'Crear'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
