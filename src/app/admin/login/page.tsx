@@ -1,28 +1,49 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertCircle, ShieldAlert, Clock } from 'lucide-react'
 import Image from 'next/image'
 import { useAuth } from '@/context/AuthContext'
 
-// Componente interno separado porque useSearchParams() requiere Suspense en Next.js
 function LoginForm() {
     const searchParams = useSearchParams()
     const { profile, loading: authLoading } = useAuth()
-    
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [loading, setLoading] = useState(false)
-    const [showPassword, setShowPassword] = useState(false)
-    const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-    // Redirección automática si ya tiene sesión activa al entrar a /admin/login directamente
-    // (ej. alguien con sesión vigente navega a la URL del login). Una navegación dura es más
-    // confiable que router.replace aquí: depende del estado de AuthContext (profile/authLoading)
-    // que puede tardar en asentarse justo después de procesar un evento de auth.
+    const [email, setEmail]               = useState('')
+    const [password, setPassword]         = useState('')
+    const [loading, setLoading]           = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
+
+    /* Estado de errores */
+    const [errorMsg, setErrorMsg]         = useState<string | null>(null)
+    const [restantes, setRestantes]       = useState<number | null>(null)   // intentos restantes
+    const [bloqueadoSeg, setBloqueadoSeg] = useState(0)                     // segundos de bloqueo
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    /* Countdown cuando está bloqueado */
+    useEffect(() => {
+        if (bloqueadoSeg <= 0) return
+        timerRef.current = setInterval(() => {
+            setBloqueadoSeg(s => {
+                if (s <= 1) {
+                    clearInterval(timerRef.current!)
+                    setErrorMsg(null)
+                    setRestantes(null)
+                    return 0
+                }
+                return s - 1
+            })
+        }, 1000)
+        return () => clearInterval(timerRef.current!)
+    }, [bloqueadoSeg])
+
+    const minutos  = Math.floor(bloqueadoSeg / 60)
+    const segundos = bloqueadoSeg % 60
+    const bloqueado = bloqueadoSeg > 0
+
     useEffect(() => {
         if (!loading && !authLoading && profile && profile.activo) {
             const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
@@ -32,41 +53,50 @@ function LoginForm() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
+        if (bloqueado) return
         setLoading(true)
         setErrorMsg(null)
+        setRestantes(null)
 
         try {
-            const { data: authData, error } = await supabase.auth.signInWithPassword({
-                email,
-                password
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
             })
 
-            if (error) {
-                let msg = error.message
-                if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
-                    msg = 'Credenciales incorrectas. Por favor, verifica tu correo y contraseña.'
-                }
-                setErrorMsg(msg)
+            const data = await res.json()
+
+            /* ── Cuenta bloqueada ── */
+            if (res.status === 429) {
+                setBloqueadoSeg(data.segRestantes ?? data.minRestantes * 60)
+                setErrorMsg('bloqueado')
                 setLoading(false)
                 return
             }
 
-            if (!authData || !authData.user) {
-                setErrorMsg('No se pudo verificar la identidad del usuario.')
+            /* ── Credenciales incorrectas ── */
+            if (res.status === 401) {
+                setRestantes(data.restantes ?? null)
+                setErrorMsg('credenciales')
                 setLoading(false)
                 return
             }
 
-            // Navegación dura en vez de router.replace: la sesión ya quedó en cookies
-            // reales (createBrowserClient), así que el middleware la valida en el
-            // servidor sin depender de que el estado de React (profile/authLoading)
-            // del lado del cliente llegue a asentarse a tiempo. Esto evita quedarse
-            // "pegado" en el login esperando un re-render que no siempre llega.
+            /* ── Error genérico ── */
+            if (!res.ok) {
+                setErrorMsg('generico')
+                setLoading(false)
+                return
+            }
+
+            /* ── Éxito: establecer sesión en el browser ── */
+            await supabase.auth.setSession(data.session)
             const redirectTo = searchParams.get('redirect') || '/admin/dashboard'
             window.location.href = redirectTo
-        } catch (err: any) {
-            console.error('Error inesperado en login:', err)
-            setErrorMsg('Ocurrió un error inesperado de conexión. Por favor, intenta de nuevo.')
+
+        } catch {
+            setErrorMsg('generico')
             setLoading(false)
         }
     }
@@ -108,10 +138,51 @@ function LoginForm() {
 
                     {/* Form */}
                     <form onSubmit={handleLogin} className="space-y-6">
-                        {errorMsg && (
-                            <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-4 rounded-xl flex items-start gap-3 animate-fade-in text-sm font-medium">
+
+                        {/* Mensaje: bloqueado con countdown */}
+                        {errorMsg === 'bloqueado' && (
+                            <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-4 rounded-xl text-sm">
+                                <div className="flex items-center gap-2 font-bold mb-2">
+                                    <ShieldAlert size={18} className="text-red-400 shrink-0" />
+                                    Acceso bloqueado temporalmente
+                                </div>
+                                <p className="text-red-300/80 text-xs mb-3">
+                                    Demasiados intentos fallidos. Tu cuenta quedará desbloqueada automáticamente.
+                                </p>
+                                <div className="flex items-center justify-center gap-2 bg-red-500/15 rounded-lg py-2.5">
+                                    <Clock size={16} className="text-red-300" />
+                                    <span className="font-black text-white text-xl tabular-nums">
+                                        {String(minutos).padStart(2, '0')}:{String(segundos).padStart(2, '0')}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mensaje: credenciales incorrectas */}
+                        {errorMsg === 'credenciales' && (
+                            <div className="bg-amber-500/10 border border-amber-500/30 text-amber-200 p-4 rounded-xl flex items-start gap-3 text-sm">
+                                <AlertCircle className="text-amber-400 shrink-0 mt-0.5" size={18} />
+                                <div>
+                                    <p className="font-semibold">Correo o contraseña incorrectos.</p>
+                                    {restantes !== null && restantes > 0 && (
+                                        <p className="text-amber-300/70 text-xs mt-1">
+                                            Te {restantes === 1 ? 'queda' : 'quedan'} <span className="font-black text-amber-200">{restantes}</span> intento{restantes !== 1 ? 's' : ''} antes de que la cuenta sea bloqueada por 15 minutos.
+                                        </p>
+                                    )}
+                                    {restantes === 0 && (
+                                        <p className="text-red-300 text-xs mt-1 font-semibold">
+                                            Última oportunidad. El próximo fallo bloqueará la cuenta.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mensaje: error genérico */}
+                        {errorMsg === 'generico' && (
+                            <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-4 rounded-xl flex items-start gap-3 text-sm">
                                 <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={18} />
-                                <span>{errorMsg}</span>
+                                <span>Error de conexión inesperado. Por favor, intenta de nuevo.</span>
                             </div>
                         )}
 
@@ -164,13 +235,18 @@ function LoginForm() {
 
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="w-full bg-gradient-to-r from-brand-orange to-orange-600 hover:from-orange-500 hover:to-orange-700 text-white py-4 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:hover:scale-100 flex items-center justify-center gap-2 group mt-2"
+                            disabled={loading || bloqueado}
+                            className="w-full bg-gradient-to-r from-brand-orange to-orange-600 hover:from-orange-500 hover:to-orange-700 text-white py-4 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 group mt-2"
                         >
                             {loading ? (
                                 <>
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    <span>Accediendo...</span>
+                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span>Verificando...</span>
+                                </>
+                            ) : bloqueado ? (
+                                <>
+                                    <ShieldAlert size={18} />
+                                    <span>Cuenta bloqueada</span>
                                 </>
                             ) : (
                                 <>

@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
+import { useTheme } from '@/context/ThemeContext'
 import {
     LayoutDashboard, Package, Tags, LogOut, Clock,
     CheckCircle2, BarChart3, Users, Ruler, ShoppingCart, Warehouse,
-    ShieldCheck, Boxes, Truck, Contact, Shield, Key, Menu, X, ChevronDown
+    ShieldCheck, Boxes, Truck, Contact, Shield, Key, Menu, X,
+    ChevronDown, Sun, Moon
 } from 'lucide-react'
 
 /* ─── Grupos de navegación ──────────────────────────────────── */
@@ -93,9 +95,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
     const { profile, loading: authLoading, hasPermission, logout } = useAuth()
+    const { theme, toggleTheme } = useTheme()
     const pathname = usePathname()
 
-    /* Auto-expandir el grupo que contiene la ruta activa */
+    /* Auto-expandir grupo activo */
     useEffect(() => {
         NAV_GROUPS.forEach(group => {
             const hasActive = group.items.some(i => pathname === i.href || pathname.startsWith(i.href + '/'))
@@ -123,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     /* Cargando auth */
     if (authLoading || !profile) return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500" />
         </div>
     )
@@ -131,9 +134,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const initials = (profile.nombre_completo || 'U').charAt(0).toUpperCase()
 
     return (
-        <div className="flex min-h-screen bg-slate-950">
+        <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950 transition-colors duration-200">
 
-            {/* CSS para scrollbar oscuro */}
+            {/* CSS scrollbar oscuro */}
             <style>{`
                 .sidebar-scroll::-webkit-scrollbar { width: 4px; }
                 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -146,16 +149,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <div className="fixed inset-0 z-40 bg-black/70 lg:hidden" onClick={() => setSidebarOpen(false)} />
             )}
 
-            {/* ══ SIDEBAR ══════════════════════════════════════════ */}
+            {/* ══ SIDEBAR — siempre oscuro (patrón estándar de admin) ══ */}
             <aside className={`
                 fixed inset-y-0 left-0 z-50 flex flex-col w-64
-                bg-slate-950 border-r border-slate-800/50
+                bg-slate-900 border-r border-slate-700/40
                 transition-transform duration-300 ease-in-out
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
                 lg:translate-x-0
             `}>
                 {/* Logo */}
-                <div className="flex items-center justify-between px-5 py-4 flex-shrink-0 border-b border-slate-800/50">
+                <div className="flex items-center justify-between px-5 py-4 flex-shrink-0 border-b border-slate-700/40">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
                             <img src="/logo.png" className="w-5 h-5" style={{ filter: 'brightness(0) invert(1)' }} alt="" />
@@ -164,15 +167,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <p className="text-sm font-black text-white leading-none tracking-tight">
                                 ACTIVA <span className="text-orange-500">SPORT</span>
                             </p>
-                            <p className="text-[10px] text-slate-600 mt-0.5 uppercase tracking-widest">Admin</p>
+                            <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-widest">Admin</p>
                         </div>
                     </div>
-                    <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1.5 rounded-lg hover:bg-slate-800 text-slate-600">
+                    <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1.5 rounded-lg hover:bg-slate-800 text-slate-500">
                         <X size={15} />
                     </button>
                 </div>
 
-                {/* ── Nav ── */}
+                {/* Nav */}
                 <nav
                     className="sidebar-scroll flex-1 overflow-y-auto px-3 py-3"
                     style={{ scrollbarWidth: 'thin', scrollbarColor: '#1e293b transparent' }}
@@ -184,15 +187,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors mb-2 ${
                             pathname === '/admin/dashboard'
                                 ? 'bg-orange-500/15 text-orange-400'
-                                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                                : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
                         }`}
                     >
                         <LayoutDashboard size={16} />
                         Dashboard
                     </Link>
 
-                    {/* Separador */}
-                    <div className="h-px bg-slate-800/60 mb-2" />
+                    <div className="h-px bg-slate-700/40 mb-2" />
 
                     {/* Grupos colapsables */}
                     <div className="space-y-0.5">
@@ -200,28 +202,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             const GroupIcon = group.icon
                             const visibleItems = group.items.filter(i => hasPermission(i.perm))
                             if (visibleItems.length === 0) return null
-
                             const isOpen = openGroups.has(group.id)
                             const hasActiveChild = visibleItems.some(i => pathname === i.href || pathname.startsWith(i.href + '/'))
 
                             return (
                                 <div key={group.id}>
-                                    {/* Cabecera del grupo — botón colapsable */}
                                     <button
                                         onClick={() => toggleGroup(group.id)}
-                                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${group.accent} ${group.accentBg} ${hasActiveChild ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${group.accent} ${group.accentBg} ${hasActiveChild ? 'opacity-100' : 'opacity-50 hover:opacity-100'}`}
                                     >
                                         <GroupIcon size={13} className="flex-shrink-0" />
                                         <span className="flex-1 text-left">{group.label}</span>
-                                        <ChevronDown
-                                            size={13}
-                                            className={`flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                                        />
+                                        <ChevronDown size={13} className={`flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                                     </button>
 
-                                    {/* Items — colapsable con animación */}
                                     <div className={`overflow-hidden transition-all duration-200 ease-in-out ${isOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                        <div className="ml-3 pl-3 border-l border-slate-800 mt-0.5 mb-1 space-y-0.5">
+                                        <div className="ml-3 pl-3 border-l border-slate-700/50 mt-0.5 mb-1 space-y-0.5">
                                             {visibleItems.map(item => {
                                                 const ItemIcon = item.icon
                                                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
@@ -232,8 +228,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                         onClick={() => setSidebarOpen(false)}
                                                         className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                                                             isActive
-                                                                ? 'bg-slate-800 text-white'
-                                                                : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/50'
+                                                                ? 'bg-slate-700/80 text-white'
+                                                                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'
                                                         }`}
                                                     >
                                                         <ItemIcon size={14} className="flex-shrink-0" />
@@ -250,34 +246,60 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
                 </nav>
 
-                {/* ── Perfil ── */}
-                <div className="flex-shrink-0 border-t border-slate-800/50 p-4">
-                    <div className="flex items-center gap-3 mb-3">
+                {/* Perfil + toggle tema + logout */}
+                <div className="flex-shrink-0 border-t border-slate-700/40 p-4 space-y-3">
+                    {/* Perfil */}
+                    <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-400 text-xs font-black flex-shrink-0">
                             {initials}
                         </div>
                         <div className="min-w-0">
                             <p className="text-xs font-bold text-white truncate leading-tight">{profile.nombre_completo}</p>
-                            <p className="text-[10px] text-slate-600 truncate">{profile.roles?.nombre || 'Rol'}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{profile.roles?.nombre || 'Rol'}</p>
                         </div>
                     </div>
-                    <button
-                        onClick={logout}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-900 hover:bg-red-500/15 text-slate-500 hover:text-red-400 text-xs font-semibold transition-colors border border-slate-800"
-                    >
-                        <LogOut size={13} /> Cerrar sesión
-                    </button>
+
+                    {/* Acciones */}
+                    <div className="flex gap-2">
+                        {/* Toggle de tema */}
+                        <button
+                            onClick={toggleTheme}
+                            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs font-semibold transition-colors flex-1"
+                        >
+                            {theme === 'dark'
+                                ? <><Sun size={13} /> Claro</>
+                                : <><Moon size={13} /> Oscuro</>
+                            }
+                        </button>
+
+                        {/* Logout */}
+                        <button
+                            onClick={logout}
+                            title="Cerrar sesión"
+                            className="flex items-center justify-center p-2 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-colors"
+                        >
+                            <LogOut size={14} />
+                        </button>
+                    </div>
                 </div>
             </aside>
 
-            {/* ══ CONTENIDO ════════════════════════════════════════ */}
-            <div className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-slate-950">
-                {/* Top bar solo en móvil */}
-                <div className="lg:hidden sticky top-0 z-30 bg-slate-950 border-b border-slate-800/50 px-4 py-3 flex items-center gap-3">
-                    <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 transition-colors">
-                        <Menu size={18} />
+            {/* ══ CONTENIDO — responde al tema ══ */}
+            <div className="lg:ml-64 flex-1 flex flex-col min-h-screen">
+                {/* Top bar móvil */}
+                <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors">
+                            <Menu size={18} />
+                        </button>
+                        <span className="text-sm font-black text-slate-900 dark:text-white">
+                            ACTIVA <span className="text-orange-500">SPORT</span>
+                        </span>
+                    </div>
+                    <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors">
+                        {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                     </button>
-                    <span className="text-sm font-black text-white">ACTIVA <span className="text-orange-500">SPORT</span></span>
                 </div>
 
                 {children}

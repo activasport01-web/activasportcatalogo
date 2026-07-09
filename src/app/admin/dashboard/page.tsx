@@ -92,21 +92,21 @@ export default function DashboardPage() {
     )
 
     return (
-        <div className="p-5 lg:p-7 space-y-6 text-white">
+        <div className="p-5 lg:p-7 space-y-6">
 
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-black text-white">Dashboard</h1>
+                    <h1 className="text-2xl font-black text-slate-900 dark:text-white">Dashboard</h1>
                     <p className="text-sm text-slate-500 mt-0.5">
-                        Bienvenido, <span className="text-orange-400 font-semibold">{profile?.nombre_completo}</span>
+                        Bienvenido, <span className="text-orange-500 font-semibold">{profile?.nombre_completo}</span>
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <p className="text-xs text-slate-600 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full hidden md:block">
+                    <p className="text-xs text-slate-500 dark:text-slate-600 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full hidden md:block">
                         {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </p>
-                    <Link href="/" className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-full transition-colors">
+                    <Link href="/" className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full transition-colors">
                         <Eye size={13} /> Ver tienda
                     </Link>
                 </div>
@@ -114,34 +114,34 @@ export default function DashboardPage() {
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:-translate-y-0.5 transition-all relative overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:-translate-y-0.5 transition-all shadow-sm">
                     <div className="flex justify-between items-start mb-3">
                         <div className="p-2.5 bg-orange-500/10 rounded-xl text-orange-500"><Package size={20} /></div>
-                        <span className="text-[10px] font-bold text-slate-600 uppercase">Total</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Total</span>
                     </div>
-                    <h3 className="text-3xl font-black text-white mb-0.5">{stats.totalProductos}</h3>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-0.5">{stats.totalProductos}</h3>
                     <p className="text-slate-500 text-xs font-medium">Productos registrados</p>
                 </div>
 
-                <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:-translate-y-0.5 transition-all">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:-translate-y-0.5 transition-all shadow-sm">
                     <div className="flex justify-between items-start mb-3">
                         <div className="p-2.5 bg-green-500/10 rounded-xl text-green-500"><CheckCircle2 size={20} /></div>
-                        <span className="text-[10px] font-bold text-slate-600 uppercase">Activos</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Activos</span>
                     </div>
-                    <h3 className="text-3xl font-black text-white mb-0.5">{stats.productosActivos}</h3>
+                    <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-0.5">{stats.productosActivos}</h3>
                     <p className="text-slate-500 text-xs font-medium">Disponibles en tienda</p>
-                    <div className="w-full bg-slate-800 h-1 rounded-full mt-3 overflow-hidden">
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 rounded-full mt-3 overflow-hidden">
                         <div className="bg-green-500 h-full rounded-full" style={{ width: `${stats.totalProductos > 0 ? (stats.productosActivos / stats.totalProductos) * 100 : 0}%` }} />
                     </div>
                 </div>
 
-                <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 hover:-translate-y-0.5 transition-all">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:-translate-y-0.5 transition-all shadow-sm">
                     <div className="flex justify-between items-start mb-3">
                         <div className="p-2.5 bg-green-600/10 rounded-xl text-green-600"><DollarSign size={20} /></div>
-                        <span className="text-[10px] font-bold text-slate-600 uppercase">Ventas 7d</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Ventas 7d</span>
                     </div>
-                    <h3 className="text-2xl font-black text-white mb-0.5">
-                        {totalVentasSemana.toFixed(0)} <span className="text-sm font-normal text-slate-500">Bs</span>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-0.5">
+                        {totalVentasSemana.toFixed(0)} <span className="text-sm font-normal text-slate-400">Bs</span>
                     </h3>
                     <p className="text-slate-500 text-xs font-medium">Ingresos esta semana</p>
                 </div>
@@ -160,25 +160,25 @@ export default function DashboardPage() {
             </div>
 
             {/* Capital Banner */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="bg-slate-800 dark:bg-slate-900 border border-slate-700 dark:border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-orange-500/15 rounded-xl">
                         <Warehouse className="text-orange-400" size={24} />
                     </div>
                     <div>
-                        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-0.5">Capital en inventario</p>
+                        <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-0.5">Capital en inventario</p>
                         <p className="text-3xl font-black text-white">
-                            {capitalInventario.toFixed(2)} <span className="text-base font-normal text-slate-500">Bs</span>
+                            {capitalInventario.toFixed(2)} <span className="text-base font-normal text-slate-400">Bs</span>
                         </p>
-                        <p className="text-slate-600 text-xs mt-0.5">stock × precio costo</p>
+                        <p className="text-slate-500 text-xs mt-0.5">stock × precio costo</p>
                     </div>
                 </div>
                 {capitalPorCategoria.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                         {capitalPorCategoria.map((item, i) => (
-                            <div key={i} className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-center">
-                                <p className="text-[10px] text-slate-500 uppercase tracking-wide font-bold mb-0.5">{item.cat}</p>
-                                <p className="text-sm font-black text-white">{item.valor.toFixed(0)} <span className="text-xs font-normal text-slate-500">Bs</span></p>
+                            <div key={i} className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-center">
+                                <p className="text-[10px] text-slate-400 uppercase tracking-wide font-bold mb-0.5">{item.cat}</p>
+                                <p className="text-sm font-black text-white">{item.valor.toFixed(0)} <span className="text-xs font-normal text-slate-400">Bs</span></p>
                             </div>
                         ))}
                     </div>
@@ -187,20 +187,20 @@ export default function DashboardPage() {
 
             {/* Gráficas */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-5">
+                <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-5">
                         <TrendingUp className="text-orange-500" size={16} />
                         Ventas vs Compras — Últimos 7 días
                     </h3>
                     {ventasVsCompras.every(d => d.ingresos === 0 && d.compras === 0) ? (
-                        <div className="h-[240px] flex items-center justify-center text-slate-600 text-sm">Sin movimientos esta semana.</div>
+                        <div className="h-[240px] flex items-center justify-center text-slate-400 text-sm">Sin movimientos esta semana.</div>
                     ) : (
                         <ResponsiveContainer width="100%" height={240}>
                             <LineChart data={ventasVsCompras} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
-                                <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#475569', fontWeight: 600 }} />
-                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#475569' }} />
-                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#0f172a', color: '#fff', boxShadow: '0 10px 25px rgba(0,0,0,0.4)' }} itemStyle={{ color: '#fff' }} formatter={(v: any, n: any) => [`${Number(v).toFixed(2)} Bs`, n === 'ingresos' ? 'Ventas' : 'Compras'] as [string, string]} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:[stroke:#1e293b]" />
+                                <XAxis dataKey="dia" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+                                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff', boxShadow: '0 10px 25px rgba(0,0,0,0.3)' }} itemStyle={{ color: '#fff' }} formatter={(v: any, n: any) => [`${Number(v).toFixed(2)} Bs`, n === 'ingresos' ? 'Ventas' : 'Compras'] as [string, string]} />
                                 <Legend formatter={(v) => v === 'ingresos' ? 'Ventas (Bs)' : 'Compras (Bs)'} wrapperStyle={{ color: '#94a3b8', fontSize: 11 }} />
                                 <Line type="monotone" dataKey="ingresos" stroke="#22c55e" strokeWidth={2.5} dot={{ r: 4, fill: '#22c55e' }} activeDot={{ r: 6 }} />
                                 <Line type="monotone" dataKey="compras" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6 }} strokeDasharray="5 5" />
@@ -209,13 +209,13 @@ export default function DashboardPage() {
                     )}
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-5">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-5">
                         <BarChart2 className="text-orange-500" size={16} />
                         Movimientos — 30 días
                     </h3>
                     {pieData.length === 0 ? (
-                        <div className="h-[180px] flex items-center justify-center text-slate-600 text-sm text-center">Sin movimientos en 30 días.</div>
+                        <div className="h-[180px] flex items-center justify-center text-slate-400 text-sm text-center">Sin movimientos en 30 días.</div>
                     ) : (
                         <>
                             <ResponsiveContainer width="100%" height={180}>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
                                     <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
                                         {pieData.map((e, i) => <Cell key={i} fill={e.color} />)}
                                     </Pie>
-                                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#0f172a', color: '#fff' }} formatter={(v: any) => [`${v} Bultos`]} />
+                                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} formatter={(v: any) => [`${v} Bultos`]} />
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="space-y-1.5 mt-2">
@@ -233,7 +233,7 @@ export default function DashboardPage() {
                                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
                                             <span className="text-slate-500 font-medium">{d.name}</span>
                                         </div>
-                                        <span className="font-bold text-slate-300">{d.value} Bultos</span>
+                                        <span className="font-bold text-slate-700 dark:text-slate-300">{d.value} Bultos</span>
                                     </div>
                                 ))}
                             </div>
@@ -243,25 +243,25 @@ export default function DashboardPage() {
             </div>
 
             {/* Accesos rápidos — Portada Web y Promociones */}
-            {(hasPermission('gestionar_configuracion')) && (
+            {hasPermission('gestionar_configuracion') && (
                 <div>
-                    <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mb-3">Acceso rápido</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Acceso rápido</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Link href="/admin/portada" className="group flex items-center gap-4 bg-slate-900 border border-slate-800 hover:border-purple-500/40 hover:bg-purple-500/5 rounded-2xl p-4 transition-all">
-                            <div className="w-11 h-11 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-500/25 transition-colors">
-                                <Image size={20} className="text-purple-400" />
+                        <Link href="/admin/portada" className="group flex items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500/40 hover:bg-purple-50 dark:hover:bg-purple-500/5 rounded-2xl p-4 transition-all shadow-sm">
+                            <div className="w-11 h-11 rounded-xl bg-purple-100 dark:bg-purple-500/15 border border-purple-200 dark:border-purple-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 dark:group-hover:bg-purple-500/25 transition-colors">
+                                <Image size={20} className="text-purple-500 dark:text-purple-400" />
                             </div>
                             <div>
-                                <p className="font-bold text-white text-sm">Portada Web</p>
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">Portada Web</p>
                                 <p className="text-xs text-slate-500 mt-0.5">Editar banner y contenido principal de la tienda</p>
                             </div>
                         </Link>
-                        <Link href="/admin/promociones" className="group flex items-center gap-4 bg-slate-900 border border-slate-800 hover:border-red-500/40 hover:bg-red-500/5 rounded-2xl p-4 transition-all">
-                            <div className="w-11 h-11 rounded-xl bg-red-500/15 border border-red-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/25 transition-colors">
-                                <Sparkles size={20} className="text-red-400" />
+                        <Link href="/admin/promociones" className="group flex items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-red-400 dark:hover:border-red-500/40 hover:bg-red-50 dark:hover:bg-red-500/5 rounded-2xl p-4 transition-all shadow-sm">
+                            <div className="w-11 h-11 rounded-xl bg-red-100 dark:bg-red-500/15 border border-red-200 dark:border-red-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-red-200 dark:group-hover:bg-red-500/25 transition-colors">
+                                <Sparkles size={20} className="text-red-500 dark:text-red-400" />
                             </div>
                             <div>
-                                <p className="font-bold text-white text-sm">Promociones</p>
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">Promociones</p>
                                 <p className="text-xs text-slate-500 mt-0.5">Gestionar ofertas, descuentos y campañas activas</p>
                             </div>
                         </Link>
@@ -270,20 +270,20 @@ export default function DashboardPage() {
             )}
 
             {/* Top Productos */}
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2 mb-5">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-5">
                     <Package className="text-orange-500" size={16} />
                     Top Productos — Mayor Stock
                 </h3>
                 {topProductos.length === 0 ? (
-                    <div className="h-[200px] flex items-center justify-center text-slate-600 text-sm">Sin productos con stock.</div>
+                    <div className="h-[200px] flex items-center justify-center text-slate-400 text-sm">Sin productos con stock.</div>
                 ) : (
                     <ResponsiveContainer width="100%" height={200}>
                         <BarChart layout="vertical" data={topProductos} margin={{ top: 0, right: 20, left: 10, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#1e293b" />
-                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#475569' }} />
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                            <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
                             <YAxis type="category" dataKey="nombre" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} width={120} />
-                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#0f172a', color: '#fff' }} formatter={(v: any) => [`${v} Bultos`, 'Stock']} />
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }} formatter={(v: any) => [`${v} Bultos`, 'Stock']} />
                             <Bar dataKey="stock" radius={[0, 6, 6, 0]} barSize={18}>
                                 {topProductos.map((_, i) => <Cell key={i} fill={i === 0 ? '#f97316' : i === 1 ? '#fb923c' : '#fdba74'} />)}
                             </Bar>
