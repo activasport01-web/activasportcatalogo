@@ -106,7 +106,7 @@ export default function CategoriasPage() {
         if (imageFile) {
             const compressed = await compressImage(imageFile)
             const fileName = `categoria_${Date.now()}_${compressed.name}`
-            const { error: upErr } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressed)
+            const { error: upErr } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressed, { cacheControl: '2592000' })
             if (!upErr) {
                 const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
                 imagen_url = data.publicUrl

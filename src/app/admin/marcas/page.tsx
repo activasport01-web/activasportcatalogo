@@ -73,7 +73,7 @@ export default function MarcasPage() {
                 const compressed = await compressImage(logoFile)
                 const cleanName = compressed.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_').toLowerCase()
                 const fileName = `marca_${Date.now()}_${cleanName}`
-                const { error: upErr } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressed)
+                const { error: upErr } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressed, { cacheControl: '2592000' })
                 if (upErr) throw upErr
                 const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
                 logo_url = data.publicUrl

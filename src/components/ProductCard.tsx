@@ -1,23 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Link as LinkIcon, Eye, Heart, ShoppingBag } from 'lucide-react'
+import { Heart } from 'lucide-react'
 import { useFavorites } from '@/context/FavoritesContext'
 import { proxyImageUrl } from '@/lib/supabase'
 
 export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQuickView?: (product: any) => void }) {
-    const [isHovered, setIsHovered] = useState(false)
-    const [activeColorIdx, setActiveColorIdx] = useState<number | null>(null)
+    const [isHovered, setIsHovered]       = useState(false)
+    const [imgLoaded, setImgLoaded]       = useState(false)
+    const [activeColorIdx, setActiveColorIdx]   = useState<number | null>(null)
     const [hoveredColorIdx, setHoveredColorIdx] = useState<number | null>(null)
     const { toggleFavorite, isFavorite } = useFavorites()
     const liked = isFavorite(zapato.id)
-
-    const handleQuickView = (e: React.MouseEvent) => {
-        e.preventDefault() // Evitar ir al link
-        e.stopPropagation()
-        if (onQuickView) onQuickView(zapato)
-    }
 
     const handleLike = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -28,36 +23,48 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
             precio: zapato.precio,
             url_imagen: zapato.url_imagen,
             categoria: zapato.categoria || '',
-            disponible: zapato.disponible ?? true
+            disponible: zapato.disponible ?? true,
         })
     }
 
-    // Colores de ejemplo si no hay en la BD
     const colores = zapato.colores || ['#000000', '#FFFFFF', '#1E40AF', '#DC2626']
 
-    const currentDisplayColorIdx = hoveredColorIdx !== null ? hoveredColorIdx : activeColorIdx;
-    const currentDisplayColor = currentDisplayColorIdx !== null ? colores[currentDisplayColorIdx] : null;
+    const currentDisplayColorIdx = hoveredColorIdx !== null ? hoveredColorIdx : activeColorIdx
+    const currentDisplayColor    = currentDisplayColorIdx !== null ? colores[currentDisplayColorIdx] : null
 
-    let displayImage = zapato.url_imagen;
+    let displayImage = zapato.url_imagen
     if (currentDisplayColor && typeof currentDisplayColor === 'object' && currentDisplayColor.imagen) {
-        displayImage = currentDisplayColor.imagen;
+        displayImage = currentDisplayColor.imagen
     }
+
+    // Resetear skeleton cuando cambia la imagen (ej: selección de color)
+    useEffect(() => { setImgLoaded(false) }, [displayImage])
+
+    const mainSrc  = proxyImageUrl(displayImage)
+    const hoverSrc = zapato.imagen_hover ? proxyImageUrl(zapato.imagen_hover) : null
 
     return (
         <Link href={`/producto/${zapato.id}`} className="group block h-full">
-            <div className="flex flex-col h-full bg-white dark:bg-slate-900/50 rounded-xl overflow-hidden border border-transparent dark:border-slate-800 p-2 transition-all hover:shadow-lg">
-                {/* Contenedor Imagen (Cuadrado Universal) */}
+            <div
+                className="flex flex-col h-full bg-white dark:bg-slate-900/50 rounded-xl overflow-hidden border border-transparent dark:border-slate-800 p-2 transition-all hover:shadow-lg"
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+            >
+                {/* Contenedor Imagen */}
                 <div className="relative aspect-square overflow-hidden mb-2 rounded-lg bg-slate-100 dark:bg-slate-800">
 
-                    {/* Badges (Esquina Superior Izquierda) */}
+                    {/* Skeleton — visible mientras carga */}
+                    {!imgLoaded && (
+                        <div className="absolute inset-0 bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                    )}
+
+                    {/* Badges */}
                     <div className="absolute top-0 left-0 z-20 flex flex-col gap-1 p-1">
-                        {/* Badge de marca Activa (para verificar prioridad de orden) */}
                         {(zapato.marca_obj?.nombre || zapato.origen || '').toLowerCase().includes('activa') && (
                             <span className="bg-brand-orange text-white text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm">
                                 ★ ACTIVA
                             </span>
                         )}
-                        {/* Badges de Estado */}
                         {zapato.etiquetas?.includes('ultimos_pares') && (
                             <span className="bg-yellow-400 text-black text-[9px] uppercase font-bold px-1.5 py-0.5 shadow-sm animate-pulse border border-yellow-500/20">
                                 ÚLTIMOS
@@ -85,32 +92,39 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                         )}
                     </div>
 
-                    {/* Botón Favorito (Flotando arriba derecha) - Más pequeño */}
+                    {/* Botón Favorito */}
                     <button
                         onClick={handleLike}
                         className="absolute top-1 right-1 z-20 p-1.5 rounded-full bg-white/50 backdrop-blur-sm hover:bg-white text-slate-900 transition-all active:scale-95"
                     >
-                        <Heart size={16} className={liked ? "fill-red-500 text-red-500" : "text-slate-900"} strokeWidth={1.5} />
+                        <Heart size={16} className={liked ? 'fill-red-500 text-red-500' : 'text-slate-900'} strokeWidth={1.5} />
                     </button>
 
                     {/* Imagen Principal */}
-                    <img
-                        src={proxyImageUrl(displayImage)}
-                        alt={zapato.nombre}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
-                    />
-
-                    {/* Imagen Secundaria (Hover en Desktop) solo si no se ha seleccionado/mirado otra variante */}
-                    {zapato.imagen_hover && (
+                    {mainSrc && (
                         <img
-                            src={proxyImageUrl(zapato.imagen_hover)}
+                            src={mainSrc}
+                            alt={zapato.nombre}
+                            loading="lazy"
+                            decoding="async"
+                            onLoad={() => setImgLoaded(true)}
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
+                        />
+                    )}
+
+                    {/* Imagen Hover — solo se monta al hacer hover real */}
+                    {hoverSrc && isHovered && currentDisplayColorIdx === null && (
+                        <img
+                            src={hoverSrc}
                             alt={`${zapato.nombre} vista 2`}
-                            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out opacity-0 ${currentDisplayColorIdx === null ? 'group-hover:opacity-100' : ''}`}
+                            loading="lazy"
+                            decoding="async"
+                            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out opacity-0 group-hover:opacity-100"
                         />
                     )}
                 </div>
 
-                {/* Info del Producto (Ultra Compacto Mobile) */}
+                {/* Info del Producto */}
                 <div className="flex flex-col gap-0.5 px-0.5">
                     <h3 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider truncate">
                         {zapato.marca_obj?.nombre || zapato.marca || zapato.origen || zapato.cat_obj?.nombre || zapato.categoria || 'Genérico'}
@@ -123,7 +137,6 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                         <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
                             Consultar
                         </span>
-
                         <button className="text-brand-orange hover:text-orange-600 transition-colors">
                             <div className="text-[9px] font-bold border border-brand-orange px-1.5 py-0.5 rounded-sm uppercase">
                                 +
@@ -131,30 +144,29 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                         </button>
                     </div>
 
-                    {/* Colores (Miniaturas Interactivas) */}
+                    {/* Colores */}
                     {colores && colores.length > 0 && (
-                        <div className="flex gap-2 mt-2 py-1 overflow-x-auto no-scrollbar" onMouseLeave={() => setHoveredColorIdx(null)}>
+                        <div
+                            className="flex gap-2 mt-2 py-1 overflow-x-auto no-scrollbar"
+                            onMouseLeave={() => setHoveredColorIdx(null)}
+                        >
                             {colores.slice(0, 4).map((c: any, i: number) => {
-                                const colorHex = typeof c === 'object' ? c.color : c;
-                                const hasImage = typeof c === 'object' && c.imagen;
-                                const isSelected = activeColorIdx === i;
+                                const colorHex = typeof c === 'object' ? c.color : c
+                                const hasImage = typeof c === 'object' && c.imagen
+                                const isSelected = activeColorIdx === i
 
                                 return (
                                     <button
                                         key={i}
                                         title={typeof c === 'object' ? c.nombre : colorHex}
                                         onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            setActiveColorIdx(i);
-                                            setHoveredColorIdx(null); // Clear hover so click takes priority
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            setActiveColorIdx(i)
+                                            setHoveredColorIdx(null)
                                         }}
-                                        onMouseEnter={() => {
-                                            if (hasImage) setHoveredColorIdx(i);
-                                        }}
-                                        onMouseLeave={() => {
-                                            setHoveredColorIdx(null);
-                                        }}
+                                        onMouseEnter={() => { if (hasImage) setHoveredColorIdx(i) }}
+                                        onMouseLeave={() => setHoveredColorIdx(null)}
                                         className={`w-9 h-9 sm:w-10 sm:h-10 rounded-md overflow-hidden shrink-0 transition-all cursor-pointer ${
                                             isSelected
                                                 ? 'border-2 border-slate-900 dark:border-white shadow-md ring-2 ring-slate-200 dark:ring-slate-800 scale-105 relative z-10'
@@ -165,16 +177,15 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                                             <img
                                                 src={proxyImageUrl(c.imagen)}
                                                 alt={c.nombre || 'Variante'}
+                                                loading="lazy"
+                                                decoding="async"
                                                 className="w-full h-full object-cover bg-white"
                                             />
                                         ) : (
-                                            <div
-                                                className="w-full h-full"
-                                                style={{ backgroundColor: colorHex }}
-                                            ></div>
+                                            <div className="w-full h-full" style={{ backgroundColor: colorHex }} />
                                         )}
                                     </button>
-                                );
+                                )
                             })}
                             {colores.length > 4 && (
                                 <span className="text-xs text-slate-400 font-bold self-center ml-1">

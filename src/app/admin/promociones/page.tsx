@@ -117,7 +117,7 @@ export default function AdminPromociones() {
 
             const { error: uploadError } = await supabase.storage
                 .from('promociones')
-                .upload(filePath, compressedFile)
+                .upload(filePath, compressedFile, { cacheControl: '2592000' })
 
             if (uploadError) throw uploadError
 

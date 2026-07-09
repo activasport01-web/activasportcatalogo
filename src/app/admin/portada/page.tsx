@@ -106,7 +106,7 @@ export default function PortadaAdmin() {
             const fileName = `portada_${Date.now()}_${finalUploadFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
             const { error: uploadError } = await supabase.storage
                 .from('imagenes-zapatos')
-                .upload(fileName, finalUploadFile, { cacheControl: '3600', upsert: false })
+                .upload(fileName, finalUploadFile, { cacheControl: '2592000', upsert: false })
 
             if (!uploadError) {
                 const { data } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)

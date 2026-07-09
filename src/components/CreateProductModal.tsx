@@ -90,7 +90,7 @@ export default function CreateProductModal({ isOpen, onClose, onSuccess }: Modal
             const compressedFile = await compressImage(imageFile)
             const fileExt = compressedFile.name.split('.').pop()
             const fileName = `${Date.now()}.${fileExt}`
-            const { error: uploadError } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressedFile)
+            const { error: uploadError } = await supabase.storage.from('imagenes-zapatos').upload(fileName, compressedFile, { cacheControl: '2592000' })
             if (uploadError) throw uploadError
 
             const { data: publicUrlData } = supabase.storage.from('imagenes-zapatos').getPublicUrl(fileName)
