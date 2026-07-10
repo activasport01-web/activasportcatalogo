@@ -3,8 +3,12 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import Link from 'next/link'
-import { ArrowLeft, Search, Pencil, X, Save, Users, UserCheck, UserX, ShieldCheck, Info, Plus, Eye, EyeOff, Trash2 } from 'lucide-react'
+import {
+    ArrowLeft, Search, Pencil, X, Save, Users, UserCheck, UserX,
+    ShieldCheck, Info, Plus, Eye, EyeOff, Trash2, KeyRound, CheckCircle2, Circle,
+} from 'lucide-react'
 
+/* ─── Tipos ─────────────────────────────────────────────────── */
 interface UsuarioAdmin {
     id: string
     nombre_completo: string | null
@@ -14,34 +18,80 @@ interface UsuarioAdmin {
     activo: boolean
     fecha_creacion: string
 }
+interface Rol { id: string; nombre: string }
 
-interface Rol {
-    id: string
-    nombre: string
+/* ─── Reglas de contraseña ───────────────────────────────────── */
+const PWD_RULES = [
+    { label: 'Mínimo 8 caracteres',  ok: (p: string) => p.length >= 8 },
+    { label: 'Una mayúscula (A-Z)',   ok: (p: string) => /[A-Z]/.test(p) },
+    { label: 'Una minúscula (a-z)',   ok: (p: string) => /[a-z]/.test(p) },
+    { label: 'Un número (0-9)',       ok: (p: string) => /[0-9]/.test(p) },
+]
+
+const PWD_STRENGTH_COLOR = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-emerald-500']
+const PWD_STRENGTH_LABEL = ['Muy débil', 'Débil', 'Regular', 'Fuerte']
+const PWD_TEXT_COLOR     = ['text-red-400', 'text-orange-400', 'text-yellow-400', 'text-emerald-400']
+
+function PasswordStrength({ password }: { password: string }) {
+    if (!password) return null
+    const score = PWD_RULES.filter(r => r.ok(password)).length
+    return (
+        <div className="space-y-2 mt-1">
+            <div className="flex gap-1">
+                {PWD_RULES.map((_, i) => (
+                    <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${i < score ? PWD_STRENGTH_COLOR[score - 1] : 'bg-slate-700'}`} />
+                ))}
+            </div>
+            {score > 0 && (
+                <p className={`text-xs font-bold ${PWD_TEXT_COLOR[score - 1]}`}>{PWD_STRENGTH_LABEL[score - 1]}</p>
+            )}
+            <div className="space-y-1">
+                {PWD_RULES.map(rule => (
+                    <div key={rule.label} className={`flex items-center gap-1.5 text-xs transition-colors ${rule.ok(password) ? 'text-emerald-400' : 'text-slate-500'}`}>
+                        {rule.ok(password)
+                            ? <CheckCircle2 size={12} className="flex-shrink-0" />
+                            : <Circle size={12} className="flex-shrink-0" />
+                        }
+                        {rule.label}
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
 }
 
+/* ─── Página principal ───────────────────────────────────────── */
 export default function UsuariosPage() {
     const { profile } = useAuth()
     const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
-    const [roles, setRoles] = useState<Rol[]>([])
-    const [loading, setLoading] = useState(true)
+    const [roles, setRoles]       = useState<Rol[]>([])
+    const [loading, setLoading]   = useState(true)
     const [loadError, setLoadError] = useState<string | null>(null)
-    const [search, setSearch] = useState('')
-    // Modal editar
-    const [showModal, setShowModal] = useState(false)
-    const [editing, setEditing] = useState<UsuarioAdmin | null>(null)
-    const [form, setForm] = useState({ nombre_completo: '', rol_id: '', activo: true })
-    const [saving, setSaving] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const [search, setSearch]     = useState('')
 
-    // Modal crear
+    /* ── Modal editar ── */
+    const [showModal, setShowModal] = useState(false)
+    const [editing, setEditing]     = useState<UsuarioAdmin | null>(null)
+    const [form, setForm]           = useState({ nombre_completo: '', rol_id: '', activo: true })
+    const [saving, setSaving]       = useState(false)
+    const [error, setError]         = useState<string | null>(null)
+
+    /* ── Cambio de contraseña (dentro del modal editar) ── */
+    const [showChangePwd, setShowChangePwd]   = useState(false)
+    const [pwdForm, setPwdForm]               = useState({ nueva: '', confirmar: '' })
+    const [showEditPwd, setShowEditPwd]       = useState(false)
+    const [changingPwd, setChangingPwd]       = useState(false)
+    const [pwdError, setPwdError]             = useState<string | null>(null)
+    const [pwdSuccess, setPwdSuccess]         = useState(false)
+
+    /* ── Modal crear ── */
     const [showCreateModal, setShowCreateModal] = useState(false)
     const [createForm, setCreateForm] = useState({ email: '', password: '', confirmar: '', nombre_completo: '', rol_id: '' })
-    const [showPassword, setShowPassword] = useState(false)
-    const [creating, setCreating] = useState(false)
-    const [createError, setCreateError] = useState<string | null>(null)
+    const [showCreatePwd, setShowCreatePwd]     = useState(false)
+    const [creating, setCreating]               = useState(false)
+    const [createError, setCreateError]         = useState<string | null>(null)
 
-    // Eliminar
+    /* ── Eliminar ── */
     const [deleting, setDeleting] = useState<string | null>(null)
 
     useEffect(() => { loadAll() }, [])
@@ -68,22 +118,54 @@ export default function UsuariosPage() {
         )
     })
 
+    /* ── Helpers de validación ── */
+    const validatePassword = (p: string): string | null => {
+        for (const rule of PWD_RULES) {
+            if (!rule.ok(p)) return `Requisito no cumplido: ${rule.label}`
+        }
+        return null
+    }
+
+    const isNameDuplicate = (nombre: string, excludeId?: string) =>
+        usuarios.some(u =>
+            u.id !== excludeId &&
+            u.nombre_completo?.toLowerCase().trim() === nombre.toLowerCase().trim()
+        )
+
+    /* ── Abrir modales ── */
     const openEdit = (u: UsuarioAdmin) => {
         setEditing(u)
         setForm({ nombre_completo: u.nombre_completo || '', rol_id: u.rol_id || '', activo: u.activo })
         setError(null)
+        setShowChangePwd(false)
+        setPwdForm({ nueva: '', confirmar: '' })
+        setPwdError(null)
+        setPwdSuccess(false)
+        setShowEditPwd(false)
         setShowModal(true)
     }
 
+    const openCreate = () => {
+        setCreateForm({ email: '', password: '', confirmar: '', nombre_completo: '', rol_id: '' })
+        setCreateError(null)
+        setShowCreatePwd(false)
+        setShowCreateModal(true)
+    }
+
+    /* ── Guardar edición ── */
     const handleSave = async () => {
         if (!editing) return
+        if (form.nombre_completo.trim() && isNameDuplicate(form.nombre_completo.trim(), editing.id)) {
+            setError('Ya existe un usuario con ese nombre completo')
+            return
+        }
         setSaving(true)
         setError(null)
         const { error: err } = await supabase.rpc('admin_actualizar_usuario', {
-            p_id: editing.id,
+            p_id:              editing.id,
             p_nombre_completo: form.nombre_completo,
-            p_rol_id: form.rol_id || null,
-            p_activo: form.activo,
+            p_rol_id:          form.rol_id || null,
+            p_activo:          form.activo,
         })
         if (err) { setError(err.message); setSaving(false); return }
         setSaving(false)
@@ -91,29 +173,52 @@ export default function UsuariosPage() {
         loadAll()
     }
 
-    const openCreate = () => {
-        setCreateForm({ email: '', password: '', confirmar: '', nombre_completo: '', rol_id: '' })
-        setCreateError(null)
-        setShowPassword(false)
-        setShowCreateModal(true)
+    /* ── Cambiar contraseña ── */
+    const handleChangePassword = async () => {
+        if (!editing) return
+        const pwdErr = validatePassword(pwdForm.nueva)
+        if (pwdErr) { setPwdError(pwdErr); return }
+        if (pwdForm.nueva !== pwdForm.confirmar) { setPwdError('Las contraseñas no coinciden'); return }
+
+        setChangingPwd(true)
+        setPwdError(null)
+        const res  = await fetch('/api/admin/usuarios', {
+            method:  'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ id: editing.id, password: pwdForm.nueva }),
+        })
+        const data = await res.json()
+        if (!res.ok) { setPwdError(data.error || 'Error al cambiar contraseña'); setChangingPwd(false); return }
+
+        setChangingPwd(false)
+        setPwdSuccess(true)
+        setPwdForm({ nueva: '', confirmar: '' })
+        setShowChangePwd(false)
+        setTimeout(() => setPwdSuccess(false), 4000)
     }
 
+    /* ── Crear usuario ── */
     const handleCreate = async () => {
         if (!createForm.email.trim()) { setCreateError('El correo es obligatorio'); return }
+        if (createForm.nombre_completo.trim() && isNameDuplicate(createForm.nombre_completo.trim())) {
+            setCreateError('Ya existe un usuario con ese nombre completo')
+            return
+        }
         if (!createForm.password) { setCreateError('La contraseña es obligatoria'); return }
-        if (createForm.password.length < 6) { setCreateError('La contraseña debe tener al menos 6 caracteres'); return }
+        const pwdErr = validatePassword(createForm.password)
+        if (pwdErr) { setCreateError(pwdErr); return }
         if (createForm.password !== createForm.confirmar) { setCreateError('Las contraseñas no coinciden'); return }
 
         setCreating(true)
         setCreateError(null)
-        const res = await fetch('/api/admin/usuarios', {
-            method: 'POST',
+        const res  = await fetch('/api/admin/usuarios', {
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: createForm.email,
-                password: createForm.password,
+            body:    JSON.stringify({
+                email:           createForm.email,
+                password:        createForm.password,
                 nombre_completo: createForm.nombre_completo,
-                rol_id: createForm.rol_id || null,
+                rol_id:          createForm.rol_id || null,
             }),
         })
         const data = await res.json()
@@ -123,20 +228,19 @@ export default function UsuariosPage() {
         loadAll()
     }
 
+    /* ── Eliminar ── */
     const handleDelete = async (u: UsuarioAdmin) => {
         if (!confirm(`¿Eliminar permanentemente la cuenta de ${u.email}?\n\nEsta acción no se puede deshacer.`)) return
         setDeleting(u.id)
-        const res = await fetch(`/api/admin/usuarios?id=${u.id}`, { method: 'DELETE' })
+        const res  = await fetch(`/api/admin/usuarios?id=${u.id}`, { method: 'DELETE' })
         const data = await res.json()
         if (!res.ok) alert(data.error || 'Error al eliminar')
         setDeleting(null)
         loadAll()
     }
 
-    const initials = (name: string | null) => {
-        if (!name) return '?'
-        return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
-    }
+    const initials = (name: string | null) =>
+        !name ? '?' : name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
 
     const rolBadge: Record<string, string> = {
         'Administrador': 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
@@ -144,10 +248,13 @@ export default function UsuariosPage() {
     }
 
     const stats = {
-        total:    usuarios.length,
-        activos:  usuarios.filter(u => u.activo).length,
+        total:     usuarios.length,
+        activos:   usuarios.filter(u => u.activo).length,
         inactivos: usuarios.filter(u => !u.activo).length,
     }
+
+    const createPwdScore = PWD_RULES.filter(r => r.ok(createForm.password)).length
+    const editPwdScore   = PWD_RULES.filter(r => r.ok(pwdForm.nueva)).length
 
     return (
         <div className="min-h-screen bg-slate-950 text-white">
@@ -223,7 +330,6 @@ export default function UsuariosPage() {
                     />
                 </div>
 
-                {/* Error de carga */}
                 {loadError && (
                     <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
                         <Info size={15} className="flex-shrink-0 mt-0.5" />
@@ -231,7 +337,7 @@ export default function UsuariosPage() {
                     </div>
                 )}
 
-                {/* Table */}
+                {/* Tabla */}
                 <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
                     {loading ? (
                         <div className="flex items-center justify-center py-20">
@@ -251,7 +357,7 @@ export default function UsuariosPage() {
                                         <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Rol</th>
                                         <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Estado</th>
                                         <th className="text-left text-xs font-semibold text-slate-400 uppercase tracking-wider px-5 py-3 hidden md:table-cell">Registrado</th>
-                                        <th className="px-5 py-3 w-12"></th>
+                                        <th className="px-5 py-3 w-24"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800/70">
@@ -302,7 +408,7 @@ export default function UsuariosPage() {
                                                             onClick={() => handleDelete(u)}
                                                             disabled={!!deleting}
                                                             className="p-2 rounded-lg hover:bg-red-500/15 text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40"
-                                                            title="Eliminar permanentemente"
+                                                            title="Eliminar"
                                                         >
                                                             {deleting === u.id
                                                                 ? <div className="w-3.5 h-3.5 border border-red-400/30 border-t-red-400 rounded-full animate-spin" />
@@ -321,19 +427,20 @@ export default function UsuariosPage() {
                 </div>
             </div>
 
-            {/* Modal Crear Usuario */}
+            {/* ══ Modal Crear Usuario ══ */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)}>
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-5 border-b border-slate-800 sticky top-0 bg-slate-900">
                             <div>
                                 <h2 className="font-bold text-white">Nuevo Usuario</h2>
-                                <p className="text-xs text-slate-400 mt-0.5">La cuenta se activa inmediatamente, sin email de confirmación</p>
+                                <p className="text-xs text-slate-400 mt-0.5">Cuenta activa inmediatamente, sin email de confirmación</p>
                             </div>
                             <button onClick={() => setShowCreateModal(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 transition-colors">
                                 <X size={18} />
                             </button>
                         </div>
+
                         <div className="p-5 space-y-4">
                             {createError && (
                                 <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
@@ -354,34 +461,6 @@ export default function UsuariosPage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contraseña *</label>
-                                    <div className="relative">
-                                        <input
-                                            type={showPassword ? 'text' : 'password'}
-                                            value={createForm.password}
-                                            onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
-                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 pr-9 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
-                                            placeholder="Mín. 6 caracteres"
-                                        />
-                                        <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                            {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Confirmar *</label>
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        value={createForm.confirmar}
-                                        onChange={e => setCreateForm(f => ({ ...f, confirmar: e.target.value }))}
-                                        className={`w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors ${createForm.confirmar && createForm.password !== createForm.confirmar ? 'border-red-500/50' : 'border-slate-700'}`}
-                                        placeholder="Repetir contraseña"
-                                    />
-                                </div>
-                            </div>
-
                             <div className="space-y-1">
                                 <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nombre Completo</label>
                                 <input
@@ -391,6 +470,11 @@ export default function UsuariosPage() {
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
                                     placeholder="Nombre completo del usuario"
                                 />
+                                {createForm.nombre_completo.trim() && isNameDuplicate(createForm.nombre_completo.trim()) && (
+                                    <p className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                                        <Info size={11} /> Ya existe un usuario con ese nombre
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-1">
@@ -401,20 +485,57 @@ export default function UsuariosPage() {
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
                                 >
                                     <option value="">Sin rol asignado</option>
-                                    {roles.map(r => (
-                                        <option key={r.id} value={r.id}>{r.nombre}</option>
-                                    ))}
+                                    {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                                 </select>
                             </div>
+
+                            {/* Contraseña con medidor */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Contraseña *</label>
+                                <div className="relative">
+                                    <input
+                                        type={showCreatePwd ? 'text' : 'password'}
+                                        value={createForm.password}
+                                        onChange={e => setCreateForm(f => ({ ...f, password: e.target.value }))}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 pr-10 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                        placeholder="Mín. 8 caracteres"
+                                    />
+                                    <button type="button" onClick={() => setShowCreatePwd(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                        {showCreatePwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                                    </button>
+                                </div>
+                                <PasswordStrength password={createForm.password} />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Confirmar Contraseña *</label>
+                                <input
+                                    type={showCreatePwd ? 'text' : 'password'}
+                                    value={createForm.confirmar}
+                                    onChange={e => setCreateForm(f => ({ ...f, confirmar: e.target.value }))}
+                                    className={`w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors ${
+                                        createForm.confirmar && createForm.password !== createForm.confirmar
+                                            ? 'border-red-500/50'
+                                            : 'border-slate-700'
+                                    }`}
+                                    placeholder="Repetir contraseña"
+                                />
+                                {createForm.confirmar && createForm.password !== createForm.confirmar && (
+                                    <p className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                                        <Info size={11} /> Las contraseñas no coinciden
+                                    </p>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex gap-3 p-5 border-t border-slate-800">
+
+                        <div className="flex gap-3 p-5 border-t border-slate-800 sticky bottom-0 bg-slate-900">
                             <button onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors">
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleCreate}
-                                disabled={creating}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-brand-orange hover:bg-orange-600 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60 transition-colors"
+                                disabled={creating || createPwdScore < 4 || createForm.password !== createForm.confirmar}
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-brand-orange hover:bg-orange-600 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 {creating
                                     ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -427,20 +548,21 @@ export default function UsuariosPage() {
                 </div>
             )}
 
-            {/* Modal Editar */}
+            {/* ══ Modal Editar Usuario ══ */}
             {showModal && editing && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowModal(false)}>
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between p-5 border-b border-slate-800">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between p-5 border-b border-slate-800 sticky top-0 bg-slate-900">
                             <h2 className="font-bold text-white">Editar Usuario</h2>
                             <button onClick={() => setShowModal(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 transition-colors">
                                 <X size={18} />
                             </button>
                         </div>
+
                         <div className="p-5 space-y-4">
-                            {/* Avatar header */}
+                            {/* Avatar */}
                             <div className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl">
-                                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-brand-orange to-orange-700 flex items-center justify-center text-white font-bold text-sm">
+                                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-brand-orange to-orange-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                                     {initials(editing.nombre_completo)}
                                 </div>
                                 <div>
@@ -451,8 +573,15 @@ export default function UsuariosPage() {
 
                             {error && (
                                 <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-xl text-sm flex items-start gap-2">
-                                    <ShieldCheck size={15} className="flex-shrink-0 mt-0.5" />
+                                    <Info size={14} className="flex-shrink-0 mt-0.5" />
                                     {error}
+                                </div>
+                            )}
+
+                            {pwdSuccess && (
+                                <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                                    <CheckCircle2 size={14} />
+                                    Contraseña actualizada correctamente
                                 </div>
                             )}
 
@@ -463,8 +592,13 @@ export default function UsuariosPage() {
                                     value={form.nombre_completo}
                                     onChange={e => setForm(f => ({ ...f, nombre_completo: e.target.value }))}
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
-                                    placeholder="Nombre completo del usuario"
+                                    placeholder="Nombre completo"
                                 />
+                                {form.nombre_completo.trim() && isNameDuplicate(form.nombre_completo.trim(), editing.id) && (
+                                    <p className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                                        <Info size={11} /> Ya existe un usuario con ese nombre
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-1">
@@ -476,9 +610,7 @@ export default function UsuariosPage() {
                                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <option value="">Sin rol</option>
-                                    {roles.map(r => (
-                                        <option key={r.id} value={r.id}>{r.nombre}</option>
-                                    ))}
+                                    {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                                 </select>
                                 {editing?.id === profile?.id && (
                                     <p className="text-xs text-amber-400 flex items-center gap-1 px-1">
@@ -491,13 +623,11 @@ export default function UsuariosPage() {
                                 <div>
                                     <p className="text-sm font-semibold text-white">Cuenta activa</p>
                                     <p className="text-xs text-slate-400 mt-0.5">
-                                        {form.activo ? 'Puede iniciar sesión en el panel' : 'No puede acceder al sistema'}
+                                        {form.activo ? 'Puede iniciar sesión' : 'Sin acceso al sistema'}
                                     </p>
                                 </div>
                                 <button
-                                    onClick={() => {
-                                        if (editing.id !== profile?.id) setForm(f => ({ ...f, activo: !f.activo }))
-                                    }}
+                                    onClick={() => { if (editing.id !== profile?.id) setForm(f => ({ ...f, activo: !f.activo })) }}
                                     disabled={editing.id === profile?.id}
                                     className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 overflow-hidden ${form.activo ? 'bg-emerald-500' : 'bg-slate-600'} disabled:opacity-40 disabled:cursor-not-allowed`}
                                 >
@@ -509,12 +639,79 @@ export default function UsuariosPage() {
                                     <Info size={12} /> No puedes desactivar tu propia cuenta.
                                 </p>
                             )}
+
+                            {/* ── Sección cambio de contraseña ── */}
+                            <div className="border border-slate-700 rounded-xl overflow-hidden">
+                                <button
+                                    onClick={() => { setShowChangePwd(p => !p); setPwdError(null) }}
+                                    className="w-full flex items-center justify-between px-4 py-3 bg-slate-800/50 hover:bg-slate-800 transition-colors text-sm font-semibold text-slate-300"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <KeyRound size={15} className="text-slate-400" />
+                                        Cambiar contraseña
+                                    </div>
+                                    <span className="text-xs text-slate-500">{showChangePwd ? '▲ cerrar' : '▼ expandir'}</span>
+                                </button>
+
+                                {showChangePwd && (
+                                    <div className="p-4 space-y-3 border-t border-slate-700">
+                                        {pwdError && (
+                                            <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-3 py-2.5 rounded-lg text-xs flex items-start gap-2">
+                                                <Info size={13} className="flex-shrink-0 mt-0.5" />
+                                                {pwdError}
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nueva Contraseña</label>
+                                            <div className="relative">
+                                                <input
+                                                    type={showEditPwd ? 'text' : 'password'}
+                                                    value={pwdForm.nueva}
+                                                    onChange={e => setPwdForm(f => ({ ...f, nueva: e.target.value }))}
+                                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 pr-10 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors"
+                                                    placeholder="Nueva contraseña"
+                                                />
+                                                <button type="button" onClick={() => setShowEditPwd(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                                    {showEditPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                                                </button>
+                                            </div>
+                                            <PasswordStrength password={pwdForm.nueva} />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Confirmar</label>
+                                            <input
+                                                type={showEditPwd ? 'text' : 'password'}
+                                                value={pwdForm.confirmar}
+                                                onChange={e => setPwdForm(f => ({ ...f, confirmar: e.target.value }))}
+                                                className={`w-full bg-slate-900 border rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-orange transition-colors ${
+                                                    pwdForm.confirmar && pwdForm.nueva !== pwdForm.confirmar
+                                                        ? 'border-red-500/50'
+                                                        : 'border-slate-700'
+                                                }`}
+                                                placeholder="Repetir contraseña"
+                                            />
+                                        </div>
+
+                                        <button
+                                            onClick={handleChangePassword}
+                                            disabled={changingPwd || editPwdScore < 4 || pwdForm.nueva !== pwdForm.confirmar}
+                                            className="w-full px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            {changingPwd
+                                                ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                : <KeyRound size={14} />
+                                            }
+                                            Actualizar contraseña
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex gap-3 p-5 border-t border-slate-800">
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors"
-                            >
+
+                        <div className="flex gap-3 p-5 border-t border-slate-800 sticky bottom-0 bg-slate-900">
+                            <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-sm font-medium transition-colors">
                                 Cancelar
                             </button>
                             <button

@@ -51,9 +51,10 @@ export async function POST(request: NextRequest) {
     if (!email?.trim() || !password?.trim()) {
         return NextResponse.json({ error: 'El correo y la contraseña son obligatorios' }, { status: 400 })
     }
-    if (password.length < 6) {
-        return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
-    }
+    if (password.length < 8)        return NextResponse.json({ error: 'Mínimo 8 caracteres' }, { status: 400 })
+    if (!/[A-Z]/.test(password))    return NextResponse.json({ error: 'Debe incluir al menos una mayúscula' }, { status: 400 })
+    if (!/[a-z]/.test(password))    return NextResponse.json({ error: 'Debe incluir al menos una minúscula' }, { status: 400 })
+    if (!/[0-9]/.test(password))    return NextResponse.json({ error: 'Debe incluir al menos un número' }, { status: 400 })
 
     // Crear usuario en auth.users (el trigger handle_new_user crea la fila en public.usuarios)
     const { data: nuevoUsuario, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -83,6 +84,26 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ id: nuevoUsuario.user.id, email: nuevoUsuario.user.email }, { status: 201 })
+}
+
+// PATCH /api/admin/usuarios — cambiar contraseña de un usuario existente
+export async function PATCH(request: NextRequest) {
+    const admin = await verificarAdmin()
+    if (!admin) return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 })
+
+    const body = await request.json()
+    const { id, password } = body
+
+    if (!id || !password) return NextResponse.json({ error: 'Faltan datos' }, { status: 400 })
+    if (password.length < 8)        return NextResponse.json({ error: 'Mínimo 8 caracteres' }, { status: 400 })
+    if (!/[A-Z]/.test(password))    return NextResponse.json({ error: 'Debe incluir al menos una mayúscula' }, { status: 400 })
+    if (!/[a-z]/.test(password))    return NextResponse.json({ error: 'Debe incluir al menos una minúscula' }, { status: 400 })
+    if (!/[0-9]/.test(password))    return NextResponse.json({ error: 'Debe incluir al menos un número' }, { status: 400 })
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(id, { password })
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+    return NextResponse.json({ ok: true })
 }
 
 // DELETE /api/admin/usuarios?id=... — eliminar usuario permanentemente
