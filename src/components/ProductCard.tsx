@@ -152,6 +152,7 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                         >
                             {colores.slice(0, 4).map((c: any, i: number) => {
                                 const colorHex = typeof c === 'object' ? c.color : c
+                                const color2   = typeof c === 'object' ? c.color2 : null
                                 const hasImage = typeof c === 'object' && c.imagen
                                 const isSelected = activeColorIdx === i
 
@@ -173,17 +174,15 @@ export default function ProductCard({ zapato, onQuickView }: { zapato: any, onQu
                                                 : 'border border-slate-200 dark:border-slate-700 hover:border-slate-400 hover:shadow-sm'
                                         }`}
                                     >
-                                        {hasImage ? (
-                                            <img
-                                                src={proxyImageUrl(c.imagen)}
-                                                alt={c.nombre || 'Variante'}
-                                                loading="lazy"
-                                                decoding="async"
-                                                className="w-full h-full object-cover bg-white"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full" style={{ backgroundColor: colorHex }} />
-                                        )}
+                                        {/* Swatch de color (el hex ya viene en los datos): evita descargar
+                                            la foto de variante en la grilla. La foto se carga en la imagen
+                                            principal solo al pasar el cursor o seleccionar el color. */}
+                                        <div
+                                            className="w-full h-full"
+                                            style={color2
+                                                ? { background: `linear-gradient(135deg, ${colorHex} 0 50%, ${color2} 50% 100%)` }
+                                                : { backgroundColor: colorHex }}
+                                        />
                                     </button>
                                 )
                             })}

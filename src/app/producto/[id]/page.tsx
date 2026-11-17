@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import ProductView from '@/components/ProductView'
 import ProductCard from '@/components/ProductCard'
 
-export const revalidate = 0
+export const revalidate = 300 // ISR: cachea la ficha 5 min en vez de consultar Supabase en cada vista
 
 interface Props {
     params: Promise<{
