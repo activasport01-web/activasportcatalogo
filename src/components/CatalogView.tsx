@@ -7,6 +7,8 @@ import ProductCard from '@/components/ProductCard'
 import QuickViewModal from '@/components/QuickViewModal'
 import { Filter, X, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react'
 
+const PAGE = 24 // tarjetas visibles por "página" (botón Cargar más)
+
 interface CatalogViewProps {
     initialProducts: any[]
     availCategorias: any[]
@@ -26,6 +28,7 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
     const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000])
     const [sortBy, setSortBy] = useState('recientes')
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
+    const [visibleCount, setVisibleCount] = useState(PAGE)
 
     // Estados Quick View
     const [quickViewProduct, setQuickViewProduct] = useState<any>(null)
@@ -206,6 +209,11 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
 
         return result
     }, [initialProducts, searchQuery, selectedCategories, selectedSubcategories, selectedBrands, selectedGenders, selectedGroups, priceRange, sortBy, brandIdToName])
+
+    // Al cambiar filtros o búsqueda, volver a la primera "página"
+    useEffect(() => {
+        setVisibleCount(PAGE)
+    }, [searchQuery, selectedCategories, selectedSubcategories, selectedBrands, selectedGenders, selectedGroups, sortBy])
 
     const toggleCategory = (cat: string) => {
         setSelectedCategories(prev =>
@@ -410,18 +418,30 @@ export default function CatalogView({ initialProducts, availCategorias, availSub
 
                         {/* Grid de Productos - Mobile 2 Columns Forced */}
                         {filteredProducts.length > 0 ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-x-3 gap-y-6 md:gap-6">
-                                {filteredProducts.map((zapato) => (
-                                    <ProductCard
-                                        key={zapato.id}
-                                        zapato={zapato}
-                                        onQuickView={(p) => {
-                                            setQuickViewProduct(p)
-                                            setIsQuickViewOpen(true)
-                                        }}
-                                    />
-                                ))}
-                            </div>
+                            <>
+                                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-x-3 gap-y-6 md:gap-6">
+                                    {filteredProducts.slice(0, visibleCount).map((zapato) => (
+                                        <ProductCard
+                                            key={zapato.id}
+                                            zapato={zapato}
+                                            onQuickView={(p) => {
+                                                setQuickViewProduct(p)
+                                                setIsQuickViewOpen(true)
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+                                {visibleCount < filteredProducts.length && (
+                                    <div className="flex justify-center mt-8">
+                                        <button
+                                            onClick={() => setVisibleCount(c => c + PAGE)}
+                                            className="px-6 py-2.5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm shadow-md hover:-translate-y-0.5 transition-all"
+                                        >
+                                            Cargar más ({filteredProducts.length - visibleCount} restantes)
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
                                 <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
