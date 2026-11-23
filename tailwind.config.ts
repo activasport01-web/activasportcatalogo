@@ -27,7 +27,17 @@ const config: Config = {
             },
             fontFamily: {
                 sans: ['Helvetica', 'Arial', 'sans-serif'],
-            }
+            },
+            keyframes: {
+                // Carrusel de marcas: avanza de izquierda a derecha
+                marquee: {
+                    from: { transform: 'translateX(-100%)' },
+                    to: { transform: 'translateX(0)' },
+                },
+            },
+            animation: {
+                marquee: 'marquee 40s linear infinite',
+            },
         },
     },
     plugins: [],
