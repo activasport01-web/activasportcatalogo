@@ -219,18 +219,10 @@ export default function Footer() {
                 {/* Línea divisoria */}
                 <div className="border-t border-gray-200 dark:border-slate-900 mt-12 pt-8">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <p className="text-gray-500 dark:text-gray-500 text-xs">
-                            © {new Date().getFullYear()} ActivaSport. Todos los derechos reservados.
-                        </p>
-                        <div className="flex flex-wrap justify-center md:flex-1 md:justify-end gap-x-6 gap-y-2 text-xs">
-                            <Link href="/terminos" className="text-gray-500 dark:text-gray-500 hover:text-brand-orange dark:hover:text-brand-orange transition">
-                                Términos y Condiciones
-                            </Link>
-                            <Link href="/privacidad" className="text-gray-500 dark:text-gray-500 hover:text-brand-orange dark:hover:text-brand-orange transition">
-                                Política de Privacidad
-                            </Link>
+                        <p className="text-gray-500 dark:text-gray-500 text-xs text-center md:text-left md:flex-1">
+                            © {new Date().getFullYear()} ActivaSport. Todos los derechos reservados.{' '}
                             {/* nofollow a propósito: Google trata como spam los enlaces repetidos en pies de muchos sitios */}
-                            <a href="https://dinamic-coding.vercel.app/" target="_blank" rel="noopener nofollow" className="group inline-flex items-center gap-[0.4em] whitespace-nowrap text-gray-500">
+                            <a href="https://dinamic-coding.vercel.app/" target="_blank" rel="noopener nofollow" className="group inline-flex items-center gap-[0.4em] whitespace-nowrap">
                                 Desarrollado por
                                 <svg viewBox="0 0 472.3 266.8" width="2.12em" height="1.2em" aria-hidden="true" className="shrink-0">
                                     <path fill="#044a92" className="dark:fill-current" d="M239.9 47.3C228.3 64 220.3 80.9 213.8 100.1C206.6 88.1 199.8 76.9 188.8 68.1C177.6 59.1 163.5 52.2 149.3 49.7C134.6 47.1 119.4 48.2 104.5 48.2C81.3 48.2 58.2 48 35.1 48.2L0.8 0.8C34 0.7 67.3 0.5 100.5 0.7C125.7 0.8 150.9-0.4 175.4 6.5C200.9 13.7 221.5 28.9 239.9 47.3ZM142.8 79.8L76.3 218.8C90.1 219 103.9 218.9 117.6 218.9C130 218.9 142.3 219 154.4 216.2C181.5 210 202.1 188.7 214.4 164.9C219.8 154.5 221.3 142.1 223.4 130.9C225.2 131.2 226.7 132.1 228.5 132.3C235.6 133 242.4 131.3 249.5 131.4C251 131.4 252.1 132.2 253.5 132.3C259.3 132.8 265.3 132.4 271 132.4C269.7 149.3 266 165.1 260.1 180.9C245.2 220.4 207.8 254.2 166.2 263C143 267.9 119.1 266.7 95.5 266.5C63.7 266.3 31.8 266.5 0 266.5L90.1 80ZM411.4 85.5L378.1 181.5L358.8 181.9L392.7 85.8ZM354.1 98.6L354 118.8L321.1 135L354.1 151.7L354.2 171.5L297.6 142.9L297.8 127.5ZM472.3 127.4L472.3 142.9L415.9 171.7L416.1 151.8L448.7 134.7L416.1 118.5L416 98.5Z" />
@@ -238,6 +230,14 @@ export default function Footer() {
                                 </svg>
                                 <span className="font-bold underline-offset-[0.2em] group-hover:underline group-focus-visible:underline">Dynamic Coding</span>
                             </a>
+                        </p>
+                        <div className="flex gap-6 text-xs">
+                            <Link href="/terminos" className="text-gray-500 dark:text-gray-500 hover:text-brand-orange dark:hover:text-brand-orange transition">
+                                Términos y Condiciones
+                            </Link>
+                            <Link href="/privacidad" className="text-gray-500 dark:text-gray-500 hover:text-brand-orange dark:hover:text-brand-orange transition">
+                                Política de Privacidad
+                            </Link>
                         </div>
                     </div>
                 </div>
