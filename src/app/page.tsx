@@ -142,7 +142,7 @@ export default async function Home() {
 
                 {/* Imagen del zapato (mix-blend-multiply elimina fondo blanco) */}
                 <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-[45%] md:w-[40%] h-[85%] z-[2] flex items-center justify-center">
-                  <img src={proxyImageUrl(pNuevo.url_imagen)} alt="Nuevo" className="shoe-img w-full h-full object-contain mix-blend-lighten drop-shadow-[0_5px_25px_rgba(255,255,255,0.15)] filter brightness-110" />
+                  <img src={proxyImageUrl(pNuevo.url_imagen)} alt="Nuevo" className="shoe-img max-w-full max-h-full rounded-xl mix-blend-lighten drop-shadow-[0_5px_25px_rgba(255,255,255,0.15)] filter brightness-110" />
                 </div>
 
                 {/* Textos */}
@@ -171,7 +171,7 @@ export default async function Home() {
                 <div className="absolute -top-16 -right-16 w-56 h-56 md:w-72 md:h-72 rounded-full border border-slate-200 dark:border-white/40 z-[1]" />
 
                 <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-[45%] md:w-[40%] h-[85%] z-[2] flex items-center justify-center">
-                  <img src={proxyImageUrl(pPopular.url_imagen)} alt="Popular" className="shoe-img w-full h-full object-contain mix-blend-multiply drop-shadow-[0_15px_25px_rgba(0,0,0,0.15)] filter brightness-105" />
+                  <img src={proxyImageUrl(pPopular.url_imagen)} alt="Popular" className="shoe-img max-w-full max-h-full rounded-xl mix-blend-multiply drop-shadow-[0_15px_25px_rgba(0,0,0,0.15)] filter brightness-105" />
                 </div>
 
                 <div className="relative z-20 flex flex-col justify-center h-full w-[55%] md:w-[50%] pl-5 md:pl-10 py-4">
@@ -199,7 +199,7 @@ export default async function Home() {
                 <div className="absolute -bottom-10 -left-10 w-40 h-40 md:w-56 md:h-56 rounded-full bg-white/10 z-[1]" />
 
                 <div className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 w-[45%] md:w-[40%] h-[85%] z-[2] flex items-center justify-center">
-                  <img src={proxyImageUrl(pOferta.url_imagen)} alt="Oferta" className="shoe-img w-full h-full object-contain mix-blend-multiply drop-shadow-[0_10px_20px_rgba(0,0,0,0.15)] filter brightness-105" />
+                  <img src={proxyImageUrl(pOferta.url_imagen)} alt="Oferta" className="shoe-img max-w-full max-h-full rounded-xl mix-blend-multiply drop-shadow-[0_10px_20px_rgba(0,0,0,0.15)] filter brightness-105" />
                 </div>
 
                 <div className="relative z-20 flex flex-col justify-center h-full w-[55%] md:w-[50%] pl-5 md:pl-10 py-4">
