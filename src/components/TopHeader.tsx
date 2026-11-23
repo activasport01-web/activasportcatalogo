@@ -127,8 +127,8 @@ export default function TopHeader() {
             {/* Main Header */}
             <div className="max-w-7xl mx-auto px-4 py-3">
                 <div className="flex items-center justify-between gap-4">
-                    {/* Logo - Adaptive */}
-                    <Link href="/" className="flex items-center gap-2 group shrink-0 relative w-48 h-12">
+                    {/* Logo - Adaptive (sin shrink-0: en celular se achica para que la fila no se salga de la pantalla) */}
+                    <Link href="/" className="flex items-center gap-2 group relative w-48 h-12">
                         <Image
                             src="/logo.png"
                             alt="ActivaSport"
